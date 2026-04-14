@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+temp/
+*.log
+*.pdf
+*.xlsx
+*.json
+*.txt
