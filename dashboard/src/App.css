@@ -221,11 +221,21 @@ html, body, #root {
   margin: 0;
   color: #111827;
 }
-/* EDITOR PANEL - RESOLVENDO OVERFLOW */
+/* NOVA BARRA DE ARRASTE (RESIZER) */
+.resizer {
+  width: 6px;
+  background-color: #d1d5db;
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  z-index: 20;
+  flex: none;
+}
+.resizer:hover, .resizer.dragging {
+  background-color: #3b82f6;
+}
+
+/* EDITOR PANEL - RESOLVENDO OVERFLOW E LARGURAS FIXAS */
 .editor {
-  width: 400px;
-  min-width: 400px;
-  max-width: 400px;
   background: var(--bg-panel);
   display: flex;
   flex-direction: column;
@@ -369,3 +379,62 @@ html, body, #root {
 .status-pendente { background: var(--warning); }
 .status-validado { background: var(--success); }
 .status-erro { background: var(--danger); }
+
+/* =========================================
+   RESPONSIVIDADE (MOBILE / TABLET PORTRAIT)
+   ========================================= */
+@media (max-width: 768px) {
+  /* Empilha a Sidebar e o Main */
+  .content-area {
+    flex-direction: column;
+    overflow-y: auto; /* Permite rolagem geral da página */
+  }
+
+  /* Sidebar vai pro topo, 100% de largura, com altura fixa para caber algumas notas */
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+    height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* O contêiner do PDF e Editor empilham verticalmente */
+  .main {
+    flex-direction: column !important; /* Sobrescreve o estilo inline do React */
+    height: auto;
+  }
+
+  /* Sobrescreve as larguras dinâmicas do Split Pane */
+  .pdf-container, .editor {
+    width: 100% !important;
+    max-width: 100%;
+    border-left: none;
+  }
+
+  /* O PDF ganha uma altura fixa para não sumir */
+  .pdf-container {
+    height: 50vh;
+    min-height: 400px;
+  }
+
+  /* O Editor fica solto embaixo */
+  .editor {
+    height: auto;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Esconde a barra de arrastar no celular */
+  .resizer {
+    display: none !important;
+  }
+
+  /* Ajusta o Header para não quebrar textos longos */
+  .header {
+    flex-wrap: wrap;
+    gap: 1rem;
+    height: auto;
+    padding: 1rem;
+  }
+}

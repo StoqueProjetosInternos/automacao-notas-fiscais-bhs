@@ -31,6 +31,10 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Estados para o painel redimensionável fluido
+  const [editorWidth, setEditorWidth] = useState(400); // Inicia com o padrão
+  const [isDragging, setIsDragging] = useState(false);
+
   const API_URL = 'http://localhost:3001'
 
   const [isApiOnline, setIsApiOnline] = useState(true)
@@ -52,6 +56,33 @@ function App() {
   useEffect(() => {
     fetchNotes()
   }, [])
+
+  // Hook para controlar o arraste de forma responsiva
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      // O editor está do lado direito. Calculamos a largura puxando da borda direita da tela.
+      let newWidth = window.innerWidth - e.clientX;
+      
+      // Limites: Mínimo 350px para não esmagar o form, máximo 55% da tela para deixar espaço pro PDF
+      if (newWidth < 350) newWidth = 350;
+      if (newWidth > window.innerWidth * 0.55) newWidth = window.innerWidth * 0.55;
+      
+      setEditorWidth(newWidth);
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const handleSelectNote = (note: Note) => {
     setSelectedNote(note)
@@ -307,12 +338,16 @@ function App() {
         </aside>
 
         {/* MAIN CONTENT */}
-        <main className="main">
-          <section className="pdf-container">
+        <main className="main" style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
+          
+          <section className="pdf-container" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+            {/* Camada invisível protetora: Impede que o iframe engula os eventos do mouse durante o arraste */}
+            {isDragging && <div style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'col-resize' }} />}
+
             <div className="pdf-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Eye size={14} />
-                <span>{selectedNote?.files.pdf || 'Visualizador OCR'}</span>
+                <span>{selectedNote?.files.pdf ? 'Visualizador de PDF' : 'Visualizador OCR'}</span>
               </div>
               <span>{selectedNote?.id}</span>
             </div>
@@ -325,15 +360,26 @@ function App() {
                 />
               ) : (
                 <div className="paper-sheet">
-                  <pre className="paper-content">
-                    {selectedNote?.data.rawText || 'Selecione um documento.'}
-                  </pre>
+                  <div className="no-pdf-message">
+                    <AlertCircle size={48} />
+                    <p>PDF original não encontrado nesta pasta.</p>
+                    <pre className="paper-content">
+                      {selectedNote?.data.rawText || 'Selecione um documento.'}
+                    </pre>
+                  </div>
                 </div>
               )}
             </div>
           </section>
 
-          <section className="editor">
+          {/* BARRA DE ARRASTE (RESIZER) */}
+          <div 
+            className={`resizer ${isDragging ? 'dragging' : ''}`}
+            onMouseDown={() => setIsDragging(true)}
+            title="Arraste para redimensionar"
+          />
+
+          <section className="editor" style={{ width: `${editorWidth}px`, flexShrink: 0 }}>
             <div className="editor-header">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
