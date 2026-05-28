@@ -20,7 +20,7 @@ export async function generateRateioExcel(
    * ========================= */
   worksheet.mergeCells("A1:G1");
   const titleCell = worksheet.getCell("A1");
-  titleCell.value = "Rateio Claro Belém";
+  titleCell.value = "Rateio de Despesas - Boleto";
   titleCell.font = { bold: true, size: 14 };
   titleCell.alignment = { vertical: "middle", horizontal: "center" };
   titleCell.fill = {
@@ -67,7 +67,9 @@ export async function generateRateioExcel(
    * Dados (linha 3)
    * ========================= */
   const value = boleto.financial?.chargedValue ?? 0;
+  console.log(boleto, 'Resultado vindo do boleto')
 
+  // TODO: Remover dados hardcoded e preencher com informações extraídas do boleto
   const dataRow = worksheet.addRow([
     101,
     141401011,
@@ -104,7 +106,7 @@ export async function generateRateioExcel(
     { width: 18 }
   ];
 
-  const fileName = `Rateio_${Date.now()}.xlsx`;
+  const fileName = `Rateio.xlsx`;
   const filePath = path.join(outputDir, fileName);
 
   await workbook.xlsx.writeFile(filePath);
