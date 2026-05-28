@@ -1,58 +1,58 @@
 import fs from "fs";
 import path from "path";
-import { PDFParse } from "pdf-parse";
-
-interface PDFResult {
-  text: string;
-  numpages: number;
-  numrender: number;
-  info: any;
-  metadata: any;
-  version: string;
-}
+import { extractWithAI } from "./aiExtract.js";
+import { BoletoData } from "./parseBoletoData.js";
 
 interface ExtractedData {
   fileName: string;
   outputPath: string;
   textContent: string;
+  parsedContent: BoletoData;
 }
 
+/**
+ * Função principal de extração utilizando Inteligência Artificial (Google Gemini).
+ * Agora com alta precisão humana para qualquer layout de documento.
+ */
 async function extractDataFromPDF(pdfPath: string): Promise<ExtractedData> {
-  console.log("Inicializando extração de dados...");
+  console.log(`[IA] Processando PDF: ${path.basename(pdfPath)}`);
 
   try {
     const dataBuffer = fs.readFileSync(pdfPath);
-    const uint8Array = new Uint8Array(dataBuffer);
-    const parser = new PDFParse(uint8Array);
+    
+    // Extração Inteligente via IA
+    const parsedContent = await extractWithAI(dataBuffer);
 
-    const result: any = await parser.getText();
-    const textContent = result.text || result.toString();
+    const baseName = path.basename(pdfPath, ".pdf");
+    const outputDir = path.join("src", "filesExtracted", baseName);
 
-    // 1. Pega apenas o nome do arquivo original (ex: "nota.pdf")
-    const fileName = path.basename(pdfPath, ".pdf") + ".txt";
-
-    // 2. Define o caminho da pasta de destino
-    const outputDir = path.join("src", "filesExtracted");
-
-    // 3. Verifica se a pasta existe, se não, cria ela
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // 4. Junta o caminho da pasta com o nome do arquivo
-    const outputPath = path.join(outputDir, fileName);
+    // 1. Copiar o PDF original para a pasta (Para o Dashboard exibir)
+    const pdfDestPath = path.join(outputDir, `${baseName}.pdf`);
+    fs.copyFileSync(pdfPath, pdfDestPath);
 
-    fs.writeFileSync(outputPath, textContent, "utf8");
+    // 2. Salvamos o JSON completo
+    const jsonPath = path.join(outputDir, `${baseName}.json`);
+    fs.writeFileSync(jsonPath, JSON.stringify(parsedContent, null, 2), "utf8");
 
-    console.log(`Dados salvos com sucesso em: ${outputPath}`);
+    // 3. Mantemos o TXT apenas como um log rápido/visual
+    const txtPath = path.join(outputDir, `${baseName}.txt`);
+    const additionalLog = parsedContent.additionalInfo ? `\nInformações Extras: ${JSON.stringify(parsedContent.additionalInfo)}` : "";
+    const logContent = `Extração realizada via Gemini IA\nFornecedor: ${parsedContent.supplier?.name}\nCNPJ Fornecedor: ${parsedContent.supplier?.cnpjCpf}\nValor: ${parsedContent.financial?.chargedValue}\nVencimento: ${parsedContent.financial?.dueDate}\nTipo: ${parsedContent.documentType}${additionalLog}`;
+    fs.writeFileSync(txtPath, logContent, "utf8");
 
     return {
-      fileName,
-      outputPath,
-      textContent
+      fileName: `${baseName}.json`,
+      outputPath: jsonPath,
+      outputDir: outputDir, // Retornamos o diretório para uso externo (ex: Excel)
+      textContent: logContent,
+      parsedContent,
     };
   } catch (error) {
-    console.error("Erro ao extrair ou salvar os dados:", error);
+    console.error(`Erro ao processar o arquivo ${pdfPath} com IA:`, error);
     throw error;
   }
 }

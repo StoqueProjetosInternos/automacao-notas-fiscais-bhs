@@ -1,38 +1,55 @@
+import "dotenv/config";
 import { extractDataFromPDF } from "./features/pdf/extractDataFromPDF.js";
-import { parseBoletoData } from "./features/pdf/parseBoletoData.js";
-import { processEmails } from './features/email/searchDataFromEmail.js'
 import { generateRateioExcel } from "./features/excel/generateRateioExcel.js";
-
+import { GraphEmailPdfProcessor } from "./features/email/searchDataFromEmail.js";
 import fs from "fs";
 import path from "path";
 
 async function main() {
   try {
+    console.log("--- Iniciando Automação de Notas Fiscais ---");
 
-    /*
-    //  TODO: Adicionar lógica para processar múltiplos arquivos PDF de uma pasta, ao invés de um arquivo específico
-        TODO: Reestrurar o código para realizar o processamento dos e-mails antes de gerar o OCR.
-    */  
-    const { textContent, fileName, outputPath } = await extractDataFromPDF("./test_3.pdf");
-    console.log("Extração de texto concluída:", fileName);
+    // 1. Tentar processar e-mail (Fluxo Real)
+    console.log("\n[1/2] Verificando novos e-mails via Microsoft Graph...");
 
-    const parsedData = parseBoletoData(textContent);
-    console.log("Dados parseados:", parsedData);
+    // const processor = new GraphEmailPdfProcessor({
+    //   tenantId: process.env.TENANT_ID || "",
+    //   clientId: process.env.CLIENT_ID || "",
+    //   clientSecret: process.env.CLIENT_SECRET || "",
+    //   userEmail: process.env.USER_EMAIL || "",
+    //   tempDir: path.join("src", "tmp"),
+    //   outputDir: path.join("src", "filesExtracted"),
+    //   markAsReadAfterSuccess: false, // Mude para true em produção
+    // });
 
-    const outputDir = path.join("src", "filesExtracted");
-    const jsonFileName = path.basename(fileName, ".txt") + ".json";
-    const jsonOutputPath = path.join(outputDir, jsonFileName);
-    fs.writeFileSync(jsonOutputPath, JSON.stringify(parsedData, null, 2), "utf8");
-    
-    console.log(`Dados estruturados salvos em: ${jsonOutputPath}`);
+    // const emailResult = await processor.processOneLatestUnread();
+    const emailResult = null; // Simulando ausência de e-mails para teste local
 
-    const excelPath = generateRateioExcel(parsedData);
-    console.log(`Excel de rateio gerado em: ${excelPath}`);
+    if (emailResult) {
+      console.log(`E-mail "${emailResult.subject}" e seus anexos processados com sucesso.`);
+    } else {
+      console.log("Nenhum e-mail novo não lido com PDF encontrado.");
 
-    // await processEmails();
+      // 2. Fallback para Teste Local (Se não houver e-mail)
+      console.log("\n[2/2] Executando processamento local de teste (test_5.pdf)...");
+      const localPdf = "./test_11.pdf";
+
+      if (fs.existsSync(localPdf)) {
+        const { parsedContent, outputDir } = await extractDataFromPDF(localPdf);
+        const excelPath = await generateRateioExcel(parsedContent, outputDir);
+        console.log(`\nProcessamento local concluído.`);
+        console.log(`Pasta: ${outputDir}`);
+        console.log(`Excel gerado: ${excelPath}`);
+      } else {
+        console.warn("Arquivo test_5.pdf não encontrado para o fallback local.");
+      }
+    }
+
+    console.log("\n--- Fluxo Finalizado ---");
+
   } catch (error) {
-    console.error("Erro no main:", error);
+    console.error("Erro no fluxo principal:", error);
   }
 }
 
-main()
+main();
