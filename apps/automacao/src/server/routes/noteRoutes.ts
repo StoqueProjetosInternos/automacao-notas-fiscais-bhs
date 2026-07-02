@@ -9,6 +9,9 @@ router.get('/', NoteController.getAllNotes);
 // Rota para obter logs de consumo
 router.get('/usage', NoteController.getUsageLog);
 
+// Rota para obter logs gerais de console da API
+router.get('/logs', NoteController.getApiLogs);
+
 // Rota para sincronizar e-mails
 router.post('/sync', NoteController.syncNotes);
 

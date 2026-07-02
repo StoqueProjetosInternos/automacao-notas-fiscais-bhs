@@ -1994,3 +1994,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Restaurar a chamada de refreshNotesList() em handleDeleteNote no Dashboard/index.tsx.
 - Status: Aplicado
+
+### CHG-0136 — Implementação de Terminal de Consulta de Logs da API
+
+- Data/Hora: 2026-07-02 13:13
+- Contexto: Operadores do dashboard necessitam de autonomia para auditar logs de console diretamente pelo painel web para investigar falhas de e-mails ou extração.
+- Objetivo: Capturar saídas do console do backend em um arquivo de log local com mascaramento de segredos e rotação por tamanho, expondo um endpoint e aba correspondente no dashboard.
+- Escopo:
+  - Backend: [config/logger.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/config/logger.ts), [index.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/index.ts), [controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts), [routes/noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts)
+  - Frontend: [services/api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts), [components/Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Vazamento acidental de tokens do Azure Active Directory ou do Graph API. (Mitigado com RegExp de substituição que varre as variáveis secretas de ambiente do process.env no texto do log antes da gravação).
+- Proposta: Interceptar console.log e console.error globais gravando em api.log, configurar rota GET e renderizar aba terminal preta com cópia rápida no dashboard.
+- Testes:
+  - Abrir aba de logs, clicar em atualizar, testar cópia de texto e garantir ocultamento de segredos de ambiente.
+- Rollback:
+  - Reverter as alterações nos arquivos e excluir o arquivo config/logger.ts.
+- Status: Aplicado

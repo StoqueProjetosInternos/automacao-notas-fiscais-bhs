@@ -3,7 +3,7 @@ import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
-import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, type UsageLog } from '../../services/api';
+import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
 import { ArrowLeft, RefreshCcw } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
@@ -76,9 +76,11 @@ interface Toast {
 export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [activeTab, setActiveTab] = useState<'notes' | 'history'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs'>('notes');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [apiLogs, setApiLogs] = useState<string>('');
+  const [loadingApiLogs, setLoadingApiLogs] = useState(false);
 
   // Estados para Filtros e Paginação do Histórico
   const [historySearchTerm, setHistorySearchTerm] = useState('');
@@ -131,9 +133,24 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const loadApiLogs = async () => {
+    setLoadingApiLogs(true);
+    try {
+      const logs = await fetchApiLogs();
+      setApiLogs(logs);
+    } catch (error) {
+      console.error('Erro ao carregar logs da API:', error);
+      showToast('Falha ao carregar logs do servidor.', 'error');
+    } finally {
+      setLoadingApiLogs(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history') {
       loadUsageLogs();
+    } else if (activeTab === 'logs') {
+      loadApiLogs();
     }
   }, [activeTab]);
 
@@ -419,7 +436,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               )}
             </div>
           </>
-        ) : (
+        ) : activeTab === 'history' ? (
           <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -747,6 +764,140 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   >
                     Próxima
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    onClick={() => setActiveTab('notes')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      border: '1px solid #e5e7eb',
+                      background: 'white',
+                      color: '#4b5563',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.color = '#111827';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.color = '#4b5563';
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    Logs de Execução da API
+                  </h2>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    className="btn btn-outline"
+                    onClick={loadApiLogs}
+                    disabled={loadingApiLogs}
+                    style={{ 
+                      padding: '6px 12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <RefreshCcw size={14} className={loadingApiLogs ? 'animate-spin' : ''} />
+                    Atualizar
+                  </button>
+                </div>
+              </div>
+
+              <div style={{
+                flex: 1,
+                minHeight: '400px',
+                background: '#1e1e1e',
+                borderRadius: '8px',
+                padding: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid #333',
+                  marginBottom: '12px'
+                }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#888' }}>
+                    Visualização das últimas 200 linhas de console (console.log / console.error)
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(apiLogs);
+                      showToast('Logs copiados para a área de transferência.', 'success');
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #555',
+                      borderRadius: '4px',
+                      color: '#ccc',
+                      fontSize: '0.7rem',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#333';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#ccc';
+                    }}
+                  >
+                    Copiar Logs
+                  </button>
+                </div>
+
+                <div 
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    fontFamily: 'Consolas, Monaco, "Courier New", Courier, monospace',
+                    fontSize: '0.75rem',
+                    color: '#f1f1f1',
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    padding: '8px',
+                    backgroundColor: '#121212',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {loadingApiLogs ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#888' }}>
+                      Carregando logs...
+                    </div>
+                  ) : apiLogs.trim() === '' ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#888' }}>
+                      Nenhum registro de log encontrado.
+                    </div>
+                  ) : (
+                    apiLogs
+                  )}
                 </div>
               </div>
             </div>
