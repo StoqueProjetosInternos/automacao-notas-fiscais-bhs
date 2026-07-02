@@ -34,11 +34,11 @@ async function main() {
       markAsReadAfterSuccess: false, // Mude para true em produção
     });
 
-    const emailResult = await processor.processOneLatestUnread();
-    // const emailResult: any = null; // Simulando ausência de e-mails para teste local
+    const emailResults = await processor.processLatestUnreadEmails(5);
+    // const emailResults: any[] = []; // Simulando ausência de e-mails para teste local
 
-    if (emailResult) {
-      console.log(`E-mail "${emailResult.subject}" e seus anexos processados com sucesso.`);
+    if (emailResults.length > 0) {
+      console.log(`${emailResults.length} e-mail(s) e seus anexos processados com sucesso.`);
     } else {
       console.log("Nenhum e-mail novo não lido com PDF encontrado.");
 

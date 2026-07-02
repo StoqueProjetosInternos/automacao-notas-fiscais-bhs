@@ -48,9 +48,43 @@ export const Sidebar = ({
     setCurrentPage(1);
   }
   
-  const filteredNotes = notes.filter(n => 
-    n.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredNotes = notes.filter(n => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+
+    const idMatches = n.id.toLowerCase().includes(term);
+    const fileNameMatches = n.fileName ? n.fileName.toLowerCase().includes(term) : false;
+    
+    const supplierNameMatches = n.data.supplier?.name ? n.data.supplier.name.toLowerCase().includes(term) : false;
+    const supplierCnpjMatches = n.data.supplier?.cnpjCpf ? n.data.supplier.cnpjCpf.toLowerCase().includes(term) : false;
+    
+    const payerNameMatches = n.data.payer?.name ? n.data.payer.name.toLowerCase().includes(term) : false;
+    const payerCnpjMatches = n.data.payer?.cnpjCpf ? n.data.payer.cnpjCpf.toLowerCase().includes(term) : false;
+    
+    const beneficiaryNameMatches = n.data.beneficiary?.name ? n.data.beneficiary.name.toLowerCase().includes(term) : false;
+    
+    const dueDateMatches = n.data.financial?.dueDate ? n.data.financial.dueDate.toLowerCase().includes(term) : false;
+    const issueDateMatches = n.data.financial?.issueDate ? n.data.financial.issueDate.toLowerCase().includes(term) : false;
+    const competenceDateMatches = n.data.financial?.competenceDate ? n.data.financial.competenceDate.toLowerCase().includes(term) : false;
+    
+    const docNumMatches = n.data.documentIdentifiers?.documentNumber ? n.data.documentIdentifiers.documentNumber.toLowerCase().includes(term) : false;
+    const ourNumMatches = n.data.documentIdentifiers?.ourNumber ? n.data.documentIdentifiers.ourNumber.toLowerCase().includes(term) : false;
+
+    return (
+      idMatches ||
+      fileNameMatches ||
+      supplierNameMatches ||
+      supplierCnpjMatches ||
+      payerNameMatches ||
+      payerCnpjMatches ||
+      beneficiaryNameMatches ||
+      dueDateMatches ||
+      issueDateMatches ||
+      competenceDateMatches ||
+      docNumMatches ||
+      ourNumMatches
+    );
+  });
 
   // Função utilitária para converter data brasileira (DD/MM/AAAA) para milissegundos
   const parseDate = (dateStr?: string): number => {

@@ -1882,3 +1882,55 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter as condicionais de renderização no index.tsx.
 - Status: Aplicado
+
+### CHG-0129 — Processamento Multithread Sequencial de Faturas e Progresso no Toaster
+
+- Data/Hora: 2026-07-02 12:18
+- Contexto: O processamento de e-mails capturava apenas uma mensagem por ciclo. Além disso, a sincronização longa carecia de feedback visual detalhado no frontend, deixando o usuário sem acompanhar o status.
+- Objetivo:
+  1) Modificar o processador de e-mails para ler até 5 itens não lidos em sequência tranquila.
+  2) Implementar um toast persistente de progresso com spinner e barra de progresso indeterminada no dashboard do frontend durante a sincronização ativa.
+  3) Personalizar mensagem de aviso amigável quando a fila de e-mails não contiver novas mensagens.
+- Escopo:
+  - Backend: [features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts), [main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/main.ts), [server/services/noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts), [server/controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. A barra de progresso no frontend utiliza classes nativas de CSS com transições suaves e sem consumo adicional de recursos.
+- Proposta: Implementar métodos de lote no plural no processador, estender a API HTTP, injetar a barra animada de progresso vinculada ao estado isSyncing, e atualizar resposta de fila vazia.
+- Testes:
+  - Clicar em Sincronizar e validar a aparição do toast de progresso com barra azul contínua.
+  - Verificar no backend o processamento ordenado e sequencial das últimas 5 mensagens da caixa.
+  - Testar o comportamento da sincronização sem e-mails na caixa e checar se o toast informativo de fila vazia é exibido.
+- Rollback:
+  - Reverter as alterações nos arquivos alterados do frontend e backend.
+- Status: Aplicado
+
+### CHG-0130 — Restrição da Busca de E-mails à Caixa de Entrada com Anexos
+
+- Data/Hora: 2026-07-02 12:24
+- Contexto: A listagem geral de mensagens (/messages) no Microsoft Graph retornava itens indesejados de outras pastas (como Itens Enviados, Rascunhos ou Lixeira) e mensagens de texto sem anexos, poluindo a fila de importação de faturas.
+- Objetivo: Restringir a busca apenas para a pasta Caixa de Entrada (/mailFolders/inbox/messages) e aplicar um filtro adicional no OData da Graph API exigindo que a mensagem possua anexos (hasAttachments eq true).
+- Escopo:
+  - Backend: [features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+- Riscos: Nenhum. É um refinamento da consulta HTTP do Microsoft Graph que reduz o volume de mensagens baixadas e analisadas.
+- Proposta: Alterar a URL do endpoint da Graph API e estender o parâmetro $filter para conter hasAttachments eq true.
+- Testes:
+  - Garantir que apenas e-mails não lidos localizados na Inbox e que possuam anexos sejam retornados na busca.
+  - Verificar que mensagens sem anexos (ou em pastas como Rascunhos) são ignoradas pela rotina.
+- Rollback:
+  - Reverter a URL do endpoint e o filtro OData no searchDataFromEmail.ts para o estado anterior.
+- Status: Aplicado
+
+### CHG-0131 — Expansão dos Critérios de Filtro de Busca na Barra Lateral
+
+- Data/Hora: 2026-07-02 12:48
+- Contexto: A pesquisa lateral de faturas estava limitada à busca pelo nome do arquivo do documento (propriedade id), prejudicando a busca por parceiros, datas ou identificadores do documento.
+- Objetivo: Expandir o filtro de busca local para checar nomes de parceiros, CNPJ/CPF, datas financeiras e números de documentos.
+- Escopo:
+  - Frontend: [components/Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Exceções de referência nula ao acessar propriedades opcionais do JSON de faturas. (Mitigado com uso de encadeamento opcional e checagens ternárias).
+- Proposta: Reescrever a expressão do notes.filter no Sidebar.tsx adicionando mapeamento para múltiplos campos opcionais do NoteData.
+- Testes:
+  - Realizar pesquisas no painel lateral usando partes de CNPJ, datas de vencimento e nomes de parceiros e comprovar a filtragem síncrona.
+- Rollback:
+  - Reverter a expressão do filtro do Sidebar.tsx para a busca padrão baseada em n.id.
+- Status: Aplicado

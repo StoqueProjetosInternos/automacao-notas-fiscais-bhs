@@ -5,7 +5,7 @@ import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
 import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCcw } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
 
 const NUMERIC_FIELDS = [
@@ -755,6 +755,24 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
       {/* Toasts de Notificação */}
       <div className="toast-container">
+        {isSyncing && (
+          <div className="toast toast-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <RefreshCcw size={14} className="animate-spin" style={{ color: '#2563eb' }} />
+              <span>Sincronizando e-mails e importando faturas...</span>
+            </div>
+            <div style={{
+              height: '4px',
+              background: '#dbeafe',
+              borderRadius: '2px',
+              overflow: 'hidden',
+              position: 'relative',
+              width: '100%'
+            }}>
+              <div className="progress-bar-loading" />
+            </div>
+          </div>
+        )}
         {toasts.map((toast) => (
           <div 
             key={toast.id} 

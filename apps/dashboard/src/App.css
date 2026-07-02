@@ -516,6 +516,35 @@ html, body, #root {
   }
 }
 
+.progress-bar-loading {
+  position: absolute;
+  height: 100%;
+  background-color: #2563eb;
+  border-radius: 2px;
+  animation: indeterminateProgress 1.5s infinite linear;
+  left: 0;
+  top: 0;
+}
+
+@keyframes indeterminateProgress {
+  0% {
+    left: -35%;
+    right: 100%;
+    width: 35%;
+  }
+  50% {
+    left: 100%;
+    right: -35%;
+    width: 35%;
+  }
+  100% {
+    left: 100%;
+    right: -35%;
+    width: 35%;
+  }
+}
+
+
 /* =========================================
    ESTILOS DO MODAL DE RATEIOS (APPORTIONMENT)
    ========================================= */

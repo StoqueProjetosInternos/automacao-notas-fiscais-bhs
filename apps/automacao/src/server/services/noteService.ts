@@ -235,7 +235,7 @@ export class NoteService {
     return result;
   }
 
-  public static async syncOneEmail() {
+  public static async syncEmails() {
     const processor = new GraphEmailPdfProcessor({
       tenantId: process.env.TENANT_ID || "",
       clientId: process.env.CLIENT_ID || "",
@@ -246,6 +246,6 @@ export class NoteService {
       markAsReadAfterSuccess: true, // Marcar no e-mail real como lido
     });
 
-    return await processor.processOneLatestUnread();
+    return await processor.processLatestUnreadEmails(5);
   }
 }

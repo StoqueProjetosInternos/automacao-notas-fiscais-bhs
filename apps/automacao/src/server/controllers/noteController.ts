@@ -75,18 +75,18 @@ export class NoteController {
 
   public static async syncNotes(req: Request, res: Response) {
     try {
-      const result = await NoteService.syncOneEmail();
-      if (result) {
+      const results = await NoteService.syncEmails();
+      if (results.length > 0) {
         res.json({ 
           success: true, 
           imported: true, 
-          message: `Nova fatura do e-mail "${result.subject}" importada com sucesso.` 
+          message: `${results.length} fatura(s) de e-mail(s) importada(s) com sucesso.` 
         });
       } else {
         res.json({ 
           success: true, 
           imported: false, 
-          message: 'Nenhum e-mail novo com anexo PDF encontrado.' 
+          message: 'A fila de e-mails está vazia. Não há novas faturas para processar no momento.' 
         });
       }
     } catch (error: any) {

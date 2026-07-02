@@ -227,50 +227,56 @@ export class GraphEmailPdfProcessor {
    * - (opcional) marca como lido se tudo deu certo
    * - MUDAR ESSE NOME DEPOIS, POIS ESTÁ CONSIDERANDO APENAS UM E-MAIL POR VEZ, MAS A IDEIA É DEPOIS PROCESSAR VÁRIOS EM LOOP (OU TODOS).
    */
-  public async processOneLatestUnread(): Promise<NormalizedEmail | null> {
+  public async processLatestUnreadEmails(limit: number = 5): Promise<NormalizedEmail[]> {
     try {
-      const email = await this.fetchLatestUnreadEmail();
-      if (!email) return null;
+      const emails = await this.fetchLatestUnreadEmails(limit);
+      if (!emails || emails.length === 0) return [];
 
-      const normalized = normalizeEmail(email);
+      const processedEmails: NormalizedEmail[] = [];
 
-      console.log([normalized], "Emails Normalizados em JSON");
-      console.log("Assunto:", normalized.subject);
-      console.log("De:", normalized.from.address);
-      console.log("Recebido em:", normalized.receivedDateTime);
-      console.log("Conteúdo (última mensagem, limpo):");
-      console.log(normalized.bodyText);
+      for (const email of emails) {
+        const normalized = normalizeEmail(email);
 
-      let processedAllPdfs = true;
+        console.log([normalized], "Emails Normalizados em JSON");
+        console.log("Assunto:", normalized.subject);
+        console.log("De:", normalized.from.address);
+        console.log("Recebido em:", normalized.receivedDateTime);
+        console.log("Conteúdo (última mensagem, limpo):");
+        console.log(normalized.bodyText);
 
-      if (email.hasAttachments) {
-        const attachments = await this.fetchAttachments(email.id);
+        let processedAllPdfs = true;
 
-        for (const file of attachments) {
-          if (!file.name?.toLowerCase().endsWith(".pdf")) continue;
+        if (email.hasAttachments) {
+          const attachments = await this.fetchAttachments(email.id);
 
-          const ok = await this.processPdfAttachment(file);
-          if (!ok) processedAllPdfs = false;
+          for (const file of attachments) {
+            if (!file.name?.toLowerCase().endsWith(".pdf")) continue;
+
+            const ok = await this.processPdfAttachment(file);
+            if (!ok) processedAllPdfs = false;
+          }
         }
+
+        // marca como lido somente se configurado e se não houve erro nos PDFs
+        if (this.cfg.markAsReadAfterSuccess && processedAllPdfs) {
+          await this.markEmailAsRead(email.id);
+          console.log(`E-mail "${email.subject}" marcado como lido.`);
+        }
+
+        // log extra
+        if (email.body) {
+          console.log("Conteúdo do E-mail (Tipo:", email.body.contentType, "):");
+          console.log(email.body.content);
+        }
+
+        console.log("---------------");
+        processedEmails.push(normalized);
       }
 
-      // marca como lido somente se configurado e se não houve erro nos PDFs
-      if (this.cfg.markAsReadAfterSuccess && processedAllPdfs) {
-        await this.markEmailAsRead(email.id);
-        console.log(`E-mail "${email.subject}" marcado como lido.`);
-      }
-
-      // log extra (mantive)
-      if (email.body) {
-        console.log("Conteúdo do E-mail (Tipo:", email.body.contentType, "):");
-        console.log(email.body.content);
-      }
-
-      console.log("---------------");
-      return normalized;
+      return processedEmails;
     } catch (error) {
       console.error("Erro no processamento de e-mails via Microsoft Graph:", error);
-      return null;
+      return [];
     }
   }
 
@@ -303,31 +309,31 @@ export class GraphEmailPdfProcessor {
     return this.accessToken;
   }
 
-  private async fetchLatestUnreadEmail(): Promise<EmailMessage | null> {
+  private async fetchLatestUnreadEmails(limit: number = 5): Promise<EmailMessage[]> {
     const token = await this.getToken();
 
     /**
-     * - $top=1 e $orderby=receivedDateTime desc para pegar o mais recente.
+     * - $top=limit e $orderby=receivedDateTime desc para pegar os mais recentes.
      * - Prefer: outlook.body-content-type="text" para devolver body em texto
-     *   (o Graph documenta esse header como forma de escolher text/html). [3](https://learn.microsoft.com/en-us/graph/api/message-get?view=graph-rest-1.0)[4](https://learn.microsoft.com/en-us/answers/questions/1083866/how-to-receive-email-messages-in-plain-text-format)
+     *   (o Graph documenta esse header como forma de escolher text/html).
      *
-     * Observação: sem orderby o Graph não garante ordem; por isso usamos receivedDateTime desc. [5](https://stackoverflow.com/questions/66836038/how-to-receive-messages-in-ascending-by-received-date-order-in-graph-api)
+     * Observação: sem orderby o Graph não garante ordem; por isso usamos receivedDateTime desc.
      */
     const url =
-      `/users/${encodeURIComponent(this.cfg.userEmail)}/messages` +
-      `?$top=1` +
+      `/users/${encodeURIComponent(this.cfg.userEmail)}/mailFolders/inbox/messages` +
+      `?$top=${limit}` +
       `&$orderby=receivedDateTime desc` +
-      `&$filter=isRead eq false` +
+      `&$filter=isRead eq false and hasAttachments eq true` +
       `&$select=id,subject,from,isRead,receivedDateTime,conversationId,internetMessageId,hasAttachments,bodyPreview,body`;
 
     const response = await this.graph.get<EmailsResponse>(url, {
       headers: {
         Authorization: `Bearer ${token}`,
-        Prefer: `outlook.body-content-type="text"`, // corpo em texto [3](https://learn.microsoft.com/en-us/graph/api/message-get?view=graph-rest-1.0)[4](https://learn.microsoft.com/en-us/answers/questions/1083866/how-to-receive-email-messages-in-plain-text-format)
+        Prefer: `outlook.body-content-type="text"`, // corpo em texto
       },
     });
 
-    return response.data.value?.[0] ?? null;
+    return response.data.value ?? [];
   }
 
   private async fetchAttachments(messageId: string): Promise<Attachment[]> {
