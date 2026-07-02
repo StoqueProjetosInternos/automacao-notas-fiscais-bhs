@@ -30,28 +30,32 @@ async function extractDataFromPDF(pdfPath: string): Promise<ExtractedData> {
     // Enriquecimento de dados contábeis via base de referência
     const parsedContent = await enrichData(parsedContentRaw);
 
-    const outputDir = path.join(FILES_DIR, baseName);
+    const cleanSupplierName = (parsedContent.supplier?.name || "Fornecedor_Nao_Identificado")
+      .replace(/[\\/:*?"<>|.]/g, "")
+      .trim();
+    const folderName = `${cleanSupplierName}_${baseName}`;
+    const outputDir = path.join(FILES_DIR, folderName);
 
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
     // 1. Copiar o PDF original para a pasta (Para o Dashboard exibir)
-    const pdfDestPath = path.join(outputDir, `${baseName}.pdf`);
+    const pdfDestPath = path.join(outputDir, `${folderName}.pdf`);
     fs.copyFileSync(pdfPath, pdfDestPath);
 
     // 2. Salvamos o JSON completo
-    const jsonPath = path.join(outputDir, `${baseName}.json`);
+    const jsonPath = path.join(outputDir, `${folderName}.json`);
     fs.writeFileSync(jsonPath, JSON.stringify(parsedContent, null, 2), "utf8");
 
     // 3. Mantemos o TXT apenas como um log rápido/visual
-    const txtPath = path.join(outputDir, `${baseName}.txt`);
+    const txtPath = path.join(outputDir, `${folderName}.txt`);
     const additionalLog = parsedContent.additionalInfo ? `\nInformações Extras: ${JSON.stringify(parsedContent.additionalInfo)}` : "";
     const logContent = `Extração realizada via Gemini IA\nFornecedor: ${parsedContent.supplier?.name}\nCNPJ Fornecedor: ${parsedContent.supplier?.cnpjCpf}\nValor: ${parsedContent.financial?.chargedValue}\nVencimento: ${parsedContent.financial?.dueDate}\nTipo: ${parsedContent.documentType}${additionalLog}`;
     fs.writeFileSync(txtPath, logContent, "utf8");
 
     return {
-      fileName: `${baseName}.json`,
+      fileName: `${folderName}.json`,
       outputPath: jsonPath,
       outputDir: outputDir, // Retornamos o diretório para uso externo (ex: Excel)
       textContent: logContent,

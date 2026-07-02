@@ -1934,3 +1934,18 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter a expressão do filtro do Sidebar.tsx para a busca padrão baseada em n.id.
 - Status: Aplicado
+
+### CHG-0132 — Organização das Pastas Extraídas com Nome do Fornecedor
+
+- Data/Hora: 2026-07-02 12:56
+- Contexto: A criação das pastas de faturas em data/extracted utilizava apenas o nome original do arquivo (como test_16), dificultando a identificação manual do parceiro comercial.
+- Objetivo: Renomear pastas e arquivos gerados contendo o nome sanitizado do fornecedor concatenado ao nome original da fatura, preservando a integridade das referências dinâmicas do backend.
+- Escopo:
+  - Backend: [features/pdf/extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts), [features/excel/generateRateioExcel.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/excel/generateRateioExcel.ts)
+- Riscos: Quebra na listagem de documentos se os arquivos internos não coincidirem com o ID da pasta. (Resolvido aplicando a renomeação em todos os arquivos de extensão .json, .pdf, .txt e .xlsx).
+- Proposta: Sanitizar o nome do parceiro extraído da IA e compor os nomes de pasta e arquivos finais, ajustando também o gerador de Excel para acompanhar o nome dinâmico da pasta.
+- Testes:
+  - Processar uma fatura de teste e garantir a criação da pasta composta e o correto carregamento dos arquivos (JSON, PDF, Excel) no frontend do dashboard.
+- Rollback:
+  - Reverter as alterações nos arquivos extractDataFromPDF.ts and generateRateioExcel.ts.
+- Status: Aplicado
