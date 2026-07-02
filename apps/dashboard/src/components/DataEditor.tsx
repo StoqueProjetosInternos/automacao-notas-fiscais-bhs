@@ -378,22 +378,41 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             </div>
             
             <div className="modal-search-bar" style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: '#f9fafb', display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <input
-                type="text"
-                placeholder="Buscar por descrição, CR, número de série..."
-                className="search-box"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ flex: 1, margin: 0 }}
-              />
-              {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm('')} 
-                  style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer' }}
-                >
-                  Limpar
-                </button>
-              )}
+              <div style={{ position: 'relative', flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="Buscar por descrição, CR, número de série..."
+                  className="search-box"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '100%', margin: 0, paddingRight: '2.5rem' }}
+                />
+                {searchTerm && (
+                  <button 
+                    type="button"
+                    onClick={() => setSearchTerm('')} 
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#9ca3af',
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      outline: 'none'
+                    }}
+                    title="Limpar busca"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="modal-body" style={{ overflowY: 'auto', padding: '1.5rem', flex: 1 }}>

@@ -497,21 +497,50 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 250px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Pesquisa Rápida</label>
-                  <input
-                    type="text"
-                    value={historySearchTerm}
-                    onChange={(e) => setHistorySearchTerm(e.target.value)}
-                    placeholder="Filtrar por nome do arquivo ou fornecedor..."
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: '0.8rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      outline: 'none',
-                      backgroundColor: '#ffffff',
-                      color: '#1f2937'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={historySearchTerm}
+                      onChange={(e) => setHistorySearchTerm(e.target.value)}
+                      placeholder="Filtrar por nome do arquivo ou fornecedor..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 30px 8px 12px',
+                        fontSize: '0.8rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        color: '#1f2937',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {historySearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setHistorySearchTerm('')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#9ca3af',
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          outline: 'none'
+                        }}
+                        title="Limpar busca"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '180px' }}>

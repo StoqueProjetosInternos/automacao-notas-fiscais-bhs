@@ -143,10 +143,35 @@ export const Sidebar = ({
           <input 
             className="search-box" 
             placeholder="Pesquisar arquivos..." 
-            style={{ paddingLeft: '2.25rem' }}
+            style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem' }}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: '#9ca3af',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                outline: 'none'
+              }}
+              title="Limpar busca"
+            >
+              &times;
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
           <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>Ordenar:</span>
