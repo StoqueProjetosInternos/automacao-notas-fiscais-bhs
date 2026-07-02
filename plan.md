@@ -2025,3 +2025,18 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Readicionar o parâmetro de $orderby no arquivo searchDataFromEmail.ts.
 - Status: Aplicado
+
+### CHG-0138 — Redirecionamento da Logo para Página Inicial
+
+- Data/Hora: 2026-07-02 13:36
+- Contexto: O logotipo da Stoque no cabeçalho era um elemento estático e não possuía ação associada.
+- Objetivo: Tornar o logotipo clicável para redirecionar o usuário diretamente para a aba inicial de Faturas.
+- Escopo:
+  - Frontend: [components/Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Nenhum. Melhoria pura de UX.
+- Proposta: Adicionar cursor pointer e manipulador onClick disparando onChangeTab('notes') no elemento img do logotipo.
+- Testes:
+  - Clicar na logo a partir das telas de histórico e logs e verificar o retorno automático para a aba inicial.
+- Rollback:
+  - Remover as propriedades cursor e onClick do elemento img da logo em Header.tsx.
+- Status: Aplicado

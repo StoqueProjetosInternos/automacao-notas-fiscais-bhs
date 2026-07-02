@@ -18,7 +18,8 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           alt="Stoque" 
           width="120" 
           height="34"
-          style={{ display: 'block' }}
+          style={{ display: 'block', cursor: 'pointer' }}
+          onClick={() => onChangeTab('notes')}
         />
         <span style={{ 
           marginLeft: '8px', 
