@@ -1,0 +1,12 @@
+{
+  "name": "stoque-fiscal-intelligence-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w stoque-fiscal-intelligence",
+    "usage": "npm run usage -w stoque-fiscal-intelligence",
+    "go": "npx tsx apps/automacao/src/server/index.ts"
+  }
+}

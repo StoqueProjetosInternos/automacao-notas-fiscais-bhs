@@ -1,9 +1,39 @@
+# Dependências e builds do monorepo
 node_modules/
 dist/
+dist-ssr/
+
+# Variáveis de ambiente e segredos locais
 .env
+.env.local
+.env.*.local
+
+# Pastas de dados e arquivos temporários da automação
+data/
 temp/
+.tmp/
+
+# Logs de depuração (npm, yarn, etc.)
 *.log
-*.pdf
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Arquivos de testes e relatórios gerados localmente
+/test_*.pdf
+/Rateio.xlsx
 *.xlsx
-*.json
-*.txt
+*.xls
+*.xlsb
+
+# Configurações do sistema operacional e IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
