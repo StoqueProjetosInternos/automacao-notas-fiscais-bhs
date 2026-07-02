@@ -286,6 +286,16 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     setFormData(newFormData);
   };
 
+  const handleDeleteApportionmentRow = (index: number) => {
+    if (!formData || !formData.apportionment) return;
+    const newApportionment = [...formData.apportionment];
+    newApportionment.splice(index, 1);
+    setFormData({
+      ...formData,
+      apportionment: newApportionment
+    });
+  };
+
   const handleSave = async (statusOverride?: string, silent?: boolean) => {
     if (!selectedNote || !formData) return;
 
@@ -425,6 +435,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                         onInputChange={handleInputChange}
                         onSave={handleSave}
                         onReprocess={handleReprocess}
+                        onDeleteApportionmentRow={handleDeleteApportionmentRow}
                       />
                     )}
                   </div>
@@ -811,13 +822,15 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     disabled={loadingApiLogs}
                     style={{ 
                       padding: '6px 12px',
+                      opacity: loadingApiLogs ? 0.7 : 1,
+                      cursor: loadingApiLogs ? 'not-allowed' : 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px'
                     }}
                   >
                     <RefreshCcw size={14} className={loadingApiLogs ? 'animate-spin' : ''} />
-                    Atualizar
+                    {loadingApiLogs ? 'Carregando...' : 'Atualizar'}
                   </button>
                 </div>
               </div>

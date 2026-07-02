@@ -2040,3 +2040,33 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Remover as propriedades cursor e onClick do elemento img da logo em Header.tsx.
 - Status: Aplicado
+
+### CHG-0139 — Feedback Visual de Carregamento nos Logs
+
+- Data/Hora: 2026-07-02 13:39
+- Contexto: O botão de atualizar os logs não fornecia feedback visual completo de desabilitado/carregando além do giro do ícone, diferindo do comportamento de sincronização.
+- Objetivo: Equalizar o comportamento visual e interativo dos botões de processamento assíncrono adicionando opacidade, cursor bloqueado e texto dinâmico.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Puramente estético.
+- Proposta: Aplicar as condicionais baseadas no estado loadingApiLogs no botão de atualização de logs.
+- Testes:
+  - Clicar em Atualizar nos logs e conferir as transições de cursor, opacidade e texto.
+- Rollback:
+  - Reverter as alterações no botão no Dashboard/index.tsx.
+- Status: Aplicado
+
+### CHG-0140 — Remoção de Itens de Rateio com Sincronismo em Excel
+
+- Data/Hora: 2026-07-02 16:13
+- Contexto: Não era possível aos analistas realizarem a exclusão de itens de rateio inconsistentes diretamente pelo modal de edição detalhado do dashboard.
+- Objetivo: Proporcionar um botão de exclusão de linhas na tabela de rateios do modal e propagar a deleção para o salvamento e regeração automatizada de planilhas.
+- Escopo:
+  - Frontend: [components/DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Redução acidental de linhas sem clicar em salvar (Mitigado por atuar sobre o estado local formData, permitindo descarte caso o usuário feche sem confirmar).
+- Proposta: Inserir a lixeira vermelha na tabela do modal vinculando o onDeleteApportionmentRow ao estado React, gerando o Excel de rateios atualizado após a persistência.
+- Testes:
+  - Deletar itens no modal, salvar a fatura e inspecionar a planilha Excel comprovando a exclusão dos rateios.
+- Rollback:
+  - Desfazer as adições na tabela do DataEditor.tsx e remover o manipulador no Dashboard/index.tsx.
+- Status: Aplicado

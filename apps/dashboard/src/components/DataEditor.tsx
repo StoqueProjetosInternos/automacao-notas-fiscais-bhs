@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Save, Check, AlertCircle, RefreshCcw } from 'lucide-react';
+import { FileText, Save, Check, AlertCircle, RefreshCcw, Trash2 } from 'lucide-react';
 import type { Note, NoteData } from '../types';
 
 interface DataEditorProps {
@@ -9,6 +9,7 @@ interface DataEditorProps {
   onInputChange: (path: string[], value: string) => void;
   onSave: (statusOverride?: string, silent?: boolean) => void;
   onReprocess: () => void;
+  onDeleteApportionmentRow: (index: number) => void;
 }
 
 const labelMap: Record<string, string> = {
@@ -105,9 +106,26 @@ const getLabel = (key: string) => {
   return labelMap[key] || key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').toUpperCase();
 };
 
-export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onSave, onReprocess }: DataEditorProps) => {
+export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onSave, onReprocess, onDeleteApportionmentRow }: DataEditorProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [rowToDelete, setRowToDelete] = useState<number | null>(null);
+  const [skipConfirm, setSkipConfirm] = useState(() => localStorage.getItem('skip_apportionment_delete_confirm') === 'true');
+
+  const handleDeleteClick = (index: number) => {
+    if (skipConfirm) {
+      onDeleteApportionmentRow(index);
+    } else {
+      setRowToDelete(index);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (rowToDelete !== null) {
+      onDeleteApportionmentRow(rowToDelete);
+      setRowToDelete(null);
+    }
+  };
   
   const renderRecursiveFields = (obj: any, path: string[] = []): React.ReactNode => {
     if (!obj) return null;
@@ -390,6 +408,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                     <th style={{ padding: '10px', fontWeight: 600, width: '120px' }}>Natureza</th>
                     <th style={{ padding: '10px', fontWeight: 600, width: '120px' }}>Contrato</th>
                     <th style={{ padding: '10px', fontWeight: 600, width: '130px' }}>Série</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '50px', textAlign: 'center' }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -457,6 +476,26 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                             style={{ padding: '6px', fontSize: '0.75rem' }}
                           />
                         </td>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className="modal-delete-btn"
+                            onClick={() => handleDeleteClick(originalIndex)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '4px',
+                              outline: 'none'
+                            }}
+                            title="Excluir item de rateio"
+                          >
+                            <Trash2 size={14} color="#ef4444" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -471,6 +510,69 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                 Concluir
               </button>
             </div>
+
+            {rowToDelete !== null && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 1000
+              }}>
+                <div style={{
+                  background: 'white',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  width: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#111827' }}>
+                    Confirmar Exclusão
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#4b5563', lineHeight: '1.4' }}>
+                    Tem certeza que deseja remover este item do rateio? Isso irá recalcular a planilha do Excel correspondente ao salvar.
+                  </p>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.75rem', color: '#4b5563' }}>
+                    <input
+                      type="checkbox"
+                      checked={skipConfirm}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSkipConfirm(checked);
+                        localStorage.setItem('skip_apportionment_delete_confirm', checked ? 'true' : 'false');
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Não perguntar novamente
+                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => setRowToDelete(null)}
+                      style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', border: '1px solid #d1d5db', cursor: 'pointer', borderRadius: '4px' }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmDelete}
+                      style={{ padding: '6px 12px', fontSize: '0.75rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
