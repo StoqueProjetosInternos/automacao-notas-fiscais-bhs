@@ -322,7 +322,6 @@ export class GraphEmailPdfProcessor {
     const url =
       `/users/${encodeURIComponent(this.cfg.userEmail)}/mailFolders/inbox/messages` +
       `?$top=${limit}` +
-      `&$orderby=receivedDateTime desc` +
       `&$filter=isRead eq false and hasAttachments eq true` +
       `&$select=id,subject,from,isRead,receivedDateTime,conversationId,internetMessageId,hasAttachments,bodyPreview,body`;
 

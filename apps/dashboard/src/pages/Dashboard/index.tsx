@@ -801,7 +801,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     <ArrowLeft size={16} />
                   </button>
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                    Logs de Execução da API
+                    Logs de Execução
                   </h2>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>

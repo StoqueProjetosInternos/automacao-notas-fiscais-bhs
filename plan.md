@@ -2010,3 +2010,18 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter as alterações nos arquivos e excluir o arquivo config/logger.ts.
 - Status: Aplicado
+
+### CHG-0137 — Remoção do OrderBy na Consulta de E-mails da Graph API
+
+- Data/Hora: 2026-07-02 13:28
+- Contexto: A combinação de ordenação por data de recebimento com o filtro composto de mensagens não lidas que possuem anexos causava erro 400 (Bad Request/InefficientFilter) no Microsoft Exchange.
+- Objetivo: Remover o parâmetro $orderby para simplificar a requisição e mitigar o erro 400, confiando na ordenação decrescente padrão da API do Graph.
+- Escopo:
+  - Backend: [features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+- Riscos: Nenhum. A ordenação padrão chronológica (mais recente primeiro) é mantida pela Graph API.
+- Proposta: Retirar a concatenação de $orderby=receivedDateTime desc da URL da consulta do Graph.
+- Testes:
+  - Disparar a sincronização via dashboard e certificar que o status code 200 (sucesso) é retornado sem lançar exceções.
+- Rollback:
+  - Readicionar o parâmetro de $orderby no arquivo searchDataFromEmail.ts.
+- Status: Aplicado

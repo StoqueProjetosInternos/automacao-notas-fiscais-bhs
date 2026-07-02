@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const LOGS_DIR = path.resolve(__dirname, '../../../../data/logs');
+const LOGS_DIR = path.resolve(__dirname, '../../../../../data/logs');
 const LOG_FILE = path.join(LOGS_DIR, 'api.log');
 
 if (!fs.existsSync(LOGS_DIR)) {
