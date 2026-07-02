@@ -7,7 +7,7 @@ interface DataEditorProps {
   selectedNote: Note | null;
   loading: boolean;
   onInputChange: (path: string[], value: string) => void;
-  onSave: (statusOverride?: string) => void;
+  onSave: (statusOverride?: string, silent?: boolean) => void;
   onReprocess: () => void;
 }
 
@@ -353,7 +353,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               </div>
               <button className="modal-close-btn" onClick={() => {
                 setIsModalOpen(false);
-                onSave();
+                onSave(undefined, true);
               }}>
                 &times;
               </button>
@@ -466,7 +466,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             <div className="modal-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button className="btn btn-primary" onClick={() => {
                 setIsModalOpen(false);
-                onSave();
+                onSave(undefined, true);
               }} style={{ maxWidth: '120px' }}>
                 Concluir
               </button>
