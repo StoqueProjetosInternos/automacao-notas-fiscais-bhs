@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { FileText, Save, Check, AlertCircle, RefreshCcw } from 'lucide-react';
 import type { Note, NoteData } from '../types';
 
@@ -105,6 +106,8 @@ const getLabel = (key: string) => {
 };
 
 export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onSave, onReprocess }: DataEditorProps) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const renderRecursiveFields = (obj: any, path: string[] = []): React.ReactNode => {
     if (!obj) return null;
@@ -112,6 +115,9 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
     return Object.keys(obj).map(key => {
       const currentPath = [...path, key];
       const value = obj[key];
+
+      // Oculta a renderização em cascata do array de rateio para evitar poluição e lentidão
+      if (key === 'apportionment') return null;
 
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         return (
@@ -263,6 +269,26 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               </div>
             </div>
 
+            {/* Seção de Rateio Detalhado por Equipamento */}
+            {formData.apportionment && Array.isArray(formData.apportionment) && formData.apportionment.length > 0 && (
+              <div className="section-card" style={{ borderLeft: '4px solid #3b82f6', background: '#f8fafc' }}>
+                <span className="section-title" style={{ color: '#1e3a8a', fontWeight: 700, display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Itens Faturados e Rateio
+                </span>
+                <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '0 0 1rem 0' }}>
+                  Esta fatura contém {formData.apportionment.length} itens detalhados com informações de séries e classificação.
+                </p>
+                <button 
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setIsModalOpen(true)}
+                  style={{ width: '100%', fontSize: '0.75rem', padding: '8px 12px' }}
+                >
+                  Visualizar e Editar Tabela de Rateio
+                </button>
+              </div>
+            )}
+
             {renderRecursiveFields(formData)}
           </>
         ) : (
@@ -311,6 +337,134 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           {formData?.status === 'validado' ? 'Validado' : 'Aprovar'}
         </button>
       </div>
+
+      {/* Modal de Edição Detalhada de Rateio */}
+      {isModalOpen && formData && formData.apportionment && (
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+                  Tabela de Rateio Detalhado
+                </h3>
+                <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                  Edite os códigos de CR, Natureza, Contrato e Série de cada item. As alterações são sincronizadas em tempo real.
+                </span>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+                &times;
+              </button>
+            </div>
+            
+            <div className="modal-search-bar" style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: '#f9fafb', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Buscar por descrição, CR, número de série..."
+                className="search-box"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ flex: 1, margin: 0 }}
+              />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')} 
+                  style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer' }}
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+
+            <div className="modal-body" style={{ overflowY: 'auto', padding: '1.5rem', flex: 1 }}>
+              <table className="apportionment-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6', textAlign: 'left', borderBottom: '2px solid var(--border)' }}>
+                    <th style={{ padding: '10px', fontWeight: 600 }}>Descrição</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '50px' }}>Qtd</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '90px' }}>Unitário</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '90px' }}>Total</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '110px' }}>CR</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '120px' }}>Natureza</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '120px' }}>Contrato</th>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '130px' }}>Série</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.apportionment
+                    .map((item: any, idx: number) => ({ item, originalIndex: idx }))
+                    .filter(({ item }: any) => {
+                      if (!searchTerm) return true;
+                      const search = searchTerm.toLowerCase();
+                      return (
+                        (item.description && item.description.toLowerCase().includes(search)) ||
+                        (item.cr && item.cr.toLowerCase().includes(search)) ||
+                        (item.naturezaCode && item.naturezaCode.toLowerCase().includes(search)) ||
+                        (item.contract && item.contract.toLowerCase().includes(search)) ||
+                        (item.serialNumber && item.serialNumber.toLowerCase().includes(search))
+                      );
+                    })
+                    .map(({ item, originalIndex }: any) => (
+                      <tr key={originalIndex} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px 10px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.description}>
+                          {item.description}
+                        </td>
+                        <td style={{ padding: '8px 10px' }}>{item.quantity}</td>
+                        <td style={{ padding: '8px 10px' }}>
+                          {item.unitValue ? item.unitValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+                        </td>
+                        <td style={{ padding: '8px 10px' }}>
+                          {item.value ? item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+                        </td>
+                        <td style={{ padding: '4px' }}>
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={item.cr || ''}
+                            onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'cr'], e.target.value)}
+                            style={{ padding: '6px', fontSize: '0.75rem' }}
+                          />
+                        </td>
+                        <td style={{ padding: '4px' }}>
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={item.naturezaCode || ''}
+                            onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'naturezaCode'], e.target.value)}
+                            style={{ padding: '6px', fontSize: '0.75rem' }}
+                          />
+                        </td>
+                        <td style={{ padding: '4px' }}>
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={item.contract || ''}
+                            onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'contract'], e.target.value)}
+                            style={{ padding: '6px', fontSize: '0.75rem' }}
+                          />
+                        </td>
+                        <td style={{ padding: '4px' }}>
+                          <input
+                            type="text"
+                            className="field-input"
+                            value={item.serialNumber || ''}
+                            onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'serialNumber'], e.target.value)}
+                            style={{ padding: '6px', fontSize: '0.75rem' }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="modal-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button className="btn btn-primary" onClick={() => setIsModalOpen(false)} style={{ maxWidth: '120px' }}>
+                Concluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

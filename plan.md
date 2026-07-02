@@ -1788,3 +1788,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a correta formatação Markdown.
 - Rollback: Deletar o arquivo README.md do repositório e restaurar as branches.
 - Status: Aplicado
+
+### CHG-0123 — Modal de Curadoria Detalhada de Rateio (Apportionment)
+
+- Data/Hora: 2026-07-02 09:35
+- Contexto: A fatura complexa test_16.pdf possui centenas de itens de rateio empilhados, o que causa lentidão e poluição visual no editor lateral de curadoria.
+- Objetivo: Ocultar o campo apportionment da renderização padrão recursiva, implementar um Modal interativo contendo a listagem em tabela e um campo de busca interna para filtragem ágil e edição direta de Classificação/Série.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Lentidão do DOM ao renderizar muitas linhas e inputs simultâneos no modal. (Mitigado com filtros de busca interna para restrição de resultados ativos).
+- Proposta: Inserir a exclusão de apportionment, injetar o card de acionamento do modal, desenhar a estrutura de tabela com busca no React e adicionar as regras de design no CSS.
+- Testes:
+  - Carregar a fatura test_16 e certificar que a barra lateral abre de forma instantânea.
+  - Clicar em "Visualizar e Editar Tabela de Rateio", realizar buscas por texto e editar códigos de CR/Série.
+  - Fechar o modal, clicar em "Salvar" e verificar se as edições persistem no arquivo JSON correspondente.
+- Rollback: Reverter os arquivos DataEditor.tsx e App.css para os estados de commit anteriores.
+- Status: Aplicado
