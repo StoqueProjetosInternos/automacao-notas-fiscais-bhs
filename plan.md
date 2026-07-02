@@ -1949,3 +1949,48 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter as alterações nos arquivos extractDataFromPDF.ts and generateRateioExcel.ts.
 - Status: Aplicado
+
+### CHG-0133 — Padronização de Nomenclatura com Fornecedor, Fatura e Data
+
+- Data/Hora: 2026-07-02 13:02
+- Contexto: A nomenclatura anterior de pastas utilizava o nome do arquivo original como sufixo de unicidade, gerando nomes excessivamente longos ou pouco descritivos.
+- Objetivo: Modificar a geração de pastas e arquivos para o padrão NomeDoFornecedor_NumeroDocumento_AAAA-MM-DD.
+- Escopo:
+  - Backend: [features/pdf/extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+- Riscos: Nenhum. É um refinamento estético e organizacional de nomes de diretório.
+- Proposta: Injetar a captura opcional do número do documento e data atual local formatada na string de composição da pasta.
+- Testes:
+  - Validar a criação do diretório em lote e o correto carregamento no dashboard.
+- Rollback:
+  - Reverter o formato de folderName em extractDataFromPDF.ts.
+- Status: Aplicado
+
+### CHG-0134 — Ajuste de Destaque e Visibilidade no Ícone de Exclusão da Barra Lateral
+
+- Data/Hora: 2026-07-02 13:04
+- Contexto: O ícone de exclusão de faturas (lixeira) na barra lateral exibia uma tonalidade padrão sem cor de destaque, e era exibido continuamente em todos os itens da lista, poluindo a visualização.
+- Objetivo: Definir a cor vermelha (#ef4444) no ícone Trash2 e ajustar a visibilidade para aparecer somente ao passar o mouse (hover) sobre cada item individual.
+- Escopo:
+  - Frontend: [components/Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. Ajuste estético de layout e estilos CSS.
+- Proposta: Injetar a propriedade color no ícone em Sidebar.tsx e adicionar regras de opacidade condicional baseada em hover no App.css.
+- Testes:
+  - Verificar que o ícone vermelho da lixeira fica oculto por padrão e surge suavemente com fade-in somente ao posicionar o cursor sobre a fatura correspondente.
+- Rollback:
+  - Remover a propriedade color no Sidebar.tsx e as classes .delete-btn-container do App.css.
+- Status: Aplicado
+
+### CHG-0135 — Correção do Gatilho de Sincronização ao Excluir Fatura
+
+- Data/Hora: 2026-07-02 13:07
+- Contexto: A função de exclusão de notas no dashboard acionava a sincronização de novos e-mails (refreshNotesList), provocando requisições externas desnecessárias durante o ato de exclusão.
+- Objetivo: Isolar a exclusão de faturas para realizar apenas a atualização da listagem local em tela, sem disparar a sincronização do Microsoft Graph.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Simplifica o fluxo de exclusão removendo chamadas de rede redundantes.
+- Proposta: Substituir refreshNotesList() por chamadas diretas de fetchNotes() e setNotes() em handleDeleteNote.
+- Testes:
+  - Excluir uma nota de teste e certificar que a lista é atualizada sem acionar a barra de progresso de sincronização do toaster.
+- Rollback:
+  - Restaurar a chamada de refreshNotesList() em handleDeleteNote no Dashboard/index.tsx.
+- Status: Aplicado

@@ -340,7 +340,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       await deleteNote(id);
       
       showToast('Fatura e rateios excluídos com sucesso.', 'success');
-      await refreshNotesList();
+      const refreshedNotes = await fetchNotes();
+      setNotes(refreshedNotes);
     } catch (error) {
       console.error('Erro ao excluir nota:', error);
       showToast('Erro ao excluir a fatura.', 'error');

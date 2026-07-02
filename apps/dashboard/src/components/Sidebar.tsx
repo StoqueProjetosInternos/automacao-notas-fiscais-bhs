@@ -289,7 +289,7 @@ export const Sidebar = ({
                       }}
                       title="Excluir fatura"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={13} color="#ef4444" />
                     </button>
                   </div>
                   

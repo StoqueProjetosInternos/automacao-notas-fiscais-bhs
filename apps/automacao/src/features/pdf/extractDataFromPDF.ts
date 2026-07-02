@@ -33,7 +33,21 @@ async function extractDataFromPDF(pdfPath: string): Promise<ExtractedData> {
     const cleanSupplierName = (parsedContent.supplier?.name || "Fornecedor_Nao_Identificado")
       .replace(/[\\/:*?"<>|.]/g, "")
       .trim();
-    const folderName = `${cleanSupplierName}_${baseName}`;
+
+    const docNumber = parsedContent.documentIdentifiers?.documentNumber 
+      ? parsedContent.documentIdentifiers.documentNumber.replace(/[\\/:*?"<>|.]/g, "").trim()
+      : "";
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+
+    const folderName = docNumber 
+      ? `${cleanSupplierName}_${docNumber}_${dateStr}`
+      : `${cleanSupplierName}_${dateStr}`;
+
     const outputDir = path.join(FILES_DIR, folderName);
 
     if (!fs.existsSync(outputDir)) {
