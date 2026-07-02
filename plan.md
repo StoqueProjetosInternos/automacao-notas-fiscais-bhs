@@ -1849,3 +1849,20 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Realizar alteração contábil no modal, clicar em Concluir e conferir se o console do backend acusa a gravação do JSON e a regeração do Excel de imediato.
 - Rollback: Remover a instrução onSave() dos acionadores do modal no React.
 - Status: Aplicado
+
+### CHG-0127 — Salvamento Condicional por Detecção de Alterações (Dirty Check)
+
+- Data/Hora: 2026-07-02 12:02
+- Contexto: Ao fechar o modal de rateio, o sistema dispara a gravação física (onSave) mesmo se nenhuma alteração tiver sido efetuada pelo usuário, gerando processamento desnecessário e mensagens redundantes.
+- Objetivo: Implementar uma verificação profunda de igualdade (dirty check) antes de realizar a requisição de salvamento, cancelando a persistência de forma silenciosa quando chamada pelo modal se não houver modificações.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [components/DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Divergência na comparação de tipos numéricos. (Resolvido executando a rotina de sanitização de campos numéricos em ambas as cópias comparadas).
+- Proposta: Introduzir o método auxiliar isDeepEqual, ajustar o parâmetro da prop onSave para suportar modo silencioso, e interceptar a execução caso não existam mudanças pendentes.
+- Testes:
+  - Abrir o modal de rateios e fechar sem alterar valores. Confirmar que nenhuma gravação é solicitada no backend e nenhum toast é emitido.
+  - Abrir o modal, alterar um CR ou série, fechar e confirmar a persistência imediata com toast de sucesso.
+  - Clicar em Salvar no painel sem alterações e validar a notificação indicando ausência de mudanças.
+- Rollback:
+  - Reverter as alterações nos arquivos index.tsx e DataEditor.tsx.
+- Status: Aplicado
