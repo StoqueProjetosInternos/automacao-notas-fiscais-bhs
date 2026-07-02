@@ -111,3 +111,14 @@ export const checkAuthSession = async (): Promise<{ user: User }> => {
 export const logoutUser = () => {
   eraseCookie('stoque_auth_token');
 };
+
+export interface SyncResponse {
+  success: boolean;
+  imported: boolean;
+  message: string;
+}
+
+export const syncEmails = async (): Promise<SyncResponse> => {
+  const response = await apiClient.post<SyncResponse>('/api/notes/sync');
+  return response.data;
+};

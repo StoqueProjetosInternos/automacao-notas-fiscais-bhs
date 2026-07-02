@@ -6,6 +6,12 @@ const router = Router();
 // Rota para listar todas as notas
 router.get('/', NoteController.getAllNotes);
 
+// Rota para obter logs de consumo
+router.get('/usage', NoteController.getUsageLog);
+
+// Rota para sincronizar e-mails
+router.post('/sync', NoteController.syncNotes);
+
 // Rota para reprocessar nota(s) contábil(eis)
 router.post('/reprocess/:id', NoteController.reprocessNote);
 
@@ -14,8 +20,5 @@ router.post('/:id', NoteController.saveNote);
 
 // Rota para excluir uma nota específica
 router.delete('/:id', NoteController.deleteNote);
-
-// Rota para obter logs de consumo
-router.get('/usage', NoteController.getUsageLog);
 
 export default router;

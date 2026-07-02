@@ -72,4 +72,26 @@ export class NoteController {
       res.status(500).json({ error: 'Erro ao excluir arquivo' });
     }
   }
+
+  public static async syncNotes(req: Request, res: Response) {
+    try {
+      const result = await NoteService.syncOneEmail();
+      if (result) {
+        res.json({ 
+          success: true, 
+          imported: true, 
+          message: `Nova fatura do e-mail "${result.subject}" importada com sucesso.` 
+        });
+      } else {
+        res.json({ 
+          success: true, 
+          imported: false, 
+          message: 'Nenhum e-mail novo com anexo PDF encontrado.' 
+        });
+      }
+    } catch (error: any) {
+      console.error('[Error] Falha na sincronização de e-mails:', error);
+      res.status(500).json({ error: 'Erro ao conectar à API do e-mail ou ao processar fatura' });
+    }
+  }
 }

@@ -24,18 +24,18 @@ async function main() {
 
     // Para evitar erros de autenticação durante o desenvolvimento local, o processamento de e-mails está comentado.
 
-    // const processor = new GraphEmailPdfProcessor({
-    //   tenantId: process.env.TENANT_ID || "",
-    //   clientId: process.env.CLIENT_ID || "",
-    //   clientSecret: process.env.CLIENT_SECRET || "",
-    //   userEmail: process.env.USER_EMAIL || "",
-    //   tempDir: path.join("..", "..", ".tmp"),
-    //   outputDir: path.join("..", "..", "data", "extracted"),
-    //   markAsReadAfterSuccess: false, // Mude para true em produção
-    // });
+    const processor = new GraphEmailPdfProcessor({
+      tenantId: process.env.TENANT_ID || "",
+      clientId: process.env.CLIENT_ID || "",
+      clientSecret: process.env.CLIENT_SECRET || "",
+      userEmail: process.env.USER_EMAIL || "",
+      tempDir: path.join("..", "..", ".tmp"),
+      outputDir: path.join("..", "..", "data", "extracted"),
+      markAsReadAfterSuccess: false, // Mude para true em produção
+    });
 
-    // const emailResult = await processor.processOneLatestUnread();
-    const emailResult: any = null; // Simulando ausência de e-mails para teste local
+    const emailResult = await processor.processOneLatestUnread();
+    // const emailResult: any = null; // Simulando ausência de e-mails para teste local
 
     if (emailResult) {
       console.log(`E-mail "${emailResult.subject}" e seus anexos processados com sucesso.`);

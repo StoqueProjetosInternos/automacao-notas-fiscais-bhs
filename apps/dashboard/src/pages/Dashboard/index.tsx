@@ -3,7 +3,7 @@ import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
-import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, type UsageLog } from '../../services/api';
+import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
 import { ArrowLeft } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
@@ -176,11 +176,17 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     setIsSyncing(true);
     const startTime = Date.now();
     try {
+      // 1. Aciona a sincronização real no backend de e-mails
+      const syncResult = await syncEmails();
+      showToast(syncResult.message, syncResult.imported ? 'success' : 'info');
+
+      // 2. Atualiza a listagem de faturas na tela
       const data = await fetchNotes();
       setNotes(data);
       setIsApiOnline(true);
     } catch (error) {
       console.error('Erro ao atualizar lista de notas:', error);
+      showToast('Falha na sincronização com o servidor de e-mails.', 'error');
       setIsApiOnline(false);
     } finally {
       const duration = Date.now() - startTime;

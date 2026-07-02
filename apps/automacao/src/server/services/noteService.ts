@@ -3,6 +3,7 @@ import path from 'path';
 import { FILES_DIR } from '../config/paths.js';
 import { generateRateioExcel } from '../../features/excel/generateRateioExcel.js';
 import { enrichData } from '../../features/pdf/dataEnrichment.js';
+import { GraphEmailPdfProcessor } from '../../features/email/searchDataFromEmail.js';
 
 export class NoteService {
   public static listAllNotes() {
@@ -232,5 +233,19 @@ export class NoteService {
     }
     result.push(current.trim());
     return result;
+  }
+
+  public static async syncOneEmail() {
+    const processor = new GraphEmailPdfProcessor({
+      tenantId: process.env.TENANT_ID || "",
+      clientId: process.env.CLIENT_ID || "",
+      clientSecret: process.env.CLIENT_SECRET || "",
+      userEmail: process.env.USER_EMAIL || "",
+      tempDir: path.resolve(FILES_DIR, '..', '..', '.tmp'),
+      outputDir: FILES_DIR,
+      markAsReadAfterSuccess: true, // Marcar no e-mail real como lido
+    });
+
+    return await processor.processOneLatestUnread();
   }
 }

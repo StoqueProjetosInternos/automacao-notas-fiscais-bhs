@@ -1804,3 +1804,48 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Fechar o modal, clicar em "Salvar" e verificar se as edições persistem no arquivo JSON correspondente.
 - Rollback: Reverter os arquivos DataEditor.tsx e App.css para os estados de commit anteriores.
 - Status: Aplicado
+
+### CHG-0124 — Sincronização Ativa de E-mails via Painel do Dashboard
+
+- Data/Hora: 2026-07-02 09:45
+- Contexto: A captura de e-mails e faturas dependia da execução manual do arquivo main.ts no backend.
+- Objetivo: Expor uma rota Express /api/notes/sync que execute o GraphEmailPdfProcessor e integrá-la ao clique do botão "Sincronizar" no dashboard, recarregando a tela e emitindo notificações de status.
+- Escopo:
+  - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts), [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts), [noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts)
+  - Frontend: [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts), [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Timeout de rede se o processo de download e extração demorar demais no servidor local. (Prevenido pelo Express local e pela persistência de conexão no frontend).
+- Proposta: Integrar a inicialização do GraphEmailPdfProcessor no NoteService, criar a rota post no roteador Express, criar a chamada Axios no frontend e integrá-la à rotina de refresh do layout do Dashboard.
+- Testes:
+  - Clicar em "Sincronizar" e verificar se o botão desativa e mostra "Sincronizando...".
+  - Conferir nos logs do backend a busca do e-mail via Graph e a chamada ao Gemini.
+  - Validar a recepção do Toast no front e a injeção do novo registro na tabela lateral.
+- Rollback: Reverter os arquivos nos respectivos repositórios e branches locais.
+- Status: Aplicado
+
+### CHG-0125 — Placeholders de Herança Contábil no Modal de Rateios
+
+- Data/Hora: 2026-07-02 10:08
+- Contexto: A Classificação Contábil preenchida no topo da tela não era refletida visualmente no modal detalhado caso os itens específicos estivessem vazios, divergindo do comportamento de fallback do Excel.
+- Objetivo: Injetar placeholders dinâmicos (cinza claro) nos campos de CR, Natureza e Contrato no modal de rateio para exibir os valores padrão herdados do cabeçalho geral.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Nenhum. Alteração meramente visual de usabilidade (UX).
+- Proposta: Adicionar as propriedades de `placeholder` vinculadas a `formData.accountingFields` nos inputs de CR, Natureza e Contrato do modal detalhado.
+- Testes:
+  - Modificar a classificação padrão no topo, abrir o modal e confirmar que os campos vazios mostram os novos valores como sugestão em cinza.
+- Rollback: Reverter as edições do atributo placeholder no arquivo correspondente.
+- Status: Aplicado
+
+### CHG-0126 — Gravação Física Automática ao Fechar o Modal de Rateio
+
+- Data/Hora: 2026-07-02 10:12
+- Contexto: Edições no modal de rateio dependiam de um clique manual posterior em "Salvar" na tela principal para regerar a planilha Excel física.
+- Objetivo: Chamar automaticamente o callback onSave() ao fechar o modal (botões "Concluir" e fechar de cabeçalho), persistindo fisicamente os novos rateios no backend instantaneamente.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Nenhum. Melhoria direta de fluxo de usabilidade (UX).
+- Proposta: Injetar a chamada de onSave() nos eventos onClick de fechamento do modal.
+- Testes:
+  - Realizar alteração contábil no modal, clicar em Concluir e conferir se o console do backend acusa a gravação do JSON e a regeração do Excel de imediato.
+- Rollback: Remover a instrução onSave() dos acionadores do modal no React.
+- Status: Aplicado

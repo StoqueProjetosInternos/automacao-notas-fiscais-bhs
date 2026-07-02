@@ -351,7 +351,10 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                   Edite os códigos de CR, Natureza, Contrato e Série de cada item. As alterações são sincronizadas em tempo real.
                 </span>
               </div>
-              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => {
+                setIsModalOpen(false);
+                onSave();
+              }}>
                 &times;
               </button>
             </div>
@@ -420,6 +423,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                             type="text"
                             className="field-input"
                             value={item.cr || ''}
+                            placeholder={formData.accountingFields?.cr || ''}
                             onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'cr'], e.target.value)}
                             style={{ padding: '6px', fontSize: '0.75rem' }}
                           />
@@ -429,6 +433,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                             type="text"
                             className="field-input"
                             value={item.naturezaCode || ''}
+                            placeholder={formData.accountingFields?.naturezaCode || ''}
                             onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'naturezaCode'], e.target.value)}
                             style={{ padding: '6px', fontSize: '0.75rem' }}
                           />
@@ -438,6 +443,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                             type="text"
                             className="field-input"
                             value={item.contract || ''}
+                            placeholder={(formData.accountingFields?.contract && formData.accountingFields?.contract !== '-') ? formData.accountingFields?.contract : ''}
                             onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'contract'], e.target.value)}
                             style={{ padding: '6px', fontSize: '0.75rem' }}
                           />
@@ -458,7 +464,10 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             </div>
 
             <div className="modal-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button className="btn btn-primary" onClick={() => setIsModalOpen(false)} style={{ maxWidth: '120px' }}>
+              <button className="btn btn-primary" onClick={() => {
+                setIsModalOpen(false);
+                onSave();
+              }} style={{ maxWidth: '120px' }}>
                 Concluir
               </button>
             </div>
