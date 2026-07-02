@@ -1773,3 +1773,18 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Excluir branches locais criadas adicionais e retornar ao estado original.
   - Remover a origin remota.
 - Status: Aplicado
+
+### CHG-0122 — Criação e Envio do README.md Profissional ao GitHub
+
+- Data/Hora: 2026-07-02 09:25
+- Contexto: O repositório no GitHub precisa de uma documentação pública profissional e descritiva na raiz do projeto.
+- Objetivo: Criar o arquivo README.md com informações estruturadas de arquitetura monorepo, dependências, credenciais fictícias de exemplo e instruções de execução local, integrando o arquivo ao fluxo de branches e subindo para o GitHub.
+- Escopo:
+  - Criação: [README.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/README.md)
+- Riscos: Exposição de chaves ou credenciais reais do Microsoft Graph / Gemini. (Mitigado pelo uso de dados fictícios de exemplo).
+- Proposta: Redigir o README.md na raiz do repositório local, realizar commit na branch de desenvolvimento, mesclar na branch de produção e fazer o push de ambas.
+- Testes:
+  - Verificar a integridade das instruções executando os comandos descritos no README.
+  - Validar a correta formatação Markdown.
+- Rollback: Deletar o arquivo README.md do repositório e restaurar as branches.
+- Status: Aplicado
