@@ -1866,3 +1866,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter as alterações nos arquivos index.tsx e DataEditor.tsx.
 - Status: Aplicado
+
+### CHG-0128 — Indicador de Carregamento na Listagem de Histórico
+
+- Data/Hora: 2026-07-02 12:07
+- Contexto: A aba de histórico apresentava comportamento estático sem feedback visual enquanto o backend processava a consulta dos logs de uso da IA, parecendo vazia ou travada.
+- Objetivo: Renderizar um spinner animado no corpo da tabela quando loadingLogs for verdadeiro, e exibir mensagem amigável caso nenhum resultado seja encontrado.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste visual simples limitado a comportamento condicional de renderização React.
+- Proposta: Injetar verificações ternárias de loadingLogs e paginatedUsageLogs.length no corpo da tabela do histórico.
+- Testes:
+  - Alternar para a aba de histórico e validar exibição e ocultação suave do spinner.
+  - Testar filtros para verificar comportamento com lista vazia.
+- Rollback:
+  - Reverter as condicionais de renderização no index.tsx.
+- Status: Aplicado

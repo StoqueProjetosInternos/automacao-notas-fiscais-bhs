@@ -450,7 +450,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   <ArrowLeft size={16} />
                 </button>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                  Histórico de Processamento (Consumo de IA)
+                  Histórico de Processamento
                 </h2>
               </div>
 
@@ -573,113 +573,136 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedUsageLogs.map((log) => (
-                      <tr 
-                        key={log.id} 
-                        className="history-row"
-                      >
-                        <td style={{ padding: '12px 16px', color: '#6b7280', fontWeight: 'bold' }}>
-                          #{log.id}
+                    {loadingLogs ? (
+                      <tr>
+                        <td colSpan={15} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                            <div className="animate-spin" style={{
+                              width: '24px',
+                              height: '24px',
+                              border: '3px solid #e5e7eb',
+                              borderTopColor: '#2563eb',
+                              borderRadius: '50%'
+                            }} />
+                            <span>Carregando histórico...</span>
+                          </div>
                         </td>
-                        <td style={{ padding: '12px 16px', color: '#111827' }}>
-                          {new Date(log.dataHora).toLocaleString('pt-BR')}
+                      </tr>
+                    ) : paginatedUsageLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={15} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                          Nenhum registro de processamento encontrado.
                         </td>
-                        <td 
-                          style={{ 
-                            padding: '12px 16px', 
-                            color: '#4b5563', 
-                            fontWeight: 500,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                          title={log.arquivo}
+                      </tr>
+                    ) : (
+                      paginatedUsageLogs.map((log) => (
+                        <tr 
+                          key={log.id} 
+                          className="history-row"
                         >
-                          {log.arquivo}
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#6b7280' }}>
-                          <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>
-                            {log.modeloIa}
-                          </span>
-                        </td>
-                        <td 
-                          style={{ 
-                            padding: '12px 16px', 
-                            color: '#111827', 
-                            fontWeight: 500,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                          title={log.fornecedor}
-                        >
-                          {log.fornecedor}
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#4b5563' }}>
-                          {log.cnpjFornecedor || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span style={{ 
-                            background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : '#eff6ff', 
-                            color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : '#1d4ed8', 
-                            padding: '2px 8px', 
-                            borderRadius: '4px', 
-                            fontSize: '0.7rem', 
-                            fontWeight: 600 
-                          }}>
-                            {log.statusArquivo || 'Pendente'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#4b5563' }}>
-                          {log.numeroDocumento || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 600, textAlign: 'right' }}>
-                          {log.valorFatura !== undefined && log.valorFatura !== null ? (
-                            `R$ ${log.valorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          ) : (
-                            <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 'normal' }}>N/D</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span className="token-badge">{log.tokensEntrada.toLocaleString()}</span>
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span className="token-badge">{log.tokensSaida.toLocaleString()}</span>
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span className="cost-badge">${log.custoUsd.toFixed(6)}</span>
-                        </td>
-                        <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>{log.tempoProcessamentoMs}</td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <span style={{ 
-                            background: log.status === 'Falha' ? '#fee2e2' : '#eff6ff', 
-                            color: log.status === 'Falha' ? '#b91c1c' : '#1d4ed8', 
-                            padding: '2px 8px', 
-                            borderRadius: '4px', 
-                            fontSize: '0.7rem', 
-                            fontWeight: 600 
-                          }}>
-                            {log.status || 'Sucesso'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#4b5563' }}>
-                          {log.zeevId ? (
+                          <td style={{ padding: '12px 16px', color: '#6b7280', fontWeight: 'bold' }}>
+                            #{log.id}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#111827' }}>
+                            {new Date(log.dataHora).toLocaleString('pt-BR')}
+                          </td>
+                          <td 
+                            style={{ 
+                              padding: '12px 16px', 
+                              color: '#4b5563', 
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                            title={log.arquivo}
+                          >
+                            {log.arquivo}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#6b7280' }}>
+                            <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>
+                              {log.modeloIa}
+                            </span>
+                          </td>
+                          <td 
+                            style={{ 
+                              padding: '12px 16px', 
+                              color: '#111827', 
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                            title={log.fornecedor}
+                          >
+                            {log.fornecedor}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4b5563' }}>
+                            {log.cnpjFornecedor || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <span style={{ 
-                              background: '#eff6ff', 
-                              color: '#1d4ed8', 
+                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : '#eff6ff', 
+                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : '#1d4ed8', 
                               padding: '2px 8px', 
                               borderRadius: '4px', 
                               fontSize: '0.7rem', 
                               fontWeight: 600 
                             }}>
-                              #{log.zeevId}
+                              {log.statusArquivo || 'Pendente'}
                             </span>
-                          ) : (
-                            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Pendente</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4b5563' }}>
+                            {log.numeroDocumento || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 600, textAlign: 'right' }}>
+                            {log.valorFatura !== undefined && log.valorFatura !== null ? (
+                              `R$ ${log.valorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 'normal' }}>N/D</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span className="token-badge">{log.tokensEntrada.toLocaleString()}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span className="token-badge">{log.tokensSaida.toLocaleString()}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span className="cost-badge">${log.custoUsd.toFixed(6)}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>{log.tempoProcessamentoMs}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span style={{ 
+                              background: log.status === 'Falha' ? '#fee2e2' : '#eff6ff', 
+                              color: log.status === 'Falha' ? '#b91c1c' : '#1d4ed8', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: 600 
+                            }}>
+                              {log.status || 'Sucesso'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', color: '#4b5563' }}>
+                            {log.zeevId ? (
+                              <span style={{ 
+                                background: '#eff6ff', 
+                                color: '#1d4ed8', 
+                                padding: '2px 8px', 
+                                borderRadius: '4px', 
+                                fontSize: '0.7rem', 
+                                fontWeight: 600 
+                              }}>
+                                #{log.zeevId}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Pendente</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
