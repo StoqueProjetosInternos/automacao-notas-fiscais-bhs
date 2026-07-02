@@ -1772,4 +1772,4 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Excluir branches locais criadas adicionais e retornar ao estado original.
   - Remover a origin remota.
-- Status: Proposto
+- Status: Aplicado
