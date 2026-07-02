@@ -54,26 +54,81 @@ async function extractDataFromPDF(pdfPath: string): Promise<ExtractedData> {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // 1. Copiar o PDF original para a pasta (Para o Dashboard exibir)
     const pdfDestPath = path.join(outputDir, `${folderName}.pdf`);
-    fs.copyFileSync(pdfPath, pdfDestPath);
-
-    // 2. Salvamos o JSON completo
     const jsonPath = path.join(outputDir, `${folderName}.json`);
-    fs.writeFileSync(jsonPath, JSON.stringify(parsedContent, null, 2), "utf8");
+    const secondaryPdfPath = path.join(outputDir, `${folderName}_Nota.pdf`);
 
-    // 3. Mantemos o TXT apenas como um log rápido/visual
+    let mergedContent = { ...parsedContent };
+
+    // Se o lote/JSON já existir, realizamos a mesclagem inteligente
+    if (fs.existsSync(jsonPath)) {
+      try {
+        const existingContent = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+        const isExistingBoleto = existingContent.documentType === "BOLETO" || 
+                                 (existingContent.barcode && existingContent.barcode.trim().length > 0);
+        const isNewBoleto = parsedContent.documentType === "BOLETO" || 
+                            (parsedContent.barcode && parsedContent.barcode.trim().length > 0);
+
+        if (isExistingBoleto && !isNewBoleto) {
+          // O existente é Boleto, o novo é Nota Fiscal
+          mergedContent = { ...existingContent };
+          // Mescla informações de rateio e tributos da nova Nota Fiscal
+          if (parsedContent.apportionment && parsedContent.apportionment.length > 0) {
+            mergedContent.apportionment = parsedContent.apportionment;
+          }
+          if (parsedContent.financial?.taxes) {
+            if (mergedContent.financial) {
+              mergedContent.financial.taxes = parsedContent.financial.taxes;
+            }
+          }
+          // Salva o PDF da Nota Fiscal como anexo secundário sem apagar o Boleto principal
+          fs.copyFileSync(pdfPath, secondaryPdfPath);
+        } else if (!isExistingBoleto && isNewBoleto) {
+          // O existente é Nota Fiscal, o novo é Boleto
+          mergedContent = { ...parsedContent };
+          // Preserva o rateio e tributação existentes da Nota Fiscal
+          if (existingContent.apportionment && existingContent.apportionment.length > 0) {
+            mergedContent.apportionment = existingContent.apportionment;
+          }
+          if (existingContent.financial?.taxes) {
+            if (mergedContent.financial) {
+              mergedContent.financial.taxes = existingContent.financial.taxes;
+            }
+          }
+          // Renomeia o PDF da Nota Fiscal existente para o secundário
+          if (fs.existsSync(pdfDestPath)) {
+            fs.renameSync(pdfDestPath, secondaryPdfPath);
+          }
+          // Grava o novo PDF (Boleto) como o PDF principal
+          fs.copyFileSync(pdfPath, pdfDestPath);
+        } else {
+          // Casos idênticos, substituição simples
+          fs.copyFileSync(pdfPath, pdfDestPath);
+        }
+      } catch (err) {
+        console.error("[AVISO] Falha ao mesclar dados do lote existente:", err);
+        fs.copyFileSync(pdfPath, pdfDestPath);
+      }
+    } else {
+      // Primeiro documento do lote
+      fs.copyFileSync(pdfPath, pdfDestPath);
+    }
+
+    // Salvamos o JSON mesclado final
+    fs.writeFileSync(jsonPath, JSON.stringify(mergedContent, null, 2), "utf8");
+
+    // Mantemos o TXT apenas como um log rápido/visual
     const txtPath = path.join(outputDir, `${folderName}.txt`);
-    const additionalLog = parsedContent.additionalInfo ? `\nInformações Extras: ${JSON.stringify(parsedContent.additionalInfo)}` : "";
-    const logContent = `Extração realizada via Gemini IA\nFornecedor: ${parsedContent.supplier?.name}\nCNPJ Fornecedor: ${parsedContent.supplier?.cnpjCpf}\nValor: ${parsedContent.financial?.chargedValue}\nVencimento: ${parsedContent.financial?.dueDate}\nTipo: ${parsedContent.documentType}${additionalLog}`;
+    const additionalLog = mergedContent.additionalInfo ? `\nInformações Extras: ${JSON.stringify(mergedContent.additionalInfo)}` : "";
+    const logContent = `Extração realizada via Gemini IA\nFornecedor: ${mergedContent.supplier?.name}\nCNPJ Fornecedor: ${mergedContent.supplier?.cnpjCpf}\nValor: ${mergedContent.financial?.chargedValue}\nVencimento: ${mergedContent.financial?.dueDate}\nTipo: ${mergedContent.documentType}${additionalLog}`;
     fs.writeFileSync(txtPath, logContent, "utf8");
 
     return {
       fileName: `${folderName}.json`,
       outputPath: jsonPath,
-      outputDir: outputDir, // Retornamos o diretório para uso externo (ex: Excel)
+      outputDir: outputDir,
       textContent: logContent,
-      parsedContent,
+      parsedContent: mergedContent,
     };
   } catch (error) {
     console.error(`Erro ao processar o arquivo ${pdfPath} com IA:`, error);

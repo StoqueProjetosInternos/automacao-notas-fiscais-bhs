@@ -2070,3 +2070,33 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Desfazer as adições na tabela do DataEditor.tsx e remover o manipulador no Dashboard/index.tsx.
 - Status: Aplicado
+
+### CHG-0141 — Mesclagem Inteligente de Múltiplos Anexos e Priorização de Boleto
+
+- Data/Hora: 2026-07-02 16:59
+- Contexto: Em lotes contendo Nota Fiscal e Boleto sob o mesmo número de documento, o processamento sequencial sobrescrevia os arquivos gerando colisão de nomes e perda de dados contábeis.
+- Objetivo: Unificar a extração do Boleto (dados de pagamento/PDF principal) com a Nota Fiscal (rateio detalhado) quando pertencerem ao mesmo lote, evitando perdas de arquivos.
+- Escopo:
+  - Backend: [features/pdf/extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+- Riscos: Substituição indevida em documentos com mesmo número mas fornecedores distintos (Mitigado por basear a colisão em chaves compostas de nome do fornecedor, número e data).
+- Proposta: Implementar merge inteligente condicional no salvamento de JSONs e alternância de caminho secundário para o PDF da Nota Fiscal.
+- Testes:
+  - Processar e-mail com Boleto e Nota Fiscal e conferir se o PDF e o código de barras do Boleto prevalecem acompanhados do rateio detalhado da Nota Fiscal.
+- Rollback:
+  - Reverter as alterações no arquivo extractDataFromPDF.ts.
+- Status: Aplicado
+
+### CHG-0142 — Botão Limpar (x) Interno nos Campos de Pesquisa
+
+- Data/Hora: 2026-07-02 17:16
+- Contexto: Usuários não tinham uma forma ágil de limpar os termos digitados nos campos de busca das listagens do dashboard.
+- Objetivo: Inserir um botão de limpeza interno ("X" com &times;) integrado ao layout dos inputs de busca nas abas de faturas, rateio e histórico.
+- Escopo:
+  - Frontend: [components/Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [components/DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Desalinhamento visual do placeholder (Mitigado adicionando preenchimento direito (paddingRight) de segurança nos campos de entrada correspondentes).
+- Proposta: Envelopar inputs em divs com position relative e adicionar botões absolutos para limpar os estados de busca no clique.
+- Testes:
+  - Digitar e apagar dados por meio do botão interno nos três inputs correspondentes.
+- Rollback:
+  - Reverter as alterações nos arquivos alterados.
+- Status: Aplicado
