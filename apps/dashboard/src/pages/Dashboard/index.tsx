@@ -76,7 +76,7 @@ interface Toast {
 export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs' | 'deadlines'>('notes');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [apiLogs, setApiLogs] = useState<string>('');
@@ -86,15 +86,39 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [historyModelFilter, setHistoryModelFilter] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
+  const [historyFileStatusFilter, setHistoryFileStatusFilter] = useState('');
+  const [historyAiStatusFilter, setHistoryAiStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
+
+  // Estados de Paginação para Aba de Prazos
+  const [deadlinesCurrentPage, setDeadlinesCurrentPage] = useState(1);
+  const deadlinesRecordsPerPage = 10;
+
+  // Estados de Edição Inline de Vencimentos
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingDateValue, setEditingDateValue] = useState<string>('');
+  const [mockOverrides, setMockOverrides] = useState<Record<string, string>>({});
+
+  // Estados de Filtro e Ordenação da Aba de Prazos
+  const [deadlineStatusFilter, setDeadlineStatusFilter] = useState<'all' | 'critical' | 'alert' | 'normal'>('all');
+  const [deadlineSortField, setDeadlineSortField] = useState<'fornecedor' | 'valor' | 'vencimento' | 'diasRestantes'>('diasRestantes');
+  const [deadlineSortOrder, setDeadlineSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Monitor de Inatividade de 15 Minutos (se inativo, chama logout)
   useActivityTimeout(onLogout, 15 * 60 * 1000);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [historySearchTerm, historyModelFilter, historyDateFilter]);
+  }, [historySearchTerm, historyModelFilter, historyDateFilter, historyFileStatusFilter, historyAiStatusFilter]);
+
+  useEffect(() => {
+    setDeadlinesCurrentPage(1);
+  }, [notes]);
+
+  useEffect(() => {
+    setDeadlinesCurrentPage(1);
+  }, [deadlineStatusFilter, deadlineSortField, deadlineSortOrder]);
 
   const availableModels = Array.from(new Set(usageLogs.map(log => log.modeloIa).filter(Boolean)));
 
@@ -110,8 +134,20 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       const logDateStr = new Date(log.dataHora).toISOString().split('T')[0];
       matchesDate = logDateStr === historyDateFilter;
     }
+
+    let matchesFileStatus = true;
+    if (historyFileStatusFilter) {
+      const fileStatus = log.statusArquivo || 'Pendente';
+      matchesFileStatus = fileStatus === historyFileStatusFilter;
+    }
+
+    let matchesAiStatus = true;
+    if (historyAiStatusFilter) {
+      const aiStatus = log.status || 'Sucesso';
+      matchesAiStatus = aiStatus === historyAiStatusFilter;
+    }
     
-    return matchesSearch && matchesModel && matchesDate;
+    return matchesSearch && matchesModel && matchesDate && matchesFileStatus && matchesAiStatus;
   });
 
   const totalRecords = filteredUsageLogs.length;
@@ -153,6 +189,90 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       loadApiLogs();
     }
   }, [activeTab]);
+
+  const parseBrazilianDate = (dateStr?: string): Date | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const d = new Date(year, month, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const getDaysRemaining = (dueDateStr?: string): number => {
+    const dueDate = parseBrazilianDate(dueDateStr);
+    if (!dueDate) return 999;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+    const diffTime = dueDate.getTime() - hoje.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const triggerEmailAlertsSimulation = (items: any[]) => {
+    const criticalItems = items.filter(item => item.diasRestantes <= 10);
+    if (criticalItems.length === 0) {
+      showToast('Nenhum fornecedor com prazo crítico (<= 10 dias) para envio de alertas.', 'info');
+      return;
+    }
+
+    const supplierNames = criticalItems.map(i => i.fornecedor).join(', ');
+    showToast(`Simulação: Alertas de e-mail enviados para os gestores responsáveis das faturas de: ${supplierNames}.`, 'success');
+  };
+
+  const handleSortDeadlines = (field: 'fornecedor' | 'valor' | 'vencimento' | 'diasRestantes') => {
+    if (deadlineSortField === field) {
+      setDeadlineSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setDeadlineSortField(field);
+      setDeadlineSortOrder('asc');
+    }
+  };
+
+  const handleSaveDueDate = async (itemId: string, originalItem: any) => {
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!dateRegex.test(editingDateValue)) {
+      showToast('Formato de data inválido. Use o padrão DD/MM/AAAA.', 'error');
+      setEditingItemId(null);
+      return;
+    }
+
+    if (originalItem.vencimento === editingDateValue) {
+      setEditingItemId(null);
+      return;
+    }
+
+    if (itemId.startsWith('m')) {
+      setMockOverrides(prev => ({ ...prev, [itemId]: editingDateValue }));
+      showToast(`Simulação: Vencimento de ${originalItem.fornecedor} atualizado para ${editingDateValue}.`, 'success');
+    } else {
+      const note = notes.find(n => n.id === itemId);
+      if (!note) return;
+
+      const copy = JSON.parse(JSON.stringify(note.data));
+      if (!copy.financial) {
+        copy.financial = {};
+      }
+      copy.financial.dueDate = editingDateValue;
+      sanitizeNumericFields(copy);
+
+      try {
+        await updateNote(note.id, copy);
+        showToast(`Vencimento de ${originalItem.fornecedor} atualizado para ${editingDateValue}.`, 'success');
+        const refreshedNotes = await fetchNotes();
+        setNotes(refreshedNotes);
+      } catch (error) {
+        console.error('Erro ao atualizar vencimento da nota:', error);
+        showToast('Falha ao atualizar a data de vencimento no servidor.', 'error');
+      }
+    }
+    setEditingItemId(null);
+  };
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -382,6 +502,105 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }, 1500);
   };
 
+  // Computação e Paginação da Lista de Prazos combinando reais e mocks
+  const hoje = new Date();
+  const addDaysToCurrentDate = (d: Date, days: number): string => {
+    const res = new Date(d);
+    res.setDate(res.getDate() + days);
+    return `${String(res.getDate()).padStart(2, '0')}/${String(res.getMonth() + 1).padStart(2, '0')}/${res.getFullYear()}`;
+  };
+
+  const mockDeadlinesList = [
+    { 
+      id: "m1", 
+      fornecedor: "Dall Soluções de TI Ltda", 
+      documento: "FAT-2026-8942", 
+      valor: 12450.00, 
+      vencimento: mockOverrides["m1"] || addDaysToCurrentDate(hoje, 5), 
+      diasRestantes: getDaysRemaining(mockOverrides["m1"] || addDaysToCurrentDate(hoje, 5)) 
+    },
+    { 
+      id: "m2", 
+      fornecedor: "Locaweb Serviços de Internet", 
+      documento: "FAT-2026-0981", 
+      valor: 4200.00, 
+      vencimento: mockOverrides["m2"] || addDaysToCurrentDate(hoje, 10), 
+      diasRestantes: getDaysRemaining(mockOverrides["m2"] || addDaysToCurrentDate(hoje, 10)) 
+    },
+    { 
+      id: "m3", 
+      fornecedor: "Papelaria Central de Minas Ltda", 
+      documento: "NF-0001045", 
+      valor: 850.50, 
+      vencimento: mockOverrides["m3"] || addDaysToCurrentDate(hoje, 18), 
+      diasRestantes: getDaysRemaining(mockOverrides["m3"] || addDaysToCurrentDate(hoje, 18)) 
+    },
+    { 
+      id: "m4", 
+      fornecedor: "Construtora Alfa S/A", 
+      documento: "FAT-0007720", 
+      valor: 45000.00, 
+      vencimento: mockOverrides["m4"] || addDaysToCurrentDate(hoje, 3), 
+      diasRestantes: getDaysRemaining(mockOverrides["m4"] || addDaysToCurrentDate(hoje, 3)) 
+    },
+    { 
+      id: "m5", 
+      fornecedor: "Seguros Porto Seguro S/A", 
+      documento: "AP-0030948", 
+      valor: 2900.00, 
+      vencimento: mockOverrides["m5"] || addDaysToCurrentDate(hoje, 12), 
+      diasRestantes: getDaysRemaining(mockOverrides["m5"] || addDaysToCurrentDate(hoje, 12)) 
+    }
+  ];
+
+  const realDeadlinesList = notes
+    .filter(note => note.data?.supplier?.name && note.data?.financial?.dueDate)
+    .map(note => {
+      const dias = getDaysRemaining(note.data.financial?.dueDate);
+      return {
+        id: note.id,
+        fornecedor: note.data.supplier?.name || '',
+        documento: note.data.documentIdentifiers?.documentNumber || note.fileName,
+        valor: note.data.financial?.chargedValue || note.data.financial?.originalValue || 0,
+        vencimento: note.data.financial?.dueDate || '',
+        diasRestantes: dias
+      };
+    });
+
+  const combinedDeadlinesList = [...realDeadlinesList, ...mockDeadlinesList];
+
+  // Filtra por status de severidade
+  const filteredDeadlines = deadlineStatusFilter === 'all' 
+    ? combinedDeadlinesList 
+    : combinedDeadlinesList.filter(item => {
+        if (deadlineStatusFilter === 'critical') return item.diasRestantes <= 7;
+        if (deadlineStatusFilter === 'alert') return item.diasRestantes > 7 && item.diasRestantes <= 10;
+        if (deadlineStatusFilter === 'normal') return item.diasRestantes > 10;
+        return true;
+      });
+
+  // Ordena de forma dinâmica
+  filteredDeadlines.sort((a, b) => {
+    let comparison = 0;
+    if (deadlineSortField === 'fornecedor') {
+      comparison = a.fornecedor.localeCompare(b.fornecedor);
+    } else if (deadlineSortField === 'valor') {
+      comparison = a.valor - b.valor;
+    } else if (deadlineSortField === 'diasRestantes') {
+      comparison = a.diasRestantes - b.diasRestantes;
+    } else if (deadlineSortField === 'vencimento') {
+      const dateA = parseBrazilianDate(a.vencimento)?.getTime() || 0;
+      const dateB = parseBrazilianDate(b.vencimento)?.getTime() || 0;
+      comparison = dateA - dateB;
+    }
+    return deadlineSortOrder === 'asc' ? comparison : -comparison;
+  });
+
+  const totalDeadlinesRecords = filteredDeadlines.length;
+  const totalDeadlinesPages = Math.ceil(totalDeadlinesRecords / deadlinesRecordsPerPage) || 1;
+  const deadlinesStartIndex = (deadlinesCurrentPage - 1) * deadlinesRecordsPerPage;
+  const paginatedDeadlines = filteredDeadlines.slice(deadlinesStartIndex, deadlinesStartIndex + deadlinesRecordsPerPage);
+
   return (
     <div className="layout">
       <Header 
@@ -584,12 +803,59 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   />
                 </div>
 
-                {(historySearchTerm || historyModelFilter || historyDateFilter) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '160px' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status do Arquivo</label>
+                  <select
+                    value={historyFileStatusFilter}
+                    onChange={(e) => setHistoryFileStatusFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="Validado">Validado</option>
+                    <option value="Excluído">Excluído</option>
+                    <option value="Pendente">Pendente</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '160px' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status IA</label>
+                  <select
+                    value={historyAiStatusFilter}
+                    onChange={(e) => setHistoryAiStatusFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="Sucesso">Sucesso</option>
+                    <option value="Falha">Falha</option>
+                  </select>
+                </div>
+
+                {(historySearchTerm || historyModelFilter || historyDateFilter || historyFileStatusFilter || historyAiStatusFilter) && (
                   <button
                     onClick={() => {
                       setHistorySearchTerm('');
                       setHistoryModelFilter('');
                       setHistoryDateFilter('');
+                      setHistoryFileStatusFilter('');
+                      setHistoryAiStatusFilter('');
                     }}
                     style={{
                       padding: '8px 12px',
@@ -808,6 +1074,320 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               </div>
             </div>
           </div>
+        ) : activeTab === 'deadlines' ? (
+          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+            <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    border: '1px solid #e5e7eb',
+                    background: 'white',
+                    color: '#4b5563',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    outline: 'none'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    e.currentTarget.style.color = '#111827';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.color = '#4b5563';
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                  Monitoramento de Prazos de Vencimento
+                </h2>
+              </div>
+
+              <div style={{ marginBottom: '20px', fontSize: '0.85rem', color: '#4b5563', lineHeight: '1.5' }}>
+                Painel para visualização preventiva de vencimentos. Fornecedores destacados em vermelho representam prazos críticos de até 7 dias; amarelo sinaliza prazos de 8 a 10 dias; verde indica prazos superiores a 10 dias.
+              </div>
+
+              {/* Barra de Ações */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '16px', 
+                marginBottom: '20px', 
+                background: 'white', 
+                padding: '16px', 
+                borderRadius: '8px', 
+                border: '1px solid #e5e7eb',
+                alignItems: 'center',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    triggerEmailAlertsSimulation(filteredDeadlines);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    background: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    transition: 'background 0.2s',
+                    outline: 'none'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                >
+                  Enviar Alertas de Vencimento
+                </button>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', flex: 1 }}>
+                  Dispara notificações preventivas por e-mail para todos os gestores com faturas críticas e em alerta (vencimentos de até 10 dias).
+                </span>
+                
+                {/* Filtro Rápido por Status */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '180px' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Filtrar Status</label>
+                  <select
+                    value={deadlineStatusFilter}
+                    onChange={(e) => setDeadlineStatusFilter(e.target.value as any)}
+                    style={{
+                      padding: '8px',
+                      fontSize: '0.8rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="critical">Crítico (≤ 7 dias)</option>
+                    <option value="alert">Alerta (8 a 10 dias)</option>
+                    <option value="normal">Normal (&gt; 10 dias)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="custom-scrollbar" style={{ overflowX: 'auto', width: '100%', paddingBottom: '6px' }}>
+                <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #f3f4f6', background: '#f9fafb' }}>
+                      <th 
+                        onClick={() => handleSortDeadlines('fornecedor')}
+                        style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '250px', cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        Fornecedor {deadlineSortField === 'fornecedor' ? (deadlineSortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </th>
+                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '150px' }}>Documento</th>
+                      <th 
+                        onClick={() => handleSortDeadlines('valor')}
+                        style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'right', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        Valor {deadlineSortField === 'valor' ? (deadlineSortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortDeadlines('vencimento')}
+                        style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        Vencimento {deadlineSortField === 'vencimento' ? (deadlineSortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortDeadlines('diasRestantes')}
+                        style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        Dias Restantes {deadlineSortField === 'diasRestantes' ? (deadlineSortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </th>
+                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '120px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedDeadlines.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                          Nenhum registro de prazos encontrado.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedDeadlines.map((item) => {
+                        let rowStyle: React.CSSProperties = {};
+                        let badgeStyle: React.CSSProperties = {
+                          display: 'inline-block',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          textAlign: 'center'
+                        };
+                        let statusText = '';
+
+                        if (item.diasRestantes <= 7) {
+                          rowStyle = { backgroundColor: '#fef2f2' };
+                          badgeStyle = { ...badgeStyle, backgroundColor: '#fee2e2', color: '#991b1b' };
+                          statusText = 'Crítico';
+                        } else if (item.diasRestantes <= 10) {
+                          rowStyle = { backgroundColor: '#fffbeb' };
+                          badgeStyle = { ...badgeStyle, backgroundColor: '#fef3c7', color: '#92400e' };
+                          statusText = 'Alerta';
+                        } else {
+                          rowStyle = { backgroundColor: '#f0fdf4' };
+                          badgeStyle = { ...badgeStyle, backgroundColor: '#d1fae5', color: '#065f46' };
+                          statusText = 'Normal';
+                        }
+
+                        return (
+                          <tr 
+                            key={item.id} 
+                            style={{ 
+                              borderBottom: '1px solid #e5e7eb',
+                              transition: 'background-color 0.15s',
+                              ...rowStyle
+                            }}
+                          >
+                            <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 500 }}>
+                              {item.fornecedor}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#4b5563' }}>
+                              {item.documento}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#111827', textAlign: 'right', fontWeight: 500 }}>
+                              {item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </td>
+                            <td 
+                              style={{ padding: '12px 16px', textAlign: 'center', cursor: 'pointer' }}
+                              onClick={() => {
+                                if (editingItemId !== item.id) {
+                                  setEditingItemId(item.id);
+                                  setEditingDateValue(item.vencimento);
+                                }
+                              }}
+                              title="Clique para editar a data de vencimento"
+                            >
+                              {editingItemId === item.id ? (
+                                <input
+                                  type="text"
+                                  value={editingDateValue}
+                                  onChange={(e) => setEditingDateValue(e.target.value)}
+                                  onBlur={() => handleSaveDueDate(item.id, item)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleSaveDueDate(item.id, item);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingItemId(null);
+                                    }
+                                  }}
+                                  autoFocus
+                                  style={{
+                                    width: '90px',
+                                    padding: '4px 6px',
+                                    fontSize: '0.8rem',
+                                    border: '1px solid #2563eb',
+                                    borderRadius: '4px',
+                                    textAlign: 'center',
+                                    outline: 'none',
+                                    color: '#111827',
+                                    backgroundColor: '#ffffff',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                  }}
+                                />
+                              ) : (
+                                <span 
+                                  style={{ 
+                                    color: '#1f2937', 
+                                    fontWeight: 500,
+                                    textDecoration: 'underline', 
+                                    textDecorationStyle: 'dotted',
+                                    textUnderlineOffset: '3px',
+                                    textDecorationColor: '#9ca3af',
+                                    transition: 'color 0.15s, text-decoration-color 0.15s'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.color = '#2563eb';
+                                    e.currentTarget.style.textDecorationColor = '#2563eb';
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.color = '#1f2937';
+                                    e.currentTarget.style.textDecorationColor = '#9ca3af';
+                                  }}
+                                >
+                                  {item.vencimento}
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#111827', textAlign: 'center', fontWeight: 'bold' }}>
+                              {item.diasRestantes <= 0 ? 'Expirado' : `${item.diasRestantes} ${item.diasRestantes === 1 ? 'dia' : 'dias'}`}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <span style={badgeStyle}>{statusText}</span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Paginação de Prazos */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: '16px',
+                paddingTop: '16px',
+                borderTop: '1px solid #e5e7eb'
+              }}>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  Exibindo {deadlinesStartIndex + 1} a {Math.min(deadlinesStartIndex + deadlinesRecordsPerPage, totalDeadlinesRecords)} de {totalDeadlinesRecords} registros
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    disabled={deadlinesCurrentPage === 1}
+                    onClick={() => setDeadlinesCurrentPage(prev => prev - 1)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.75rem',
+                      background: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      color: deadlinesCurrentPage === 1 ? '#d1d5db' : '#4b5563',
+                      cursor: deadlinesCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    Anterior
+                  </button>
+                  <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#4b5563' }}>
+                    Página {deadlinesCurrentPage} de {totalDeadlinesPages}
+                  </span>
+                  <button
+                    disabled={deadlinesCurrentPage === totalDeadlinesPages}
+                    onClick={() => setDeadlinesCurrentPage(prev => prev + 1)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.75rem',
+                      background: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      color: deadlinesCurrentPage === totalDeadlinesPages ? '#d1d5db' : '#4b5563',
+                      cursor: deadlinesCurrentPage === totalDeadlinesPages ? 'not-allowed' : 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -865,8 +1445,9 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               </div>
 
               <div style={{
-                flex: 1,
-                minHeight: '400px',
+                height: 'calc(100vh - 220px)',
+                maxHeight: '750px',
+                minHeight: '350px',
                 background: '#1e1e1e',
                 borderRadius: '8px',
                 padding: '16px',

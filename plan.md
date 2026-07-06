@@ -2100,3 +2100,105 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter as alterações nos arquivos alterados.
 - Status: Aplicado
+
+### CHG-0143 — Implementação da Aba de Monitoramento de Prazos de Vencimento
+
+- Data/Hora: 2026-07-06 14:00
+- Contexto: Solicitação corporativa de visualização preventiva e controle de prazos de faturas para evitar multas.
+- Objetivo: Adicionar a aba "Prazos" no painel principal, com listagem ordenada de faturas (reais + mockadas), colorização condicional por severidade e simulação interativa de envio de notificações/e-mails.
+- Escopo:
+  - Frontend: [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Lógica de cálculo no frontend sem alterações de banco de dados ou backend.
+- Proposta: Adicionar a aba 'deadlines' na navegação, calcular diferença de dias com base na data local e renderizar tabela estilizada com cores correspondentes a cada severidade (Vermelho: <= 7 dias, Amarelo: 8-10 dias, Verde: > 10 dias).
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar na aba de Prazos, conferir a ordenação por urgência de dias restantes, a classificação visual por cores e o envio da notificação simulada com Toast.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0144 — Adição de Paginação na Aba de Prazos
+
+- Data/Hora: 2026-07-06 14:15
+- Contexto: Necessidade de otimizar a performance de renderização no frontend com a paginação de registros de prazos.
+- Objetivo: Implementar paginação de 10 registros por página na aba "Prazos", garantindo integridade visual com o restante da interface.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Alteração restrita à computação e fatiamento local da lista no frontend.
+- Proposta: Declarar estado `deadlinesCurrentPage` e slice `combinedDeadlinesList` no corpo da renderização, e exibir barra de paginação com suporte a estados habilitado/desabilitado na navegação.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar entre páginas na tabela de Prazos e garantir que a contagem de faturas e o funcionamento dos botões estão íntegros.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0145 — Filtros, Ordenação e Edição Inline na Tabela de Prazos
+
+- Data/Hora: 2026-07-06 14:35
+- Contexto: Necessidade de refinar o monitoramento preventivo de prazos permitindo isolamento de registros críticos e ordenação customizada de colunas.
+- Objetivo: Implementar filtros por status de urgência, cabeçalhos de coluna clicáveis para ordenação bidirecional e edição rápida inline do vencimento com validação de formato brasileiro.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Tratamento de ordenação e filtros inteiramente local na memória da aplicação cliente.
+- Proposta: Inserir dropdown de filtro por status e manipulador `handleSortDeadlines` vinculando cliques dos cabeçalhos ao estado React; mapear e-mails utilizando apenas registros correspondentes ao filtro ativo.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar na aba Prazos, filtrar por "Crítico" e verificar se apenas registros sob severidade crítica são listados.
+  - Clicar nas colunas "Fornecedor", "Valor", "Vencimento" e "Dias Restantes" confirmando a ordenação crescente/decrescente.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0146 — Ajuste de Contraste da Edição de Vencimento na Aba de Prazos
+
+- Data/Hora: 2026-07-06 14:45
+- Contexto: Relato de baixa legibilidade do texto e dos campos da data de vencimento sob as cores de fundo pastéis das linhas.
+- Objetivo: Aumentar o contraste visual da data de vencimento nas etapas de visualização (texto escuro com hover azul) e edição (fundo branco sólido e sombra).
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste estrito de CSS inline no frontend.
+- Proposta: Substituir estilos inline do input forçando fundo branco e cor do texto escura; alterar a cor padrão de visualização da data para `#1f2937` com transição para azul sob foco do mouse.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Passar o mouse nas datas de vencimento e verificar se o contraste de leitura é alto em linhas vermelhas, amarelas e verdes.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0147 — Inclusão de Filtros de Status no Histórico de Processamento
+
+- Data/Hora: 2026-07-06 15:10
+- Contexto: Necessidade de auditar os logs históricos de faturas agrupados por status do arquivo e pelo resultado da IA.
+- Objetivo: Adicionar filtros select para "Status do Arquivo" (Validado, Excluído, Pendente) e "Status IA" (Sucesso, Falha) no cabeçalho de buscas da aba Histórico.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Lógica executada localmente em memória sem impactos na integridade do servidor.
+- Proposta: Inserir novos elementos de seleção e suas respectivas condicionais de filtragem na lógica do hook React.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Filtrar o histórico por Status IA = "Falha" ou Status do Arquivo = "Excluído" e certificar que as correspondências exibidas na tabela estão perfeitamente alinhadas com as seleções.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0148 — Contenção de Altura e Scroll Interno na Aba de Logs
+
+- Data/Hora: 2026-07-06 15:20
+- Contexto: Aba de logs esticava verticalmente de forma excessiva devido à falta de limite na caixa de visualização dos registros.
+- Objetivo: Restringir a altura do console de logs a um limite dinâmico (`calc(100vh - 220px)`) para forçar o scroll interno e impedir o rolamento da tela principal.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste estrito de posicionamento CSS inline no frontend.
+- Proposta: Substituir `flex: 1` e `minHeight: 400px` do container preto por restrições de altura e altura máxima gerais da viewport.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar na aba de Logs, rolar o console preto e verificar se a rolagem ocorre estritamente dentro da caixa preta.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+
+
+
+
