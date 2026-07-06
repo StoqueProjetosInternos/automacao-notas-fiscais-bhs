@@ -15,6 +15,7 @@ export interface NoteData {
   supplier?: {
     name?: string;
     cnpjCpf?: string;
+    partnerCode?: string;
   };
   financial?: {
     dueDate?: string;

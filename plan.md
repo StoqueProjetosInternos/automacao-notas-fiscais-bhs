@@ -2233,6 +2233,41 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
 
+### CHG-0151 — Cruzamento Contábil Inteligente via Base de Fornecedores
+
+- Data/Hora: 2026-07-06 17:00
+- Contexto: Necessidade de automatizar a indexação contábil para alcançar 100% de acerto nas faturas extraídas.
+- Objetivo: Implementar cruzamento de dados contábeis no robô backend utilizando o CNPJ como chave de correspondência contra base_fornecedores_faturas.json, padronizando Razão Social, CR e Natureza cadastrados (respeitando a exceção contábil do parceiro Magna).
+- Escopo:
+  - Backend: [features/pdf/dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts), [features/pdf/types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/types.ts)
+  - Frontend: [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/types.ts)
+- Riscos: Baixos. O isolamento lógico por CNPJ e a regra de bypass na Magna evitam efeitos colaterais indesejados.
+- Proposta: Realizar a leitura do JSON de cadastro de fornecedores no backend, atualizar os fallbacks de CR e Natureza, e injetar a Razão Social oficial e o partnerCode nas interfaces do lote.
+- Testes:
+  - Validar a compilação do backend e do frontend (`npm run build`).
+  - Executar simulação de extração de PDF no backend e garantir que o arquivo JSON do lote resultante possui o Nome Oficial e o partnerCode definidos adequadamente.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts apps/automacao/src/features/pdf/types.ts apps/dashboard/src/types.ts`
+- Status: Aplicado
+
+### CHG-0152 — Lookup Secundário por Nome e Preenchimento de CNPJ na Automação
+
+- Data/Hora: 2026-07-06 17:15
+- Contexto: Boleto do fornecedor AGA CONSULTORIA LTDA extraído sem CNPJ (null), inviabilizando a indexação automática que se baseava apenas no CNPJ.
+- Objetivo: Implementar busca secundária por Razão Social (`cleanString`) no enriquecimento de faturas e restaurar o CNPJ correspondente para indexar corretamente CR e Natureza cadastrados.
+- Escopo:
+  - Backend: [features/pdf/dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos: Mínimos. Restrito à integridade da busca do lookup.
+- Proposta: Inserir a condicional de busca por nome caso a correspondência pelo CNPJ resulte vazia; injetar o CNPJ resgatado de volta no lote.
+- Testes:
+  - Validar a compilação do backend (`npm run build -w stoque-fiscal-intelligence`).
+  - Reprocessar a fatura da AGA CONSULTORIA no painel e confirmar o preenchimento automático das informações contábeis.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Status: Aplicado
+
+
+
 
 
 

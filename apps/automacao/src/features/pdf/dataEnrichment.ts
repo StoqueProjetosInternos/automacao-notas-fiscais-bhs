@@ -11,6 +11,7 @@ const CONSOLIDATED_JSON_PATH = path.resolve(__dirname, "../../../../../data/rate
 const BASE_PATH = path.resolve(__dirname, "../../../../../data/base_referencia.csv");
 const ITEMS_MAPPING_PATH = path.resolve(__dirname, "../../../../../data/mapeamento_itens.json");
 const CNPJ_ALIASES_PATH = path.resolve(__dirname, "../../../../../data/cnpj_aliases.json");
+const BASE_FORNECEDORES_JSON_PATH = path.resolve(__dirname, "../../../../../data/base_fornecedores_faturas.json");
 
 // Mapeamento de CNPJs de fornecedores conhecidos (fallback em memória)
 let CNPJ_TO_PARTNER: Record<string, string> = {
@@ -103,8 +104,59 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
 
   console.log(`[Enrichment] Processando enriquecimento contábil de: ${supplierName || "Fornecedor Desconhecido"}`);
 
+  const cleanCnpj = normalizeNumbers(supplierCnpj);
+
+  // Carrega base de fornecedores cadastrados
+  let baseFornecedores: any[] = [];
+  if (fs.existsSync(BASE_FORNECEDORES_JSON_PATH)) {
+    try {
+      baseFornecedores = JSON.parse(fs.readFileSync(BASE_FORNECEDORES_JSON_PATH, "utf8"));
+    } catch (err) {
+      console.error("[Enrichment] Erro ao analisar base_fornecedores_faturas.json:", err);
+    }
+  }
+
+  // Busca correspondência de cadastro pelo CNPJ ou secundariamente pela Razão Social
+  let matchedSupplier = cleanCnpj ? baseFornecedores.find(item => normalizeNumbers(item.cnpj) === cleanCnpj) : undefined;
+  
+  if (!matchedSupplier && supplierName) {
+    const cleanSupplierName = cleanString(supplierName);
+    matchedSupplier = baseFornecedores.find(item => {
+      const cleanItemName = cleanString(item.fornecedor);
+      return cleanSupplierName.includes(cleanItemName) || cleanItemName.includes(cleanSupplierName);
+    });
+  }
+  
+  let matchedPartnerCode = "";
+  let isMagna = false;
+
+  if (matchedSupplier) {
+    isMagna = cleanString(matchedSupplier.fornecedor).includes("magna");
+    matchedPartnerCode = matchedSupplier.documento.replace("PARC-", "");
+
+    // Normaliza a Razão Social oficial do fornecedor, restaura o CNPJ e anexa o CódParceiro
+    if (data.supplier) {
+      data.supplier.name = matchedSupplier.fornecedor;
+      data.supplier.partnerCode = matchedPartnerCode;
+      if (!data.supplier.cnpjCpf) {
+        data.supplier.cnpjCpf = matchedSupplier.cnpj;
+      }
+    }
+  }
+
   // 1. Carregar fallback padrão do CSV caso o consolidado não possua a regra
   const fallback = getCsvFallback(supplierCnpj, clientAccount);
+
+  // Sobrescreve as regras de fallback caso o fornecedor esteja cadastrado (exceto para o caso da Magna)
+  if (matchedSupplier && !isMagna) {
+    if (matchedSupplier.centroResultado) {
+      fallback.cr = String(matchedSupplier.centroResultado);
+    }
+    if (matchedSupplier.natureza) {
+      fallback.naturezaCode = String(matchedSupplier.natureza);
+    }
+  }
+
   let defaultAccounting = {
     cr: fallback.cr,
     crDescription: fallback.cr === "N/A" ? "N/A" : "Centro de Custo " + fallback.cr,
@@ -218,14 +270,14 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
         };
       }
 
-      // III. Fallback para os dados contábeis padrões
+      // III. Fallback para os dados contábeis padrões (tratando "N/A" como ausente)
       return {
         ...item,
-        cr: item.cr || defaultAccounting.cr,
-        crDescription: item.crDescription || defaultAccounting.crDescription,
-        naturezaCode: item.naturezaCode || defaultAccounting.naturezaCode,
-        naturezaDescription: item.naturezaDescription || defaultAccounting.naturezaDescription,
-        contract: item.contract && item.contract !== "-" ? item.contract : defaultAccounting.contract
+        cr: (!item.cr || item.cr === "N/A") ? defaultAccounting.cr : item.cr,
+        crDescription: (!item.crDescription || item.crDescription === "Centro de Custo N/A" || item.crDescription === "N/A") ? defaultAccounting.crDescription : item.crDescription,
+        naturezaCode: (!item.naturezaCode || item.naturezaCode === "N/A") ? defaultAccounting.naturezaCode : item.naturezaCode,
+        naturezaDescription: (!item.naturezaDescription || item.naturezaDescription === "Rateio Geral" || item.naturezaDescription === "N/A") ? defaultAccounting.naturezaDescription : item.naturezaDescription,
+        contract: (!item.contract || item.contract === "0" || item.contract === "-") ? defaultAccounting.contract : item.contract
       };
     });
 
