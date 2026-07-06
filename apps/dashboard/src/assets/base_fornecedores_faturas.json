@@ -1,0 +1,542 @@
+[
+  {
+    "id": "m1",
+    "fornecedor": "AGA CONSULTORIA LTDA",
+    "documento": "PARC-12210",
+    "valor": 10657.5,
+    "vencimento": "30/07/2026",
+    "cnpj": "34.266.418/0001-67",
+    "centroResultado": "1103",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m2",
+    "fornecedor": "AGA CONSULTORIA LTDA",
+    "documento": "PARC-12210",
+    "valor": 10657.5,
+    "vencimento": "30/07/2026",
+    "cnpj": "34.266.418/0001-67",
+    "centroResultado": "1103",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m3",
+    "fornecedor": "AGA CONSULTORIA LTDA",
+    "documento": "PARC-12210",
+    "valor": 10657.5,
+    "vencimento": "30/07/2026",
+    "cnpj": "34.266.418/0001-67",
+    "centroResultado": "1103",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m4",
+    "fornecedor": "ALEYANT SPAIN",
+    "documento": "PARC-10008",
+    "valor": 9006,
+    "vencimento": "01/07/2026",
+    "cnpj": "05.388.674/0001-29",
+    "centroResultado": "101",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m5",
+    "fornecedor": "ALIANCA TECNOINFO LTDA - ME",
+    "documento": "PARC-16157",
+    "valor": 13617.75,
+    "vencimento": "17/07/2026",
+    "cnpj": "11.845.592/0001-69",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m6",
+    "fornecedor": "ALTI SERVICES LTDA",
+    "documento": "PARC-15678",
+    "valor": 13258.5,
+    "vencimento": "05/07/2026",
+    "cnpj": "57.319.251/0001-50",
+    "centroResultado": "1103",
+    "natureza": "141401002"
+  },
+  {
+    "id": "m7",
+    "fornecedor": "ALTI SERVICES LTDA",
+    "documento": "PARC-15678",
+    "valor": 13258.5,
+    "vencimento": "05/07/2026",
+    "cnpj": "57.319.251/0001-50",
+    "centroResultado": "1103",
+    "natureza": "141401002"
+  },
+  {
+    "id": "m8",
+    "fornecedor": "ALTI SERVICES LTDA",
+    "documento": "PARC-15678",
+    "valor": 13258.5,
+    "vencimento": "05/07/2026",
+    "cnpj": "57.319.251/0001-50",
+    "centroResultado": "1103",
+    "natureza": "141401002"
+  },
+  {
+    "id": "m9",
+    "fornecedor": "ALTI SERVICES LTDA",
+    "documento": "PARC-15678",
+    "valor": 13258.5,
+    "vencimento": "20/07/2026",
+    "cnpj": "57.319.251/0001-50",
+    "centroResultado": "1103",
+    "natureza": "141401002"
+  },
+  {
+    "id": "m10",
+    "fornecedor": "ALTI SERVICES LTDA",
+    "documento": "PARC-15678",
+    "valor": 13258.5,
+    "vencimento": "05/07/2026",
+    "cnpj": "57.319.251/0001-50",
+    "centroResultado": "1103",
+    "natureza": "141401002"
+  },
+  {
+    "id": "m11",
+    "fornecedor": "BANCO DLL BRASIL S.A - STOQUE",
+    "documento": "PARC-14718",
+    "valor": 12538.5,
+    "vencimento": "10/07/2026",
+    "cnpj": "05.040.481/0001-82",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m12",
+    "fornecedor": "BANCO DLL BRASIL S.A - ZEEV",
+    "documento": "PARC-14718",
+    "valor": 12538.5,
+    "vencimento": "21/07/2026",
+    "cnpj": "05.040.481/0001-82",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m13",
+    "fornecedor": "BHS AXTER SOLUCOES DIGITAIS LTDA",
+    "documento": "PARC-14940",
+    "valor": 12705,
+    "vencimento": "09/07/2026",
+    "cnpj": "04.856.032/0001-44",
+    "centroResultado": "1103",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m14",
+    "fornecedor": "BHS AXTER SOLUCOES DIGITAIS LTDA",
+    "documento": "PARC-14940",
+    "valor": 12705,
+    "vencimento": "31/07/2026",
+    "cnpj": "04.856.032/0001-44",
+    "centroResultado": "1103",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m15",
+    "fornecedor": "BLUEPARTNER SOLUCOES EM TI LTDA",
+    "documento": "PARC-14137",
+    "valor": 12102.75,
+    "vencimento": "15/07/2026",
+    "cnpj": "25.330.241/0001-20",
+    "centroResultado": "1103",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m16",
+    "fornecedor": "CallFace",
+    "documento": "PARC-15349",
+    "valor": 13011.75,
+    "vencimento": "22/07/2026",
+    "cnpj": "39.764.520/0001-06",
+    "centroResultado": "1103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m17",
+    "fornecedor": "Century Telecom LTDA",
+    "documento": "PARC-11656",
+    "valor": 10242,
+    "vencimento": "05/07/2026",
+    "cnpj": "01.492.641/0001-73",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m18",
+    "fornecedor": "Century Telecom LTDA",
+    "documento": "PARC-11656",
+    "valor": 10242,
+    "vencimento": "05/07/2026",
+    "cnpj": "01.492.641/0001-73",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m19",
+    "fornecedor": "Century Telecom LTDA",
+    "documento": "PARC-11656",
+    "valor": 10242,
+    "vencimento": "13/07/2026",
+    "cnpj": "01.492.641/0001-73",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m20",
+    "fornecedor": "Century Telecom LTDA",
+    "documento": "PARC-11656",
+    "valor": 10242,
+    "vencimento": "13/07/2026",
+    "cnpj": "01.492.641/0001-73",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m21",
+    "fornecedor": "Century Telecom LTDA",
+    "documento": "PARC-11656",
+    "valor": 10242,
+    "vencimento": "10/07/2026",
+    "cnpj": "01.492.641/0001-73",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m22",
+    "fornecedor": "Century Telecom LTDA",
+    "documento": "PARC-11656",
+    "valor": 10242,
+    "vencimento": "10/07/2026",
+    "cnpj": "01.492.641/0001-73",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m23",
+    "fornecedor": "Claro S.A./NET",
+    "documento": "PARC-3118",
+    "valor": 3838.5,
+    "vencimento": "11/07/2026",
+    "cnpj": "66.970.229/0264-76",
+    "centroResultado": "101",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m24",
+    "fornecedor": "Claro S.A./NET",
+    "documento": "PARC-3118",
+    "valor": 3838.5,
+    "vencimento": "15/07/2026",
+    "cnpj": "66.970.229/0264-76",
+    "centroResultado": "101",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m25",
+    "fornecedor": "Claro S.A./NET",
+    "documento": "PARC-3118",
+    "valor": 3838.5,
+    "vencimento": "10/07/2026",
+    "cnpj": "66.970.229/0104-72",
+    "centroResultado": "101",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m26",
+    "fornecedor": "DIGITÉCNICA EQUIPAMENTOS E SERVIÇOS LTDA - EPP",
+    "documento": "PARC-3207",
+    "valor": 3905.25,
+    "vencimento": "30/07/2026",
+    "cnpj": "18.545.608/0001-67",
+    "centroResultado": "1103",
+    "natureza": "141401007"
+  },
+  {
+    "id": "m27",
+    "fornecedor": "EMC TECNOLOGIA LTDA",
+    "documento": "PARC-142",
+    "valor": 1606.5,
+    "vencimento": "06/07/2026",
+    "cnpj": "22.261.093/0001-40",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m28",
+    "fornecedor": "EMC TECNOLOGIA LTDA",
+    "documento": "PARC-142",
+    "valor": 1606.5,
+    "vencimento": "18/07/2026",
+    "cnpj": "22.261.093/0001-40",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m29",
+    "fornecedor": "FALE IP",
+    "documento": "PARC-17051",
+    "valor": 14288.25,
+    "vencimento": "10/07/2026",
+    "cnpj": "10.445.420/0001-35",
+    "centroResultado": "1103",
+    "natureza": "141601003"
+  },
+  {
+    "id": "m30",
+    "fornecedor": "GUILHERME CARRAPATOSO GARCIA SERVICOS ADMINISTRATIVOS",
+    "documento": "PARC-2597",
+    "valor": 3447.75,
+    "vencimento": "25/07/2026",
+    "cnpj": "14.737.908/0001-97",
+    "centroResultado": "807",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m31",
+    "fornecedor": "HOSTGATOR BRASIL LTDA",
+    "documento": "PARC-9044",
+    "valor": 8283,
+    "vencimento": "02/07/2025",
+    "cnpj": "15.754.475/0001-40",
+    "centroResultado": "1103",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m32",
+    "fornecedor": "INGRAM MICRO BRASIL LTDA",
+    "documento": "PARC-5380",
+    "valor": 5535,
+    "vencimento": "08/07/2026",
+    "cnpj": "01.771.935/0002-15",
+    "centroResultado": "1103",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m33",
+    "fornecedor": "JM FIBRA COMUNICACAO MULTIMIDIA LTDA ",
+    "documento": "PARC-17023",
+    "valor": 14267.25,
+    "vencimento": "20/07/2026",
+    "cnpj": "40.955.623/0001-32",
+    "centroResultado": "1103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m34",
+    "fornecedor": "MAGNA SERVICOS DE MANUTENCAO EM INFORMATICA LTDA",
+    "documento": "PARC-14756",
+    "valor": 12567,
+    "vencimento": "11/07/2026",
+    "cnpj": "11.603.140/0001-70",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m35",
+    "fornecedor": "MAGNA SERVICOS DE MANUTENCAO EM INFORMATICA LTDA",
+    "documento": "PARC-15030",
+    "valor": 12772.5,
+    "vencimento": "10/07/2026",
+    "cnpj": "11.603.140/0003-32",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m36",
+    "fornecedor": "MUNDIVOX NETWORKS LTDA",
+    "documento": "PARC-14709",
+    "valor": 12531.75,
+    "vencimento": "20/07/2026",
+    "cnpj": "27.770.739/0002-10",
+    "centroResultado": "1103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m37",
+    "fornecedor": "MUNDIVOX NETWORKS LTDA",
+    "documento": "PARC-14709",
+    "valor": 12531.75,
+    "vencimento": "20/07/2026",
+    "cnpj": "27.770.739/0002-10",
+    "centroResultado": "1103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m38",
+    "fornecedor": "NOW TREINAMENTO E LOCACAO LTDA",
+    "documento": "PARC-14381",
+    "valor": 12285.75,
+    "vencimento": "20/07/2026",
+    "cnpj": "45.385.327/0001-67",
+    "centroResultado": "1104",
+    "natureza": "141501005"
+  },
+  {
+    "id": "m39",
+    "fornecedor": "SAIPH COMERCIO DE INFORMATICA LTDA",
+    "documento": "PARC-14159",
+    "valor": 12119.25,
+    "vencimento": "30/07/2026",
+    "cnpj": "10.521.620/0002-00",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  },
+  {
+    "id": "m40",
+    "fornecedor": "SANKHYA JIVA TECNOLOGIA E INOVACAO LTDA",
+    "documento": "PARC-3265",
+    "valor": 3948.75,
+    "vencimento": "30/07/2026",
+    "cnpj": "26.314.062/0001-61",
+    "centroResultado": "1103",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m41",
+    "fornecedor": "SANKHYA TECNOLOGIA EM SISTEMAS LTDA",
+    "documento": "PARC-3746",
+    "valor": 4309.5,
+    "vencimento": "25/07/2026",
+    "cnpj": "26.314.062/0002-42",
+    "centroResultado": "1103",
+    "natureza": "141601003"
+  },
+  {
+    "id": "m42",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "16/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m43",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "15/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m44",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "21/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m45",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "23/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m46",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "23/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m47",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "23/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m48",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "12/07/2026",
+    "cnpj": "02.558.157/0009-10",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m49",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "21/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m50",
+    "fornecedor": "Telefônica Brasil S/A",
+    "documento": "PARC-2584",
+    "valor": 3438,
+    "vencimento": "23/07/2026",
+    "cnpj": "02.558.157/0001-62",
+    "centroResultado": "103",
+    "natureza": "141401011"
+  },
+  {
+    "id": "m51",
+    "fornecedor": "VGM MONTEIRO ME - Fale Sempre Mais",
+    "documento": "PARC-7718",
+    "valor": 7288.5,
+    "vencimento": "31/07/2026",
+    "cnpj": "18.497.042/0001-45",
+    "centroResultado": "1103",
+    "natureza": "141401010"
+  },
+  {
+    "id": "m52",
+    "fornecedor": "VIRTUAL SISTEMAS E TECNOLOGIA LTDA",
+    "documento": "PARC-3713",
+    "valor": 4284.75,
+    "vencimento": "23/07/2026",
+    "cnpj": "10.445.420/0001-35",
+    "centroResultado": "1103",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m53",
+    "fornecedor": "VIRTUAL SISTEMAS E TECNOLOGIA LTDA",
+    "documento": "PARC-3713",
+    "valor": 4284.75,
+    "vencimento": "10/07/2026",
+    "cnpj": "10.445.420/0001-35",
+    "centroResultado": "1103",
+    "natureza": "141601001"
+  },
+  {
+    "id": "m54",
+    "fornecedor": "VOKE S.A",
+    "documento": "PARC-9348",
+    "valor": 8511,
+    "vencimento": "27/07/2026",
+    "cnpj": "04.212.396/0001-91",
+    "centroResultado": "1103",
+    "natureza": "141401001"
+  }
+]

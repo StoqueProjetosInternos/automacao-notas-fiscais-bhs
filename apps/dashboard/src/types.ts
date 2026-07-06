@@ -39,8 +39,32 @@ export interface NoteData {
   additionalInfo?: Record<string, unknown>;
   rawText?: string;
   
+  apportionment?: ApportionmentItem[];
+  accountingFields?: AccountingFields;
+  
   // Suporte a campos de legado que podem existir nos JSONs salvos
   valorTotal?: number;
+  [key: string]: unknown;
+}
+
+export interface AccountingFields {
+  cr?: string;
+  crDescription?: string;
+  naturezaCode?: string;
+  naturezaDescription?: string;
+  contract?: string;
+  [key: string]: unknown;
+}
+
+export interface ApportionmentItem {
+  description?: string;
+  quantity?: number;
+  unitValue?: number;
+  value?: number;
+  cr?: string;
+  naturezaCode?: string;
+  contract?: string;
+  serialNumber?: string;
   [key: string]: unknown;
 }
 

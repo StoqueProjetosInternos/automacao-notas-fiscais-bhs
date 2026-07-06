@@ -2198,6 +2198,43 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
 
+### CHG-0149 — Ingestão de Cadastro de Fornecedores Real na Aba de Prazos
+
+- Data/Hora: 2026-07-06 16:40
+- Contexto: Necessidade de possuir dados preventivos fiéis de prazos com base na planilha de fornecedores adicionada ao repositório.
+- Objetivo: Converter a planilha base_fornecedores_faturas.xlsx em JSON e integrá-la ao frontend para substituir a exibição fictícia por 54 registros autênticos de fornecedores e vencimentos.
+- Escopo:
+  - Configurações: [tsconfig.app.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/tsconfig.app.json)
+  - Tipagem: [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/types.ts)
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+  - Script de Suporte: `apps/automacao/src/scripts/generate_base_json.ts`
+- Riscos: Baixos. Conversão prévia do Excel em JSON resolve a necessidade de requisições ou dependências em runtime no frontend.
+- Proposta: Habilitar importação de arquivos JSON no compilador, tipar propriedades do rateio no types.ts, e mapear o arquivo gerado contendo CNPJ e Vencimento original no `mockDeadlinesList`.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Abrir a aba Prazos e constatar a renderização de múltiplos fornecedores reais da planilha paginados, ordenados e classificados por cor.
+- Rollback:
+  1) `git checkout -- apps/dashboard/tsconfig.app.json apps/dashboard/src/types.ts apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0150 — Implementação de Vencimentos Preventivos Dinâmicos na Aba de Prazos
+
+- Data/Hora: 2026-07-06 16:50
+- Contexto: Necessidade de automatizar a recorrência de faturamento para evitar que o painel exiba datas estáticas vencidas.
+- Objetivo: Implementar projeção automática das datas de vencimento preventivo da base para o mês atual ou subsequente em tempo de execução, preservando os dias de vencimento originais.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixos. Tratamento lógico restrito à renderização do frontend no carregamento.
+- Proposta: Inserir a função helper `getDynamicDueDate` e aplicá-la na geração de faturas da base do Excel.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Observar se fornecedores com datas originais do início do mês (ex: dia 1 ou 5) mudam para o mês posterior (agosto) e fornecedores com vencimentos ao fim do mês se mantêm em julho, atualizando os dias restantes.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+
+
 
 
 

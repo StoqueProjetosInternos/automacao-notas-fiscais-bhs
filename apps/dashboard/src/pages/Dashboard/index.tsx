@@ -7,6 +7,7 @@ import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, sync
 import type { Note, NoteData } from '../../types';
 import { ArrowLeft, RefreshCcw } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
+import baseFornecedores from '../../assets/base_fornecedores_faturas.json';
 
 const NUMERIC_FIELDS = [
   'originalValue', 'chargedValue', 'iss', 'irrf', 'pis', 'cofins', 'csll', 'quantity', 'unitValue', 'value'
@@ -212,6 +213,45 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     dueDate.setHours(0, 0, 0, 0);
     const diffTime = dueDate.getTime() - hoje.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const getDynamicDueDate = (originalDateStr: string): string => {
+    const parsedOriginal = parseBrazilianDate(originalDateStr);
+    if (!parsedOriginal) return originalDateStr;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const diaOriginal = parsedOriginal.getDate();
+
+    // Cria a data candidata para o mês e ano vigentes
+    let candidateDate = new Date(hoje.getFullYear(), hoje.getMonth(), diaOriginal);
+
+    // Ajusta o dia se estourar o limite de dias do mês (ex: 31 de fevereiro)
+    if (candidateDate.getMonth() !== hoje.getMonth()) {
+      candidateDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    }
+
+    // Se a data de vencimento deste mês já passou, projeta para o próximo mês
+    if (candidateDate.getTime() < hoje.getTime()) {
+      let nextMonth = hoje.getMonth() + 1;
+      let nextYear = hoje.getFullYear();
+      if (nextMonth > 11) {
+        nextMonth = 0;
+        nextYear += 1;
+      }
+      candidateDate = new Date(nextYear, nextMonth, diaOriginal);
+      
+      // Ajusta o dia se estourar o limite do próximo mês (ex: 31 de novembro)
+      if (candidateDate.getMonth() !== nextMonth) {
+        candidateDate = new Date(nextYear, nextMonth + 1, 0);
+      }
+    }
+
+    const dd = String(candidateDate.getDate()).padStart(2, '0');
+    const mm = String(candidateDate.getMonth() + 1).padStart(2, '0');
+    const yyyy = candidateDate.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   };
 
   const triggerEmailAlertsSimulation = (items: any[]) => {
@@ -503,55 +543,20 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   };
 
   // Computação e Paginação da Lista de Prazos combinando reais e mocks
-  const hoje = new Date();
-  const addDaysToCurrentDate = (d: Date, days: number): string => {
-    const res = new Date(d);
-    res.setDate(res.getDate() + days);
-    return `${String(res.getDate()).padStart(2, '0')}/${String(res.getMonth() + 1).padStart(2, '0')}/${res.getFullYear()}`;
-  };
 
-  const mockDeadlinesList = [
-    { 
-      id: "m1", 
-      fornecedor: "Dall Soluções de TI Ltda", 
-      documento: "FAT-2026-8942", 
-      valor: 12450.00, 
-      vencimento: mockOverrides["m1"] || addDaysToCurrentDate(hoje, 5), 
-      diasRestantes: getDaysRemaining(mockOverrides["m1"] || addDaysToCurrentDate(hoje, 5)) 
-    },
-    { 
-      id: "m2", 
-      fornecedor: "Locaweb Serviços de Internet", 
-      documento: "FAT-2026-0981", 
-      valor: 4200.00, 
-      vencimento: mockOverrides["m2"] || addDaysToCurrentDate(hoje, 10), 
-      diasRestantes: getDaysRemaining(mockOverrides["m2"] || addDaysToCurrentDate(hoje, 10)) 
-    },
-    { 
-      id: "m3", 
-      fornecedor: "Papelaria Central de Minas Ltda", 
-      documento: "NF-0001045", 
-      valor: 850.50, 
-      vencimento: mockOverrides["m3"] || addDaysToCurrentDate(hoje, 18), 
-      diasRestantes: getDaysRemaining(mockOverrides["m3"] || addDaysToCurrentDate(hoje, 18)) 
-    },
-    { 
-      id: "m4", 
-      fornecedor: "Construtora Alfa S/A", 
-      documento: "FAT-0007720", 
-      valor: 45000.00, 
-      vencimento: mockOverrides["m4"] || addDaysToCurrentDate(hoje, 3), 
-      diasRestantes: getDaysRemaining(mockOverrides["m4"] || addDaysToCurrentDate(hoje, 3)) 
-    },
-    { 
-      id: "m5", 
-      fornecedor: "Seguros Porto Seguro S/A", 
-      documento: "AP-0030948", 
-      valor: 2900.00, 
-      vencimento: mockOverrides["m5"] || addDaysToCurrentDate(hoje, 12), 
-      diasRestantes: getDaysRemaining(mockOverrides["m5"] || addDaysToCurrentDate(hoje, 12)) 
-    }
-  ];
+
+  const mockDeadlinesList = baseFornecedores.map((item) => {
+    const dynamicVencimento = getDynamicDueDate(item.vencimento);
+    const finalVencimento = mockOverrides[item.id] || dynamicVencimento;
+    return {
+      id: item.id,
+      fornecedor: item.fornecedor,
+      documento: item.documento,
+      valor: item.valor,
+      vencimento: finalVencimento,
+      diasRestantes: getDaysRemaining(finalVencimento)
+    };
+  });
 
   const realDeadlinesList = notes
     .filter(note => note.data?.supplier?.name && note.data?.financial?.dueDate)
@@ -1149,7 +1154,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   Enviar Alertas de Vencimento
                 </button>
                 <span style={{ fontSize: '0.75rem', color: '#6b7280', flex: 1 }}>
-                  Dispara notificações preventivas por e-mail para todos os gestores com faturas críticas e em alerta (vencimentos de até 10 dias).
+                  Dispara notificações preventivas por e-mail para o gestor com faturas críticas e em alerta (vencimentos de até 10 dias).
                 </span>
                 
                 {/* Filtro Rápido por Status */}
