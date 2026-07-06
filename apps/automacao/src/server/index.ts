@@ -6,6 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../../../../.env") });
 
+import "./config/logger.js";
 import app from './app.js';
 import { FILES_DIR } from './config/paths.js';
 

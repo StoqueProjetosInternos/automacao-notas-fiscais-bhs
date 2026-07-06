@@ -4,8 +4,8 @@ interface HeaderProps {
   onSync: () => void;
   isApiOnline: boolean;
   isSyncing: boolean;
-  activeTab: 'notes' | 'history';
-  onChangeTab: (tab: 'notes' | 'history') => void;
+  activeTab: 'notes' | 'history' | 'logs' | 'deadlines';
+  onChangeTab: (tab: 'notes' | 'history' | 'logs' | 'deadlines') => void;
   onLogout: () => void;
 }
 
@@ -18,7 +18,8 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           alt="Stoque" 
           width="120" 
           height="34"
-          style={{ display: 'block' }}
+          style={{ display: 'block', cursor: 'pointer' }}
+          onClick={() => onChangeTab('notes')}
         />
         <span style={{ 
           marginLeft: '8px', 
@@ -68,6 +69,40 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           onClick={() => onChangeTab('history')}
         >
           Histórico
+        </button>
+        <button 
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontSize: '0.85rem',
+            fontWeight: activeTab === 'logs' ? 700 : 500,
+            color: activeTab === 'logs' ? '#2563eb' : '#6b7280',
+            cursor: 'pointer',
+            padding: '6px 0',
+            borderBottom: `2px solid ${activeTab === 'logs' ? '#2563eb' : 'transparent'}`,
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+          onClick={() => onChangeTab('logs')}
+        >
+          Logs
+        </button>
+        <button 
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontSize: '0.85rem',
+            fontWeight: activeTab === 'deadlines' ? 700 : 500,
+            color: activeTab === 'deadlines' ? '#2563eb' : '#6b7280',
+            cursor: 'pointer',
+            padding: '6px 0',
+            borderBottom: `2px solid ${activeTab === 'deadlines' ? '#2563eb' : 'transparent'}`,
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+          onClick={() => onChangeTab('deadlines')}
+        >
+          Prazos
         </button>
       </nav>
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

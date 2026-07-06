@@ -122,3 +122,8 @@ export const syncEmails = async (): Promise<SyncResponse> => {
   const response = await apiClient.post<SyncResponse>('/api/notes/sync');
   return response.data;
 };
+
+export const fetchApiLogs = async (): Promise<string> => {
+  const response = await apiClient.get<{ logs: string }>('/api/notes/logs');
+  return response.data.logs;
+};

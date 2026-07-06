@@ -516,6 +516,35 @@ html, body, #root {
   }
 }
 
+.progress-bar-loading {
+  position: absolute;
+  height: 100%;
+  background-color: #2563eb;
+  border-radius: 2px;
+  animation: indeterminateProgress 1.5s infinite linear;
+  left: 0;
+  top: 0;
+}
+
+@keyframes indeterminateProgress {
+  0% {
+    left: -35%;
+    right: 100%;
+    width: 35%;
+  }
+  50% {
+    left: 100%;
+    right: -35%;
+    width: 35%;
+  }
+  100% {
+    left: 100%;
+    right: -35%;
+    width: 35%;
+  }
+}
+
+
 /* =========================================
    ESTILOS DO MODAL DE RATEIOS (APPORTIONMENT)
    ========================================= */
@@ -607,4 +636,28 @@ html, body, #root {
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.delete-btn-container {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.note-item:hover .delete-btn-container {
+  opacity: 1;
+}
+
+.delete-btn-container:hover {
+  transform: scale(1.1);
+  transition: transform 0.1s ease;
+}
+
+.modal-delete-btn {
+  opacity: 0.6;
+  transition: all 0.2s ease-in-out;
+}
+
+.modal-delete-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
 }

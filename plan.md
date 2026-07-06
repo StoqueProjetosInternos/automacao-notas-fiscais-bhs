@@ -1866,3 +1866,339 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   - Reverter as alterações nos arquivos index.tsx e DataEditor.tsx.
 - Status: Aplicado
+
+### CHG-0128 — Indicador de Carregamento na Listagem de Histórico
+
+- Data/Hora: 2026-07-02 12:07
+- Contexto: A aba de histórico apresentava comportamento estático sem feedback visual enquanto o backend processava a consulta dos logs de uso da IA, parecendo vazia ou travada.
+- Objetivo: Renderizar um spinner animado no corpo da tabela quando loadingLogs for verdadeiro, e exibir mensagem amigável caso nenhum resultado seja encontrado.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste visual simples limitado a comportamento condicional de renderização React.
+- Proposta: Injetar verificações ternárias de loadingLogs e paginatedUsageLogs.length no corpo da tabela do histórico.
+- Testes:
+  - Alternar para a aba de histórico e validar exibição e ocultação suave do spinner.
+  - Testar filtros para verificar comportamento com lista vazia.
+- Rollback:
+  - Reverter as condicionais de renderização no index.tsx.
+- Status: Aplicado
+
+### CHG-0129 — Processamento Multithread Sequencial de Faturas e Progresso no Toaster
+
+- Data/Hora: 2026-07-02 12:18
+- Contexto: O processamento de e-mails capturava apenas uma mensagem por ciclo. Além disso, a sincronização longa carecia de feedback visual detalhado no frontend, deixando o usuário sem acompanhar o status.
+- Objetivo:
+  1) Modificar o processador de e-mails para ler até 5 itens não lidos em sequência tranquila.
+  2) Implementar um toast persistente de progresso com spinner e barra de progresso indeterminada no dashboard do frontend durante a sincronização ativa.
+  3) Personalizar mensagem de aviso amigável quando a fila de e-mails não contiver novas mensagens.
+- Escopo:
+  - Backend: [features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts), [main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/main.ts), [server/services/noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts), [server/controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. A barra de progresso no frontend utiliza classes nativas de CSS com transições suaves e sem consumo adicional de recursos.
+- Proposta: Implementar métodos de lote no plural no processador, estender a API HTTP, injetar a barra animada de progresso vinculada ao estado isSyncing, e atualizar resposta de fila vazia.
+- Testes:
+  - Clicar em Sincronizar e validar a aparição do toast de progresso com barra azul contínua.
+  - Verificar no backend o processamento ordenado e sequencial das últimas 5 mensagens da caixa.
+  - Testar o comportamento da sincronização sem e-mails na caixa e checar se o toast informativo de fila vazia é exibido.
+- Rollback:
+  - Reverter as alterações nos arquivos alterados do frontend e backend.
+- Status: Aplicado
+
+### CHG-0130 — Restrição da Busca de E-mails à Caixa de Entrada com Anexos
+
+- Data/Hora: 2026-07-02 12:24
+- Contexto: A listagem geral de mensagens (/messages) no Microsoft Graph retornava itens indesejados de outras pastas (como Itens Enviados, Rascunhos ou Lixeira) e mensagens de texto sem anexos, poluindo a fila de importação de faturas.
+- Objetivo: Restringir a busca apenas para a pasta Caixa de Entrada (/mailFolders/inbox/messages) e aplicar um filtro adicional no OData da Graph API exigindo que a mensagem possua anexos (hasAttachments eq true).
+- Escopo:
+  - Backend: [features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+- Riscos: Nenhum. É um refinamento da consulta HTTP do Microsoft Graph que reduz o volume de mensagens baixadas e analisadas.
+- Proposta: Alterar a URL do endpoint da Graph API e estender o parâmetro $filter para conter hasAttachments eq true.
+- Testes:
+  - Garantir que apenas e-mails não lidos localizados na Inbox e que possuam anexos sejam retornados na busca.
+  - Verificar que mensagens sem anexos (ou em pastas como Rascunhos) são ignoradas pela rotina.
+- Rollback:
+  - Reverter a URL do endpoint e o filtro OData no searchDataFromEmail.ts para o estado anterior.
+- Status: Aplicado
+
+### CHG-0131 — Expansão dos Critérios de Filtro de Busca na Barra Lateral
+
+- Data/Hora: 2026-07-02 12:48
+- Contexto: A pesquisa lateral de faturas estava limitada à busca pelo nome do arquivo do documento (propriedade id), prejudicando a busca por parceiros, datas ou identificadores do documento.
+- Objetivo: Expandir o filtro de busca local para checar nomes de parceiros, CNPJ/CPF, datas financeiras e números de documentos.
+- Escopo:
+  - Frontend: [components/Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Exceções de referência nula ao acessar propriedades opcionais do JSON de faturas. (Mitigado com uso de encadeamento opcional e checagens ternárias).
+- Proposta: Reescrever a expressão do notes.filter no Sidebar.tsx adicionando mapeamento para múltiplos campos opcionais do NoteData.
+- Testes:
+  - Realizar pesquisas no painel lateral usando partes de CNPJ, datas de vencimento e nomes de parceiros e comprovar a filtragem síncrona.
+- Rollback:
+  - Reverter a expressão do filtro do Sidebar.tsx para a busca padrão baseada em n.id.
+- Status: Aplicado
+
+### CHG-0132 — Organização das Pastas Extraídas com Nome do Fornecedor
+
+- Data/Hora: 2026-07-02 12:56
+- Contexto: A criação das pastas de faturas em data/extracted utilizava apenas o nome original do arquivo (como test_16), dificultando a identificação manual do parceiro comercial.
+- Objetivo: Renomear pastas e arquivos gerados contendo o nome sanitizado do fornecedor concatenado ao nome original da fatura, preservando a integridade das referências dinâmicas do backend.
+- Escopo:
+  - Backend: [features/pdf/extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts), [features/excel/generateRateioExcel.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/excel/generateRateioExcel.ts)
+- Riscos: Quebra na listagem de documentos se os arquivos internos não coincidirem com o ID da pasta. (Resolvido aplicando a renomeação em todos os arquivos de extensão .json, .pdf, .txt e .xlsx).
+- Proposta: Sanitizar o nome do parceiro extraído da IA e compor os nomes de pasta e arquivos finais, ajustando também o gerador de Excel para acompanhar o nome dinâmico da pasta.
+- Testes:
+  - Processar uma fatura de teste e garantir a criação da pasta composta e o correto carregamento dos arquivos (JSON, PDF, Excel) no frontend do dashboard.
+- Rollback:
+  - Reverter as alterações nos arquivos extractDataFromPDF.ts and generateRateioExcel.ts.
+- Status: Aplicado
+
+### CHG-0133 — Padronização de Nomenclatura com Fornecedor, Fatura e Data
+
+- Data/Hora: 2026-07-02 13:02
+- Contexto: A nomenclatura anterior de pastas utilizava o nome do arquivo original como sufixo de unicidade, gerando nomes excessivamente longos ou pouco descritivos.
+- Objetivo: Modificar a geração de pastas e arquivos para o padrão NomeDoFornecedor_NumeroDocumento_AAAA-MM-DD.
+- Escopo:
+  - Backend: [features/pdf/extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+- Riscos: Nenhum. É um refinamento estético e organizacional de nomes de diretório.
+- Proposta: Injetar a captura opcional do número do documento e data atual local formatada na string de composição da pasta.
+- Testes:
+  - Validar a criação do diretório em lote e o correto carregamento no dashboard.
+- Rollback:
+  - Reverter o formato de folderName em extractDataFromPDF.ts.
+- Status: Aplicado
+
+### CHG-0134 — Ajuste de Destaque e Visibilidade no Ícone de Exclusão da Barra Lateral
+
+- Data/Hora: 2026-07-02 13:04
+- Contexto: O ícone de exclusão de faturas (lixeira) na barra lateral exibia uma tonalidade padrão sem cor de destaque, e era exibido continuamente em todos os itens da lista, poluindo a visualização.
+- Objetivo: Definir a cor vermelha (#ef4444) no ícone Trash2 e ajustar a visibilidade para aparecer somente ao passar o mouse (hover) sobre cada item individual.
+- Escopo:
+  - Frontend: [components/Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. Ajuste estético de layout e estilos CSS.
+- Proposta: Injetar a propriedade color no ícone em Sidebar.tsx e adicionar regras de opacidade condicional baseada em hover no App.css.
+- Testes:
+  - Verificar que o ícone vermelho da lixeira fica oculto por padrão e surge suavemente com fade-in somente ao posicionar o cursor sobre a fatura correspondente.
+- Rollback:
+  - Remover a propriedade color no Sidebar.tsx e as classes .delete-btn-container do App.css.
+- Status: Aplicado
+
+### CHG-0135 — Correção do Gatilho de Sincronização ao Excluir Fatura
+
+- Data/Hora: 2026-07-02 13:07
+- Contexto: A função de exclusão de notas no dashboard acionava a sincronização de novos e-mails (refreshNotesList), provocando requisições externas desnecessárias durante o ato de exclusão.
+- Objetivo: Isolar a exclusão de faturas para realizar apenas a atualização da listagem local em tela, sem disparar a sincronização do Microsoft Graph.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Simplifica o fluxo de exclusão removendo chamadas de rede redundantes.
+- Proposta: Substituir refreshNotesList() por chamadas diretas de fetchNotes() e setNotes() em handleDeleteNote.
+- Testes:
+  - Excluir uma nota de teste e certificar que a lista é atualizada sem acionar a barra de progresso de sincronização do toaster.
+- Rollback:
+  - Restaurar a chamada de refreshNotesList() em handleDeleteNote no Dashboard/index.tsx.
+- Status: Aplicado
+
+### CHG-0136 — Implementação de Terminal de Consulta de Logs da API
+
+- Data/Hora: 2026-07-02 13:13
+- Contexto: Operadores do dashboard necessitam de autonomia para auditar logs de console diretamente pelo painel web para investigar falhas de e-mails ou extração.
+- Objetivo: Capturar saídas do console do backend em um arquivo de log local com mascaramento de segredos e rotação por tamanho, expondo um endpoint e aba correspondente no dashboard.
+- Escopo:
+  - Backend: [config/logger.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/config/logger.ts), [index.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/index.ts), [controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts), [routes/noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts)
+  - Frontend: [services/api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts), [components/Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Vazamento acidental de tokens do Azure Active Directory ou do Graph API. (Mitigado com RegExp de substituição que varre as variáveis secretas de ambiente do process.env no texto do log antes da gravação).
+- Proposta: Interceptar console.log e console.error globais gravando em api.log, configurar rota GET e renderizar aba terminal preta com cópia rápida no dashboard.
+- Testes:
+  - Abrir aba de logs, clicar em atualizar, testar cópia de texto e garantir ocultamento de segredos de ambiente.
+- Rollback:
+  - Reverter as alterações nos arquivos e excluir o arquivo config/logger.ts.
+- Status: Aplicado
+
+### CHG-0137 — Remoção do OrderBy na Consulta de E-mails da Graph API
+
+- Data/Hora: 2026-07-02 13:28
+- Contexto: A combinação de ordenação por data de recebimento com o filtro composto de mensagens não lidas que possuem anexos causava erro 400 (Bad Request/InefficientFilter) no Microsoft Exchange.
+- Objetivo: Remover o parâmetro $orderby para simplificar a requisição e mitigar o erro 400, confiando na ordenação decrescente padrão da API do Graph.
+- Escopo:
+  - Backend: [features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+- Riscos: Nenhum. A ordenação padrão chronológica (mais recente primeiro) é mantida pela Graph API.
+- Proposta: Retirar a concatenação de $orderby=receivedDateTime desc da URL da consulta do Graph.
+- Testes:
+  - Disparar a sincronização via dashboard e certificar que o status code 200 (sucesso) é retornado sem lançar exceções.
+- Rollback:
+  - Readicionar o parâmetro de $orderby no arquivo searchDataFromEmail.ts.
+- Status: Aplicado
+
+### CHG-0138 — Redirecionamento da Logo para Página Inicial
+
+- Data/Hora: 2026-07-02 13:36
+- Contexto: O logotipo da Stoque no cabeçalho era um elemento estático e não possuía ação associada.
+- Objetivo: Tornar o logotipo clicável para redirecionar o usuário diretamente para a aba inicial de Faturas.
+- Escopo:
+  - Frontend: [components/Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Nenhum. Melhoria pura de UX.
+- Proposta: Adicionar cursor pointer e manipulador onClick disparando onChangeTab('notes') no elemento img do logotipo.
+- Testes:
+  - Clicar na logo a partir das telas de histórico e logs e verificar o retorno automático para a aba inicial.
+- Rollback:
+  - Remover as propriedades cursor e onClick do elemento img da logo em Header.tsx.
+- Status: Aplicado
+
+### CHG-0139 — Feedback Visual de Carregamento nos Logs
+
+- Data/Hora: 2026-07-02 13:39
+- Contexto: O botão de atualizar os logs não fornecia feedback visual completo de desabilitado/carregando além do giro do ícone, diferindo do comportamento de sincronização.
+- Objetivo: Equalizar o comportamento visual e interativo dos botões de processamento assíncrono adicionando opacidade, cursor bloqueado e texto dinâmico.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Puramente estético.
+- Proposta: Aplicar as condicionais baseadas no estado loadingApiLogs no botão de atualização de logs.
+- Testes:
+  - Clicar em Atualizar nos logs e conferir as transições de cursor, opacidade e texto.
+- Rollback:
+  - Reverter as alterações no botão no Dashboard/index.tsx.
+- Status: Aplicado
+
+### CHG-0140 — Remoção de Itens de Rateio com Sincronismo em Excel
+
+- Data/Hora: 2026-07-02 16:13
+- Contexto: Não era possível aos analistas realizarem a exclusão de itens de rateio inconsistentes diretamente pelo modal de edição detalhado do dashboard.
+- Objetivo: Proporcionar um botão de exclusão de linhas na tabela de rateios do modal e propagar a deleção para o salvamento e regeração automatizada de planilhas.
+- Escopo:
+  - Frontend: [components/DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Redução acidental de linhas sem clicar em salvar (Mitigado por atuar sobre o estado local formData, permitindo descarte caso o usuário feche sem confirmar).
+- Proposta: Inserir a lixeira vermelha na tabela do modal vinculando o onDeleteApportionmentRow ao estado React, gerando o Excel de rateios atualizado após a persistência.
+- Testes:
+  - Deletar itens no modal, salvar a fatura e inspecionar a planilha Excel comprovando a exclusão dos rateios.
+- Rollback:
+  - Desfazer as adições na tabela do DataEditor.tsx e remover o manipulador no Dashboard/index.tsx.
+- Status: Aplicado
+
+### CHG-0141 — Mesclagem Inteligente de Múltiplos Anexos e Priorização de Boleto
+
+- Data/Hora: 2026-07-02 16:59
+- Contexto: Em lotes contendo Nota Fiscal e Boleto sob o mesmo número de documento, o processamento sequencial sobrescrevia os arquivos gerando colisão de nomes e perda de dados contábeis.
+- Objetivo: Unificar a extração do Boleto (dados de pagamento/PDF principal) com a Nota Fiscal (rateio detalhado) quando pertencerem ao mesmo lote, evitando perdas de arquivos.
+- Escopo:
+  - Backend: [features/pdf/extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+- Riscos: Substituição indevida em documentos com mesmo número mas fornecedores distintos (Mitigado por basear a colisão em chaves compostas de nome do fornecedor, número e data).
+- Proposta: Implementar merge inteligente condicional no salvamento de JSONs e alternância de caminho secundário para o PDF da Nota Fiscal.
+- Testes:
+  - Processar e-mail com Boleto e Nota Fiscal e conferir se o PDF e o código de barras do Boleto prevalecem acompanhados do rateio detalhado da Nota Fiscal.
+- Rollback:
+  - Reverter as alterações no arquivo extractDataFromPDF.ts.
+- Status: Aplicado
+
+### CHG-0142 — Botão Limpar (x) Interno nos Campos de Pesquisa
+
+- Data/Hora: 2026-07-02 17:16
+- Contexto: Usuários não tinham uma forma ágil de limpar os termos digitados nos campos de busca das listagens do dashboard.
+- Objetivo: Inserir um botão de limpeza interno ("X" com &times;) integrado ao layout dos inputs de busca nas abas de faturas, rateio e histórico.
+- Escopo:
+  - Frontend: [components/Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [components/DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Desalinhamento visual do placeholder (Mitigado adicionando preenchimento direito (paddingRight) de segurança nos campos de entrada correspondentes).
+- Proposta: Envelopar inputs em divs com position relative e adicionar botões absolutos para limpar os estados de busca no clique.
+- Testes:
+  - Digitar e apagar dados por meio do botão interno nos três inputs correspondentes.
+- Rollback:
+  - Reverter as alterações nos arquivos alterados.
+- Status: Aplicado
+
+### CHG-0143 — Implementação da Aba de Monitoramento de Prazos de Vencimento
+
+- Data/Hora: 2026-07-06 14:00
+- Contexto: Solicitação corporativa de visualização preventiva e controle de prazos de faturas para evitar multas.
+- Objetivo: Adicionar a aba "Prazos" no painel principal, com listagem ordenada de faturas (reais + mockadas), colorização condicional por severidade e simulação interativa de envio de notificações/e-mails.
+- Escopo:
+  - Frontend: [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Lógica de cálculo no frontend sem alterações de banco de dados ou backend.
+- Proposta: Adicionar a aba 'deadlines' na navegação, calcular diferença de dias com base na data local e renderizar tabela estilizada com cores correspondentes a cada severidade (Vermelho: <= 7 dias, Amarelo: 8-10 dias, Verde: > 10 dias).
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar na aba de Prazos, conferir a ordenação por urgência de dias restantes, a classificação visual por cores e o envio da notificação simulada com Toast.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0144 — Adição de Paginação na Aba de Prazos
+
+- Data/Hora: 2026-07-06 14:15
+- Contexto: Necessidade de otimizar a performance de renderização no frontend com a paginação de registros de prazos.
+- Objetivo: Implementar paginação de 10 registros por página na aba "Prazos", garantindo integridade visual com o restante da interface.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Alteração restrita à computação e fatiamento local da lista no frontend.
+- Proposta: Declarar estado `deadlinesCurrentPage` e slice `combinedDeadlinesList` no corpo da renderização, e exibir barra de paginação com suporte a estados habilitado/desabilitado na navegação.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar entre páginas na tabela de Prazos e garantir que a contagem de faturas e o funcionamento dos botões estão íntegros.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0145 — Filtros, Ordenação e Edição Inline na Tabela de Prazos
+
+- Data/Hora: 2026-07-06 14:35
+- Contexto: Necessidade de refinar o monitoramento preventivo de prazos permitindo isolamento de registros críticos e ordenação customizada de colunas.
+- Objetivo: Implementar filtros por status de urgência, cabeçalhos de coluna clicáveis para ordenação bidirecional e edição rápida inline do vencimento com validação de formato brasileiro.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Tratamento de ordenação e filtros inteiramente local na memória da aplicação cliente.
+- Proposta: Inserir dropdown de filtro por status e manipulador `handleSortDeadlines` vinculando cliques dos cabeçalhos ao estado React; mapear e-mails utilizando apenas registros correspondentes ao filtro ativo.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar na aba Prazos, filtrar por "Crítico" e verificar se apenas registros sob severidade crítica são listados.
+  - Clicar nas colunas "Fornecedor", "Valor", "Vencimento" e "Dias Restantes" confirmando a ordenação crescente/decrescente.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0146 — Ajuste de Contraste da Edição de Vencimento na Aba de Prazos
+
+- Data/Hora: 2026-07-06 14:45
+- Contexto: Relato de baixa legibilidade do texto e dos campos da data de vencimento sob as cores de fundo pastéis das linhas.
+- Objetivo: Aumentar o contraste visual da data de vencimento nas etapas de visualização (texto escuro com hover azul) e edição (fundo branco sólido e sombra).
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste estrito de CSS inline no frontend.
+- Proposta: Substituir estilos inline do input forçando fundo branco e cor do texto escura; alterar a cor padrão de visualização da data para `#1f2937` com transição para azul sob foco do mouse.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Passar o mouse nas datas de vencimento e verificar se o contraste de leitura é alto em linhas vermelhas, amarelas e verdes.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0147 — Inclusão de Filtros de Status no Histórico de Processamento
+
+- Data/Hora: 2026-07-06 15:10
+- Contexto: Necessidade de auditar os logs históricos de faturas agrupados por status do arquivo e pelo resultado da IA.
+- Objetivo: Adicionar filtros select para "Status do Arquivo" (Validado, Excluído, Pendente) e "Status IA" (Sucesso, Falha) no cabeçalho de buscas da aba Histórico.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Mínimos. Lógica executada localmente em memória sem impactos na integridade do servidor.
+- Proposta: Inserir novos elementos de seleção e suas respectivas condicionais de filtragem na lógica do hook React.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Filtrar o histórico por Status IA = "Falha" ou Status do Arquivo = "Excluído" e certificar que as correspondências exibidas na tabela estão perfeitamente alinhadas com as seleções.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0148 — Contenção de Altura e Scroll Interno na Aba de Logs
+
+- Data/Hora: 2026-07-06 15:20
+- Contexto: Aba de logs esticava verticalmente de forma excessiva devido à falta de limite na caixa de visualização dos registros.
+- Objetivo: Restringir a altura do console de logs a um limite dinâmico (`calc(100vh - 220px)`) para forçar o scroll interno e impedir o rolamento da tela principal.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste estrito de posicionamento CSS inline no frontend.
+- Proposta: Substituir `flex: 1` e `minHeight: 400px` do container preto por restrições de altura e altura máxima gerais da viewport.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Navegar na aba de Logs, rolar o console preto e verificar se a rolagem ocorre estritamente dentro da caixa preta.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+
+
+
+

@@ -257,7 +257,8 @@ export async function generateRateioExcel(
 
   // Colunas já configuradas no início da aba para preservar o mergeCells
 
-  const fileName = `Rateio.xlsx`;
+  const folderName = path.basename(outputDir);
+  const fileName = `${folderName}.xlsx`;
   const filePath = path.join(outputDir, fileName);
 
   await workbook.xlsx.writeFile(filePath);

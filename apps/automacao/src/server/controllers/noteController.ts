@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService.js';
+import { getLogsContent } from '../config/logger.js';
 
 export class NoteController {
   public static getAllNotes(req: Request, res: Response) {
@@ -75,23 +76,33 @@ export class NoteController {
 
   public static async syncNotes(req: Request, res: Response) {
     try {
-      const result = await NoteService.syncOneEmail();
-      if (result) {
+      const results = await NoteService.syncEmails();
+      if (results.length > 0) {
         res.json({ 
           success: true, 
           imported: true, 
-          message: `Nova fatura do e-mail "${result.subject}" importada com sucesso.` 
+          message: `${results.length} fatura(s) de e-mail(s) importada(s) com sucesso.` 
         });
       } else {
         res.json({ 
           success: true, 
           imported: false, 
-          message: 'Nenhum e-mail novo com anexo PDF encontrado.' 
+          message: 'A fila de e-mails está vazia. Não há novas faturas para processar no momento.' 
         });
       }
     } catch (error: any) {
       console.error('[Error] Falha na sincronização de e-mails:', error);
       res.status(500).json({ error: 'Erro ao conectar à API do e-mail ou ao processar fatura' });
+    }
+  }
+
+  public static getApiLogs(req: Request, res: Response) {
+    try {
+      const logs = getLogsContent(200);
+      res.json({ logs });
+    } catch (error) {
+      console.error('[Error] Falha ao ler logs do sistema:', error);
+      res.status(500).json({ error: 'Erro ao obter logs da API' });
     }
   }
 }
