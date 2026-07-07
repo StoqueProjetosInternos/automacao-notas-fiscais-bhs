@@ -237,17 +237,13 @@ export class GraphEmailPdfProcessor {
       for (const email of emails) {
         const normalized = normalizeEmail(email);
 
-        console.log([normalized], "Emails Normalizados em JSON");
-        console.log("Assunto:", normalized.subject);
-        console.log("De:", normalized.from.address);
-        console.log("Recebido em:", normalized.receivedDateTime);
-        console.log("Conteúdo (última mensagem, limpo):");
-        console.log(normalized.bodyText);
+        console.log(`[Email Sync] Processando e-mail de entrada. Assunto: "${normalized.subject || 'Sem Assunto'}" | Recebido em: ${normalized.receivedDateTime}`);
 
         let processedAllPdfs = true;
 
         if (email.hasAttachments) {
           const attachments = await this.fetchAttachments(email.id);
+          console.log(`[Email Sync] Encontrado(s) ${attachments.length} anexo(s) no e-mail.`);
 
           for (const file of attachments) {
             if (!file.name?.toLowerCase().endsWith(".pdf")) continue;
@@ -260,16 +256,10 @@ export class GraphEmailPdfProcessor {
         // marca como lido somente se configurado e se não houve erro nos PDFs
         if (this.cfg.markAsReadAfterSuccess && processedAllPdfs) {
           await this.markEmailAsRead(email.id);
-          console.log(`E-mail "${email.subject}" marcado como lido.`);
+          console.log(`[Email Sync] E-mail com assunto "${email.subject}" marcado com sucesso como lido.`);
         }
 
-        // log extra
-        if (email.body) {
-          console.log("Conteúdo do E-mail (Tipo:", email.body.contentType, "):");
-          console.log(email.body.content);
-        }
-
-        console.log("---------------");
+        console.log("[Email Sync] Concluído processamento da mensagem.");
         processedEmails.push(normalized);
       }
 

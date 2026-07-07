@@ -2198,7 +2198,273 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
 
+### CHG-0149 — Ingestão de Cadastro de Fornecedores Real na Aba de Prazos
 
+- Data/Hora: 2026-07-06 16:40
+- Contexto: Necessidade de possuir dados preventivos fiéis de prazos com base na planilha de fornecedores adicionada ao repositório.
+- Objetivo: Converter a planilha base_fornecedores_faturas.xlsx em JSON e integrá-la ao frontend para substituir a exibição fictícia por 54 registros autênticos de fornecedores e vencimentos.
+- Escopo:
+  - Configurações: [tsconfig.app.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/tsconfig.app.json)
+  - Tipagem: [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/types.ts)
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+  - Script de Suporte: `apps/automacao/src/scripts/generate_base_json.ts`
+- Riscos: Baixos. Conversão prévia do Excel em JSON resolve a necessidade de requisições ou dependências em runtime no frontend.
+- Proposta: Habilitar importação de arquivos JSON no compilador, tipar propriedades do rateio no types.ts, e mapear o arquivo gerado contendo CNPJ e Vencimento original no `mockDeadlinesList`.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Abrir a aba Prazos e constatar a renderização de múltiplos fornecedores reais da planilha paginados, ordenados e classificados por cor.
+- Rollback:
+  1) `git checkout -- apps/dashboard/tsconfig.app.json apps/dashboard/src/types.ts apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
 
+### CHG-0150 — Implementação de Vencimentos Preventivos Dinâmicos na Aba de Prazos
+
+- Data/Hora: 2026-07-06 16:50
+- Contexto: Necessidade de automatizar a recorrência de faturamento para evitar que o painel exiba datas estáticas vencidas.
+- Objetivo: Implementar projeção automática das datas de vencimento preventivo da base para o mês atual ou subsequente em tempo de execução, preservando os dias de vencimento originais.
+- Escopo:
+  - Frontend: [pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixos. Tratamento lógico restrito à renderização do frontend no carregamento.
+- Proposta: Inserir a função helper `getDynamicDueDate` e aplicá-la na geração de faturas da base do Excel.
+- Testes:
+  - Validar a compilação do dashboard (`npm run build -w stoque-fiscal-intelligence-dashboard`).
+  - Observar se fornecedores com datas originais do início do mês (ex: dia 1 ou 5) mudam para o mês posterior (agosto) e fornecedores com vencimentos ao fim do mês se mantêm em julho, atualizando os dias restantes.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0151 — Cruzamento Contábil Inteligente via Base de Fornecedores
+
+- Data/Hora: 2026-07-06 17:00
+- Contexto: Necessidade de automatizar a indexação contábil para alcançar 100% de acerto nas faturas extraídas.
+- Objetivo: Implementar cruzamento de dados contábeis no robô backend utilizando o CNPJ como chave de correspondência contra base_fornecedores_faturas.json, padronizando Razão Social, CR e Natureza cadastrados (respeitando a exceção contábil do parceiro Magna).
+- Escopo:
+  - Backend: [features/pdf/dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts), [features/pdf/types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/types.ts)
+  - Frontend: [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/types.ts)
+- Riscos: Baixos. O isolamento lógico por CNPJ e a regra de bypass na Magna evitam efeitos colaterais indesejados.
+- Proposta: Realizar a leitura do JSON de cadastro de fornecedores no backend, atualizar os fallbacks de CR e Natureza, e injetar a Razão Social oficial e o partnerCode nas interfaces do lote.
+- Testes:
+  - Validar a compilação do backend e do frontend (`npm run build`).
+  - Executar simulação de extração de PDF no backend e garantir que o arquivo JSON do lote resultante possui o Nome Oficial e o partnerCode definidos adequadamente.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts apps/automacao/src/features/pdf/types.ts apps/dashboard/src/types.ts`
+- Status: Aplicado
+
+### CHG-0152 — Lookup Secundário por Nome e Preenchimento de CNPJ na Automação
+
+- Data/Hora: 2026-07-06 17:15
+- Contexto: Boleto do fornecedor AGA CONSULTORIA LTDA extraído sem CNPJ (null), inviabilizando a indexação automática que se baseava apenas no CNPJ.
+- Objetivo: Implementar busca secundária por Razão Social (`cleanString`) no enriquecimento de faturas e restaurar o CNPJ correspondente para indexar corretamente CR e Natureza cadastrados.
+- Escopo:
+  - Backend: [features/pdf/dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos: Mínimos. Restrito à integridade da busca do lookup.
+- Proposta: Inserir a condicional de busca por nome caso a correspondência pelo CNPJ resulte vazia; injetar o CNPJ resgatado de volta no lote.
+- Testes:
+  - Validar a compilação do backend (`npm run build -w stoque-fiscal-intelligence`).
+  - Reprocessar a fatura da AGA CONSULTORIA no painel e confirmar o preenchimento automático das informações contábeis.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Status: Aplicado
+
+### CHG-0153 — Correção do Status de Fatura no Histórico de Consumo
+
+- Data/Hora: 2026-07-07 09:30
+- Contexto: A aba de histórico exibia o status de faturas ativas no sistema de arquivos como "Excluído" devido a buscas por pasta baseadas unicamente no nome de arquivo original.
+- Objetivo: Corrigir a lógica de correspondência de logs históricos em noteService.ts, consultando de forma inteligente as faturas existentes com base em número de documento e fornecedor.
+- Escopo:
+  - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+- Riscos: Nenhum. Alteração lógica restrita à auditoria histórica e leitura de dados.
+- Proposta: Injetar busca cruzada de identificadores da nota no histórico com base nas notas ativas na memória de carregamento.
+- Testes:
+  - Abrir aba de histórico e verificar se as linhas de logs exibem o status correspondente real da pasta extraída.
+- Rollback:
+  1) Retornar o código de getUsageLog em noteService.ts para a verificação com base em path.join(FILES_DIR, id) clássico.
+- Status: Aplicado
+
+### CHG-0154 — Ordenação de Itens Recentes e Data de Importação no Dashboard
+
+- Data/Hora: 2026-07-07 09:45
+- Contexto: O usuário necessita auditar faturas priorizando as de faturamento mais recente, além de identificar visualmente o momento de chegada delas no sistema.
+- Objetivo: Obter e propagar data de criação da pasta no backend, implementar o critério de ordenação padrão de itens mais recentes e expor a data de importação formatada no card da barra lateral.
+- Escopo:
+  - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+  - Frontend: [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/types.ts), [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Nenhum. Alteração puramente cosmética e de UX sem manipulação destrutiva de dados.
+- Proposta: Injetar `createdAt` na listagem do backend e ordenar/renderizar dinamicamente na barra lateral.
+- Testes:
+  - Validar se a ordenação inicial exibe os itens recém-processados e se a data aparece devidamente formatada.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/noteService.ts apps/dashboard/src/types.ts apps/dashboard/src/components/Sidebar.tsx`
+- Status: Aplicado
+
+### CHG-0155 — Higienização de Logs e Limpeza de Auditoria HTTP
+
+- Data/Hora: 2026-07-07 09:50
+- Contexto: Relatos de excesso de logs informativos de rotas HTTP genéricas e vazamento potencial de dados pessoais em console (através da impressão direta de corpos brutos de e-mails).
+- Objetivo: Higienizar os logs operacionais removendo o log de rotas HTTP genéricas em app.ts e a escrita de corpos de e-mail e payloads brutos em searchDataFromEmail.ts, substituindo-os por mensagens de progresso seguras e estruturadas.
+- Escopo:
+  - Backend: [app.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/app.ts), [searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+- Riscos: Nenhum. Melhoria estritamente relacionada a segurança da informação e auditoria operacional.
+- Proposta: Retirar blocos de logs redundantes e sensíveis dos arquivos mapeados e centralizar logs de progresso e estatísticas de anexos.
+- Testes:
+  - Disparar sincronização, ler arquivos de logs resultantes e certificar que não contêm o conteúdo bruto do email.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/app.ts apps/automacao/src/features/email/searchDataFromEmail.ts`
+- Status: Aplicado
+
+### CHG-0156 — Propagação Contábil e Sincronização do Excel de Rateio
+
+- Data/Hora: 2026-07-07 10:10
+- Contexto: Mudanças na classificação contábil principal de cabeçalho (accountingFields) não eram refletidas no arquivo Excel devido aos códigos contidos nos itens do rateio detail (apportionment) manterem seus valores de inicialização originais.
+- Objetivo: Garantir a propagação de mudanças nos códigos de CR, Natureza e Contrato do cabeçalho contábil para os itens do lote durante o fluxo de gravação e regeração do Excel.
+- Escopo:
+  - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+- Riscos: Nenhum. O mapeamento respeita edições contábeis isoladas feitas pelo usuário no modal detalhado de rateios.
+- Proposta: Injetar a lógica de comparação e propagação automática no método updateNote no backend.
+- Testes:
+  - Modificar o CR de um lote no painel, salvar e certificar que a alteração é aplicada em todas as linhas da planilha de rateio gerada.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/noteService.ts`
+- Status: Aplicado
+
+### CHG-0157 — Filtro de Fornecedor na Aba de Prazos do Dashboard
+
+- Data/Hora: 2026-07-07 11:55
+- Contexto: A aba de Prazos contendo a listagem preventivo-contábil exibe dezenas de faturas, mas não possuía mecanismo de busca para rastreio direto de um credor ou parceiro específico.
+- Objetivo: Adicionar um campo de busca por fornecedor integrado com limpeza rápida por meio do botão interno (x) na aba de Prazos.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Processamento restrito à filtragem local em memória no cliente.
+- Proposta: Inserir estado deadlineSearchSupplier, atualizar lógica do filter de faturas e adicionar elemento input na interface.
+- Testes:
+  - Digitar buscas e conferir os resultados instantâneos, a funcionalidade do reset da paginação e o botão de descarte da busca.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0158 — Integração SMTP para Envio Real de Alertas de Vencimento
+
+- Data/Hora: 2026-07-07 12:15
+- Contexto: O dashboard apenas simulava o envio de alertas de vencimento preventivo. Há necessidade de integrar um envio real via protocolo SMTP.
+- Objetivo: Instalar a biblioteca Nodemailer, expor rotas e lógica no backend para despachar e-mails baseados em variáveis de ambiente e integrar o botão do frontend com o novo endpoint.
+- Escopo:
+  - Configuração: [.env.example](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.env.example), [package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/package.json)
+  - Backend: [noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts), [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts), [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+  - Frontend: [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Vazamento de credenciais SMTP. (Mitigado por utilizar variáveis locais de ambiente não versionadas e ocultas pelo logger padrão de console).
+- Proposta: Integrar biblioteca nodemailer e construir pipeline de email no backend e integração no frontend.
+- Testes:
+  - Disparar envio de email via dashboard e validar o recebimento do relatório em HTML consolidado no e-mail destino.
+- Rollback:
+  1) `npm uninstall nodemailer && npm uninstall --save-dev @types/nodemailer -w stoque-fiscal-intelligence`
+  2) `git checkout -- apps/automacao/package.json apps/automacao/src/server/routes/noteRoutes.ts apps/automacao/src/server/controllers/noteController.ts apps/automacao/src/server/services/noteService.ts apps/dashboard/src/services/api.ts apps/dashboard/src/pages/Dashboard/index.tsx .env.example`
+- Status: Aplicado
+
+### CHG-0159 — Loading e Desativação do Botão de Disparo de Alertas SMTP
+
+- Data/Hora: 2026-07-07 12:30
+- Contexto: O botão de envio de e-mails de vencimento não possuía indicação visual de carregamento ou bloqueio a múltiplos cliques rápidos, gerando dúvidas na execução.
+- Objetivo: Implementar feedback visual (loader) e bloquear cliques simultâneos no botão da aba de prazos durante o envio do e-mail.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Alteração focada em UX.
+- Proposta: Inserir estado isSendingAlerts, atualizar triggerEmailAlertsSimulation e aplicar estilos condicionais com Loader2 no botão.
+- Testes:
+  - Testar clique, conferir estado disabled, o Loader animado e retorno do toaster.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0160 — Externalização de Credenciais no AuthController via .env
+
+- Data/Hora: 2026-07-07 13:15
+- Contexto: O dashboard utilizava credenciais administrativas fixas codificadas diretamente no arquivo authController.ts.
+- Objetivo: Ler as chaves ADMIN_EMAIL e ADMIN_PASSWORD do arquivo .env via process.env para evitar credenciais hardcoded.
+- Escopo:
+  - Backend: [authController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/authController.ts)
+  - Configuração: [.env.example](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.env.example)
+- Riscos: Falhas de login caso variáveis sejam declaradas incorretamente. Mitigado por incluir fallback local.
+- Proposta: Substituir constantes estáticas no controlador por process.env e atualizar o .env.example.
+- Testes:
+  - Realizar login com as chaves customizadas do .env após reinício de servidor.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/controllers/authController.ts .env.example`
+- Status: Aplicado
+
+### CHG-0161 — Resolução Dinâmica de Credenciais de Login e Correção de Hoisting
+
+- Data/Hora: 2026-07-07 13:30
+- Contexto: A avaliação global (module-level) das credenciais do .env no authController.ts causava a leitura de valores undefined devido ao hoisting das declarações import antes do carregamento do dotenv.
+- Objetivo: Ler as chaves ADMIN_EMAIL e ADMIN_PASSWORD no momento de processamento da requisição HTTP (dinamicamente) e redefinir a tipagem de e-mail como string no sessionManager.ts.
+- Escopo:
+  - Backend: [authController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/authController.ts), [sessionManager.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/sessionManager.ts)
+- Riscos: Nenhum. Fornece maior segurança ao validar explicitamente a existência de credenciais configuradas na inicialização.
+- Proposta: Mover a busca do process.env para dentro da função login e restaurar a tipagem estrita de SessionManager.
+- Testes:
+  - Validar sucesso de login informando as chaves configuradas no .env após o boot do servidor.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/controllers/authController.ts apps/automacao/src/server/services/sessionManager.ts`
+- Status: Aplicado
+
+### CHG-0162 — Configuração de Script Nodemon para Desenvolvimento da API
+
+- Data/Hora: 2026-07-07 13:35
+- Contexto: A inicialização da API do backend não possuía suporte a watch mode de arquivos, obrigando o desenvolvedor a reiniciar manualmente o terminal a cada salvamento.
+- Objetivo: Adicionar o comando dev-api em ambos os package.json para assistir e recarregar automaticamente o servidor Express com nodemon.
+- Escopo:
+  - Backend: [package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/package.json)
+  - Monorepo: [package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/package.json)
+- Riscos: Nenhum. Configurações restritas à conveniência de ambiente de desenvolvimento.
+- Proposta: Inserir a chave dev-api com a execução do nodemon sob a pasta src da API.
+- Testes:
+  - Inicializar via dev-api, alterar código e certificar reinicialização espontânea no console.
+- Rollback:
+  1) `git checkout -- package.json apps/automacao/package.json`
+- Status: Aplicado
+
+### CHG-0163 — Cardificação e Borda de Separação na Listagem de Arquivos
+
+- Data/Hora: 2026-07-07 13:40
+- Contexto: Os itens de arquivo na listagem lateral não tinham separadores visíveis fora do estado ativo/hover, prejudicando o discernimento de faturas sucessivas.
+- Objetivo: Inserir borda padrão, aumentar o distanciamento e adicionar sombra sutil nas regras CSS de .note-item.
+- Escopo:
+  - Frontend: [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. Ajuste puramente estético.
+- Proposta: Substituir borda transparente por var(--border) e acrescentar sombra em App.css.
+- Testes:
+  - Verificar visualmente a listagem na barra lateral no navegador.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0164 — Formatação de Data e Hora Local nos Logs do Servidor
+
+- Data/Hora: 2026-07-07 13:45
+- Contexto: As marcas temporais nos arquivos de logs do console eram salvas no padrão ISO 8601 UTC (Zulu), divergindo do fuso horário local e dificultando a auditoria rápida.
+- Objetivo: Modificar a geração do timestamp no logger.ts para registrar a data/hora local contendo a indicação de offset de fuso horário.
+- Escopo:
+  - Backend: [logger.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/config/logger.ts)
+- Riscos: Nenhum. Alteração simples de formatação de string de log.
+- Proposta: Inserir a função getLocalTimestamp e atualizar a constante timestamp no writeLog.
+- Testes:
+  - Checar as novas linhas do arquivo api.log após a alteração.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/config/logger.ts`
+- Status: Aplicado
+
+### CHG-0165 — Feedback de Carregamento Artificial na Atualização de Logs
+
+- Data/Hora: 2026-07-07 13:50
+- Contexto: O carregamento dos logs de console é instantâneo no cliente, impossibilitando a exibição do estado de loading e gerando dúvidas se a ação de atualização ocorreu.
+- Objetivo: Inserir um delay assíncrono de 800ms na rotina loadApiLogs para simular o carregamento do botão.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Ajuste simples de temporização visual (UX).
+- Proposta: Inserir Promise/setTimeout no início do método loadApiLogs.
+- Testes:
+  - Clicar em atualizar na tela de logs e checar a animação temporária do botão.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
 
 

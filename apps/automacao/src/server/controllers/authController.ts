@@ -1,30 +1,32 @@
 import { Request, Response } from 'express';
 import { sessionManager } from '../services/sessionManager.js';
-
-// Credenciais fixas de demonstração
-const USER_EMAIL = 'admin@stoque.com.br';
-const USER_PASSWORD = 'stoque-fiscal';
-
 export class AuthController {
   public static async login(req: Request, res: Response) {
     const { email, password } = req.body;
+
+    const userEmail = process.env.ADMIN_EMAIL;
+    const userPassword = process.env.ADMIN_PASSWORD;
+
+    if (!userEmail || !userPassword) {
+      return res.status(500).json({ error: 'Erro de configuração de autenticação no servidor.' });
+    }
 
     if (!email || !password) {
       return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
     }
 
-    if (email.toLowerCase() === USER_EMAIL && password === USER_PASSWORD) {
+    if (email.toLowerCase() === userEmail.toLowerCase().trim() && password === userPassword) {
       console.log(`[AUTH] Login bem-sucedido para o usuário: ${email}`);
       const sessionId = sessionManager.createSession({
         name: 'Analista Fiscal Stoque',
-        email: USER_EMAIL,
+        email: userEmail,
         role: 'ADMIN'
       });
       return res.json({
         token: sessionId,
         user: {
           name: 'Analista Fiscal Stoque',
-          email: USER_EMAIL,
+          email: userEmail,
           role: 'ADMIN'
         }
       });

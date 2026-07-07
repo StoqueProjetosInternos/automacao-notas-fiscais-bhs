@@ -48,6 +48,17 @@ export class NoteController {
     }
   }
 
+  public static async sendDeadlineAlerts(req: Request, res: Response) {
+    const { items } = req.body;
+    try {
+      const result = await NoteService.sendDeadlineAlerts(items);
+      res.json(result);
+    } catch (error: any) {
+      console.error('[Error] Falha ao enviar alertas de vencimento:', error);
+      res.status(500).json({ error: error.message || 'Erro ao enviar alertas por e-mail' });
+    }
+  }
+
   public static getUsageLog(req: Request, res: Response) {
     try {
       const logs = NoteService.getUsageLog();
