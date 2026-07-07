@@ -107,6 +107,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [deadlineSortOrder, setDeadlineSortOrder] = useState<'asc' | 'desc'>('asc');
   const [deadlineSearchSupplier, setDeadlineSearchSupplier] = useState('');
   const [isSendingAlerts, setIsSendingAlerts] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Monitor de Inatividade de 15 Minutos (se inativo, chama logout)
   useActivityTimeout(onLogout, 15 * 60 * 1000);
@@ -549,6 +550,11 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   };
 
   const handleLogoutWithToast = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogoutAction = () => {
+    setShowLogoutModal(false);
     showToast('Obrigado por utilizar o Fiscal Intelligence (SFI). Até logo!', 'success');
     setTimeout(() => {
       onLogout();
@@ -1646,6 +1652,94 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
           </div>
         ))}
       </div>
+
+      {/* Modal de Confirmação de Logout */}
+      {showLogoutModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          animation: 'fadeIn 0.2s ease-out'
+        }} onClick={() => setShowLogoutModal(false)}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '400px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #e2e8f0',
+            animation: 'slideUp 0.2s ease-out'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              color: '#0f172a'
+            }}>
+              Confirmar Saída
+            </h3>
+            <p style={{
+              margin: '0 0 24px 0',
+              fontSize: '0.875rem',
+              color: '#475569',
+              lineHeight: '1.5'
+            }}>
+              Deseja realmente sair do sistema? Suas alterações salvas não serão perdidas.
+            </p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+                onClick={() => setShowLogoutModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                onClick={confirmLogoutAction}
+              >
+                Confirmar Saída
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

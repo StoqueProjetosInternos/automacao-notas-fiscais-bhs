@@ -2482,4 +2482,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- documentation.md`
 - Status: Aplicado
 
+### CHG-0167 — Modal de Confirmação de Logout Estilizado no Dashboard
+
+- Data/Hora: 2026-07-07 14:10
+- Contexto: A confirmação de encerramento da sessão utilizava window.confirm nativo, poluindo a visualização e destoando da identidade visual do dashboard.
+- Objetivo: Criar um modal customizado, elegante, com desfoque de fundo (backdrop blur) e animações CSS (fadeIn e slideUp).
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum.
+- Proposta: Adicionar estado showLogoutModal, configurar callback confirmLogoutAction e injetar o bloco de marcação do modal no fim da layout tree.
+- Testes:
+  - Clicar no botão Sair e checar as transições e cliques de confirmação/fechamento do modal.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
 
