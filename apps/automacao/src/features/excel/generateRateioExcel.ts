@@ -112,6 +112,7 @@ export async function generateRateioExcel(
     valueSum: number;
     description: string;
   }
+  
   const groups = new Map<string, GroupedItem>();
 
   items.forEach(item => {
@@ -189,7 +190,7 @@ export async function generateRateioExcel(
   dTitleCell.fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FCE4D6" } // pêssego
+    fgColor: { argb: "FCE4D6" } 
   };
   detalhadoSheet.getRow(1).height = 28;
 

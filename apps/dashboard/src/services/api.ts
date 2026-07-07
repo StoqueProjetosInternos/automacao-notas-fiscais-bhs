@@ -123,6 +123,11 @@ export const syncEmails = async (): Promise<SyncResponse> => {
   return response.data;
 };
 
+export const sendDeadlineAlerts = async (items: any[]): Promise<{ success: boolean, message: string }> => {
+  const response = await apiClient.post<{ success: boolean, message: string }>('/api/notes/deadlines/send-alerts', { items });
+  return response.data;
+};
+
 export const fetchApiLogs = async (): Promise<string> => {
   const response = await apiClient.get<{ logs: string }>('/api/notes/logs');
   return response.data.logs;

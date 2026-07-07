@@ -3,9 +3,9 @@ import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
-import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, type UsageLog } from '../../services/api';
+import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, sendDeadlineAlerts, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
-import { ArrowLeft, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, RefreshCcw, Loader2 } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
 import baseFornecedores from '../../assets/base_fornecedores_faturas.json';
 
@@ -105,6 +105,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [deadlineStatusFilter, setDeadlineStatusFilter] = useState<'all' | 'critical' | 'alert' | 'normal'>('all');
   const [deadlineSortField, setDeadlineSortField] = useState<'fornecedor' | 'valor' | 'vencimento' | 'diasRestantes'>('diasRestantes');
   const [deadlineSortOrder, setDeadlineSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [deadlineSearchSupplier, setDeadlineSearchSupplier] = useState('');
+  const [isSendingAlerts, setIsSendingAlerts] = useState(false);
 
   // Monitor de Inatividade de 15 Minutos (se inativo, chama logout)
   useActivityTimeout(onLogout, 15 * 60 * 1000);
@@ -119,7 +121,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
   useEffect(() => {
     setDeadlinesCurrentPage(1);
-  }, [deadlineStatusFilter, deadlineSortField, deadlineSortOrder]);
+  }, [deadlineStatusFilter, deadlineSortField, deadlineSortOrder, deadlineSearchSupplier]);
 
   const availableModels = Array.from(new Set(usageLogs.map(log => log.modeloIa).filter(Boolean)));
 
@@ -173,6 +175,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const loadApiLogs = async () => {
     setLoadingApiLogs(true);
     try {
+      // Atraso artificial de 800ms para simular o carregamento e dar feedback visual ao usuário
+      await new Promise(resolve => setTimeout(resolve, 800));
       const logs = await fetchApiLogs();
       setApiLogs(logs);
     } catch (error) {
@@ -254,15 +258,24 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  const triggerEmailAlertsSimulation = (items: any[]) => {
+  const triggerEmailAlertsSimulation = async (items: any[]) => {
     const criticalItems = items.filter(item => item.diasRestantes <= 10);
     if (criticalItems.length === 0) {
       showToast('Nenhum fornecedor com prazo crítico (<= 10 dias) para envio de alertas.', 'info');
       return;
     }
 
-    const supplierNames = criticalItems.map(i => i.fornecedor).join(', ');
-    showToast(`Simulação: Alertas de e-mail enviados para os gestores responsáveis das faturas de: ${supplierNames}.`, 'success');
+    setIsSendingAlerts(true);
+    try {
+      const result = await sendDeadlineAlerts(items);
+      showToast(result.message, 'success');
+    } catch (error: any) {
+      console.error('Erro ao enviar alertas de e-mail:', error);
+      const errMsg = error.response?.data?.error || 'Erro ao enviar alertas por e-mail.';
+      showToast(errMsg, 'error');
+    } finally {
+      setIsSendingAlerts(false);
+    }
   };
 
   const handleSortDeadlines = (field: 'fornecedor' | 'valor' | 'vencimento' | 'diasRestantes') => {
@@ -574,15 +587,24 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
   const combinedDeadlinesList = [...realDeadlinesList, ...mockDeadlinesList];
 
-  // Filtra por status de severidade
-  const filteredDeadlines = deadlineStatusFilter === 'all' 
-    ? combinedDeadlinesList 
-    : combinedDeadlinesList.filter(item => {
-        if (deadlineStatusFilter === 'critical') return item.diasRestantes <= 7;
-        if (deadlineStatusFilter === 'alert') return item.diasRestantes > 7 && item.diasRestantes <= 10;
-        if (deadlineStatusFilter === 'normal') return item.diasRestantes > 10;
-        return true;
-      });
+  // Filtra por status de severidade e busca por fornecedor
+  const filteredDeadlines = combinedDeadlinesList.filter(item => {
+    // Filtro por status de severidade
+    if (deadlineStatusFilter !== 'all') {
+      if (deadlineStatusFilter === 'critical' && item.diasRestantes > 7) return false;
+      if (deadlineStatusFilter === 'alert' && (item.diasRestantes <= 7 || item.diasRestantes > 10)) return false;
+      if (deadlineStatusFilter === 'normal' && item.diasRestantes <= 10) return false;
+    }
+
+    // Filtro por busca de fornecedor
+    if (deadlineSearchSupplier) {
+      const search = deadlineSearchSupplier.toLowerCase().trim();
+      const name = item.fornecedor ? item.fornecedor.toLowerCase() : '';
+      if (!name.includes(search)) return false;
+    }
+
+    return true;
+  });
 
   // Ordena de forma dinâmica
   filteredDeadlines.sort((a, b) => {
@@ -1136,22 +1158,37 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   onClick={() => {
                     triggerEmailAlertsSimulation(filteredDeadlines);
                   }}
+                  disabled={isSendingAlerts}
                   style={{
                     padding: '8px 16px',
                     fontSize: '0.8rem',
-                    background: '#2563eb',
+                    background: isSendingAlerts ? '#9ca3af' : '#2563eb',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
-                    cursor: 'pointer',
+                    cursor: isSendingAlerts ? 'not-allowed' : 'pointer',
                     fontWeight: 600,
                     transition: 'background 0.2s',
-                    outline: 'none'
+                    outline: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseOver={(e) => {
+                    if (!isSendingAlerts) e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isSendingAlerts) e.currentTarget.style.backgroundColor = '#2563eb';
+                  }}
                 >
-                  Enviar Alertas de Vencimento
+                  {isSendingAlerts ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar Alertas de Vencimento'
+                  )}
                 </button>
                 <span style={{ fontSize: '0.75rem', color: '#6b7280', flex: 1 }}>
                   Dispara notificações preventivas por e-mail para o gestor com faturas críticas e em alerta (vencimentos de até 10 dias).
@@ -1179,6 +1216,53 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     <option value="alert">Alerta (8 a 10 dias)</option>
                     <option value="normal">Normal (&gt; 10 dias)</option>
                   </select>
+                </div>
+
+                {/* Busca por Fornecedor */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '220px', position: 'relative' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Buscar Fornecedor</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Pesquisar fornecedor..."
+                      value={deadlineSearchSupplier}
+                      onChange={(e) => setDeadlineSearchSupplier(e.target.value)}
+                      style={{
+                        padding: '8px 24px 8px 8px',
+                        fontSize: '0.8rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        color: '#1f2937',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {deadlineSearchSupplier && (
+                      <button
+                        type="button"
+                        onClick={() => setDeadlineSearchSupplier('')}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          background: 'none',
+                          border: 'none',
+                          color: '#9ca3af',
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          outline: 'none'
+                        }}
+                        title="Limpar busca"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

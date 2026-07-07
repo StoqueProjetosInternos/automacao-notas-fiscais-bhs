@@ -19,8 +19,26 @@ const originalInfo = console.info;
 const originalWarn = console.warn;
 const originalError = console.error;
 
+function getLocalTimestamp(): string {
+  const now = new Date();
+  const tzo = -now.getTimezoneOffset();
+  const dif = tzo >= 0 ? '+' : '-';
+  const pad = (num: number) => String(num).padStart(2, '0');
+  const padMs = (num: number) => String(num).padStart(3, '0');
+  
+  return now.getFullYear() +
+    '-' + pad(now.getMonth() + 1) +
+    '-' + pad(now.getDate()) +
+    'T' + pad(now.getHours()) +
+    ':' + pad(now.getMinutes()) +
+    ':' + pad(now.getSeconds()) +
+    '.' + padMs(now.getMilliseconds()) +
+    dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+    ':' + pad(Math.abs(tzo) % 60);
+}
+
 function writeLog(level: string, ...args: any[]) {
-  const timestamp = new Date().toISOString();
+  const timestamp = getLocalTimestamp();
   const message = args.map(arg => {
     if (typeof arg === 'object') {
       try {

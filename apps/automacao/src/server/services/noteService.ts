@@ -22,9 +22,12 @@ export class NoteService {
 
         if (fs.existsSync(jsonPath)) {
           const content = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+          const stats = fs.statSync(folderPath);
+          const createdAt = stats.birthtime && stats.birthtime.getTime() > 0 ? stats.birthtime.toISOString() : stats.mtime.toISOString();
           notes.push({
             id: folder,
             fileName: jsonFile,
+            createdAt: createdAt,
             data: content,
             files: {
               json: `${folder}/${jsonFile}`,
@@ -45,6 +48,47 @@ export class NoteService {
     if (!fs.existsSync(filePath)) {
       throw new Error('Nota não encontrada');
     }
+
+    try {
+      const rawContent = fs.readFileSync(filePath, 'utf-8');
+      const oldData = JSON.parse(rawContent);
+
+      // Propaga alterações contábeis do cabeçalho para os itens do rateio
+      if (newData.accountingFields && oldData.accountingFields) {
+        const oldCr = oldData.accountingFields.cr;
+        const newCr = newData.accountingFields.cr;
+        const oldNatureza = oldData.accountingFields.naturezaCode;
+        const newNatureza = newData.accountingFields.naturezaCode;
+        const oldContract = oldData.accountingFields.contract;
+        const newContract = newData.accountingFields.contract;
+
+        if (oldCr !== newCr) {
+          newData.accountingFields.crDescription = newCr && newCr !== 'N/A' ? `Centro de Custo ${newCr}` : 'N/A';
+        }
+
+        if (newData.apportionment && Array.isArray(newData.apportionment)) {
+          newData.apportionment = newData.apportionment.map((item: any) => {
+            const updatedItem = { ...item };
+            
+            if (oldCr && updatedItem.cr === oldCr) {
+              updatedItem.cr = newCr;
+              updatedItem.crDescription = newCr && newCr !== 'N/A' ? `Centro de Custo ${newCr}` : 'N/A';
+            }
+            if (oldNatureza && updatedItem.naturezaCode === oldNatureza) {
+              updatedItem.naturezaCode = newNatureza;
+            }
+            if (oldContract && updatedItem.contract === oldContract) {
+              updatedItem.contract = newContract;
+            }
+
+            return updatedItem;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`[NoteService] Erro ao propagar alteração contábil para os itens:`, err);
+    }
+
     fs.writeFileSync(filePath, JSON.stringify(newData, null, 2), 'utf-8');
 
     // Regera a planilha de rateio com base no JSON atualizado (contendo edições manuais)
@@ -127,12 +171,15 @@ export class NoteService {
     }
 
     try {
+      const activeNotes = this.listAllNotes();
       const content = fs.readFileSync(usageLogPath, 'utf-8');
       const lines = content.trim().split('\n');
       if (lines.length <= 1) return [];
 
       const headers = lines[0].split(',');
       const logs = [];
+      const cleanStr = (s: string) => s ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : '';
+      const cleanDoc = (s: string) => s ? s.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : '';
 
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -142,28 +189,65 @@ export class NoteService {
         if (cols.length >= headers.length) {
           const fileName = cols[1];
           const id = fileName.replace(/\.[^/.]+$/, ""); // remove a extensão
-          const folderPath = path.join(FILES_DIR, id);
           
+          const docNumCsv = cols[10];
+          const supplierCsv = cols[3];
+          const cnpjCsv = cols[9];
+
+          const docNumCleanCsv = cleanDoc(docNumCsv);
+          const supplierCleanCsv = cleanStr(supplierCsv);
+          const cnpjCleanCsv = cnpjCsv ? cnpjCsv.replace(/\D/g, '') : '';
+
+          const matchingNote = activeNotes.find(note => {
+            if (note.id === id) return true;
+
+            const noteDocNum = note.data.documentIdentifiers?.documentNumber;
+            const noteDocNumClean = cleanDoc(noteDocNum);
+
+            if (docNumCleanCsv && noteDocNumClean && docNumCleanCsv === noteDocNumClean) {
+              const noteSupplier = note.data.supplier?.name;
+              const noteCnpj = note.data.supplier?.cnpjCpf;
+
+              const noteSupplierClean = cleanStr(noteSupplier);
+              const noteCnpjClean = noteCnpj ? noteCnpj.replace(/\D/g, '') : '';
+
+              if (supplierCleanCsv && noteSupplierClean && supplierCleanCsv === noteSupplierClean) {
+                return true;
+              }
+              if (cnpjCleanCsv && noteCnpjClean && cnpjCleanCsv === noteCnpjClean) {
+                return true;
+              }
+              if (note.id.toLowerCase().includes(docNumCleanCsv)) {
+                return true;
+              }
+            }
+
+            if (!docNumCleanCsv && supplierCleanCsv) {
+              const noteSupplier = note.data.supplier?.name;
+              const noteSupplierClean = cleanStr(noteSupplier);
+              if (supplierCleanCsv === noteSupplierClean) {
+                const valCsv = cols[11] ? parseFloat(cols[11]) : undefined;
+                const valNote = note.data.financial?.originalValue;
+                if (valCsv !== undefined && valNote !== undefined && Math.abs(valCsv - valNote) < 0.01) {
+                  return true;
+                }
+              }
+            }
+
+            return false;
+          });
+
           let fileStatus = 'Pendente';
-          if (!fs.existsSync(folderPath)) {
+          if (!matchingNote) {
             fileStatus = 'Excluído';
           } else {
-            const jsonPath = path.join(folderPath, `${id}.json`);
-            if (fs.existsSync(jsonPath)) {
-              try {
-                const noteJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-                if (noteJson.status === 'validado') {
-                  fileStatus = 'Validado';
-                } else if (noteJson.status === 'pendente') {
-                  fileStatus = 'Pendente';
-                } else {
-                  fileStatus = 'Processado';
-                }
-              } catch (e) {
-                fileStatus = 'Processado';
-              }
-            } else {
+            const status = matchingNote.data.status;
+            if (status === 'validado') {
+              fileStatus = 'Validado';
+            } else if (status === 'pendente') {
               fileStatus = 'Pendente';
+            } else {
+              fileStatus = 'Processado';
             }
           }
 
@@ -247,5 +331,86 @@ export class NoteService {
     });
 
     return await processor.processLatestUnreadEmails(5);
+  }
+
+  public static async sendDeadlineAlerts(items: any[]) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      throw new Error('Nenhum item informado para envio de alertas');
+    }
+
+    const criticalItems = items.filter(item => item.diasRestantes <= 10);
+    if (criticalItems.length === 0) {
+      return { success: true, message: 'Nenhum fornecedor com prazo crítico (<= 10 dias) para envio de alertas.' };
+    }
+
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+    const smtpSecure = process.env.SMTP_SECURE === 'true';
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM || smtpUser;
+    const smtpTo = process.env.SMTP_TO;
+
+    if (!smtpHost || !smtpUser || !smtpPass || !smtpTo) {
+      throw new Error('Configuração de SMTP incompleta nas variáveis de ambiente');
+    }
+
+    const nodemailer = await import('nodemailer');
+    const transporter = (nodemailer.default || nodemailer).createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    });
+
+    let tableRows = '';
+    criticalItems.forEach(item => {
+      const color = item.diasRestantes <= 7 ? '#ef4444' : '#eab308';
+      const severity = item.diasRestantes <= 7 ? 'Crítico' : 'Alerta';
+      tableRows += `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 12px; font-weight: bold; color: #111827;">${item.fornecedor}</td>
+          <td style="padding: 12px; color: #374151;">R$ ${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="padding: 12px; color: #374151;">${item.vencimento}</td>
+          <td style="padding: 12px; font-weight: bold; color: ${color};">${item.diasRestantes} dias (${severity})</td>
+        </tr>
+      `;
+    });
+
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #1e3a8a; margin-top: 0;">Relatório Preventivo de Vencimentos</h2>
+        <p style="color: #4b5563; font-size: 0.95rem;">As seguintes faturas estão com vencimento próximo (menor ou igual a 10 dias) e requerem atenção urgente:</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
+              <th style="padding: 12px; font-weight: 600; color: #4b5563;">Fornecedor</th>
+              <th style="padding: 12px; font-weight: 600; color: #4b5563;">Valor</th>
+              <th style="padding: 12px; font-weight: 600; color: #4b5563;">Vencimento</th>
+              <th style="padding: 12px; font-weight: 600; color: #4b5563;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        
+        <p style="margin-top: 30px; font-size: 0.8rem; color: #9ca3af; text-align: center;">Este é um alerta automático gerado pelo Stoque Fiscal Intelligence.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: smtpTo,
+      subject: `[Alerta Fiscal] Relatório Preventivo de Vencimentos - ${criticalItems.length} Faturas`,
+      html: htmlBody
+    });
+
+    console.log(`[SMTP] Relatório preventivo de vencimento enviado com sucesso para: ${smtpTo}`);
+    return { success: true, message: `Alertas de vencimento enviados com sucesso para ${smtpTo}.` };
   }
 }

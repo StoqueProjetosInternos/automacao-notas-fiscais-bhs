@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w stoque-fiscal-intelligence",
+    "dev-api": "npm run dev-api -w stoque-fiscal-intelligence",
     "usage": "npm run usage -w stoque-fiscal-intelligence",
     "go": "npx tsx apps/automacao/src/server/index.ts"
   }
