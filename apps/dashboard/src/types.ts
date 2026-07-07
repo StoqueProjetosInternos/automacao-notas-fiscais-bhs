@@ -72,6 +72,7 @@ export interface ApportionmentItem {
 export interface Note {
   id: string;
   fileName: string;
+  createdAt?: string;
   data: NoteData;
   files: {
     json: string;

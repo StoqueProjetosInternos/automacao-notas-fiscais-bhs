@@ -12,13 +12,29 @@ interface SidebarProps {
   style?: React.CSSProperties;
 }
 
-type SortOption = 'name-asc' | 'name-desc' | 'val-asc' | 'val-desc' | 'date-asc';
+type SortOption = 'name-asc' | 'name-desc' | 'val-asc' | 'val-desc' | 'date-asc' | 'recent';
 
 const formatValue = (val: any): string => {
   if (val === undefined || val === null || val === '') return '0,00';
   const num = Number(val);
   if (isNaN(num)) return String(val);
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const formatDate = (isoStr?: string): string => {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  } catch (e) {
+    return '';
+  }
 };
 
 export const Sidebar = ({ 
@@ -30,7 +46,7 @@ export const Sidebar = ({
   onSearchChange,
   style
 }: SidebarProps) => {
-  const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [noteIdDeleting, setNoteIdDeleting] = useState<string | null>(null);
   const itemsPerPage = 10;
@@ -103,6 +119,11 @@ export const Sidebar = ({
 
   // Ordena a lista com base no critério selecionado
   const sortedNotes = [...filteredNotes].sort((a, b) => {
+    if (sortBy === 'recent') {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    }
     if (sortBy === 'name-asc') {
       return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
     }
@@ -193,6 +214,7 @@ export const Sidebar = ({
               cursor: 'pointer'
             }}
           >
+            <option value="recent">Mais Recentes</option>
             <option value="name-asc">Nome do Arquivo (A-Z)</option>
             <option value="name-desc">Nome do Arquivo (Z-A)</option>
             <option value="val-desc">Valor (Maior primeiro)</option>
@@ -335,6 +357,16 @@ export const Sidebar = ({
                   }} title={note.id}>
                     {note.id}
                   </div>
+
+                  {note.createdAt && (
+                    <div style={{ 
+                      fontSize: '0.65rem', 
+                      color: '#6b7280', 
+                      marginBottom: '6px'
+                    }}>
+                      <span style={{ fontWeight: 500 }}>Importado em:</span> {formatDate(note.createdAt)}
+                    </div>
+                  )}
 
                   <div className="note-item-meta">
                     <span>
