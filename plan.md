@@ -2467,4 +2467,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
 
+### CHG-0166 — Atualização Geral do Arquivo de Documentação Técnica
+
+- Data/Hora: 2026-07-07 13:55
+- Contexto: A documentação técnica documentation.md precisava de atualizações para cobrir as novas chaves .env (SMTP e auth), o novo script dev-api e o processamento de logs em fuso horário local.
+- Objetivo: Atualizar o arquivo de documentação documentation.md.
+- Escopo:
+  - Configuração: [documentation.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/documentation.md)
+- Riscos: Nenhum. Mudança documental.
+- Proposta: Inserir explicações das variáveis SMTP, ADMIN e o comando npm run dev-api no markdown.
+- Testes:
+  - Validação de renderização markdown.
+- Rollback:
+  1) `git checkout -- documentation.md`
+- Status: Aplicado
+
 

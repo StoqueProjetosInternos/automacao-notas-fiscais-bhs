@@ -53,10 +53,12 @@ O projeto é estruturado como um monorepo baseado em **npm workspaces**, permiti
 O motor responsável pela captação, extração de texto, comunicação com LLM e processamento das planilhas.
 
 - **Email Processor (`src/features/email/searchDataFromEmail.ts`):** Integra-se com a Microsoft Graph API para buscar e-mails não lidos, baixar anexos em formato PDF e movê-los para um fluxo de processamento.
+- **Alertas SMTP (`src/server/services/noteService.ts`):** Envia relatórios preventivos contendo tabelas HTML de vencimentos críticos (≤ 10 dias) para os gestores, utilizando credenciais de correio configuradas por variáveis de ambiente.
 - **AI Engine (`src/features/pdf/aiExtract.ts`):** Envia o documento PDF diretamente para a API do Google Gemini (usando modelos como `gemini-1.5-flash` ou `gemini-2.0-flash`) com um prompt especializado em conformidade fiscal brasileira para obter um JSON estruturado.
 - **Data Enrichment (`src/features/pdf/dataEnrichment.ts`):** Cruza as informações extraídas pela IA com a planilha de referência local (`data/base_referencia.csv`) e as bases Excel de séries de hardware (`rateio_monitores.xlsx` e `rateio_notebooks.xlsb` na raiz do projeto) para associar Centros de Custo (CR), Códigos de Natureza de Despesa e Contratos de forma individualizada para cada equipamento faturado.
 - **Excel Generator (`src/features/excel/generateRateioExcel.ts`):** Consolida os dados e gera planilhas no formato de rateio financeiro aceito pelo sistema ERP/Zeev do cliente utilizando a biblioteca `exceljs`. O arquivo gerado (`Rateio.xlsx`) contém duas abas: `Rateio` (agrupamento consolidado de CR, Natureza e Contrato) e `Rateio_Detalhado` (listagem individualizada com a coluna de Série).
 - **Backend Server (`src/server/index.ts` e `src/server/app.ts`):** Servidor Express na porta `3001` (organizado em Rotas, Controllers e Services) que expõe endpoints REST para listar, buscar PDFs, atualizar dados editados no JSON de extração e disparar a geração final de planilhas.
+- **Logger Local (`src/server/config/logger.ts`):** Interceptador de logs do console que formata marcas de data e hora no padrão local do sistema (respeitando o fuso horário atual, ex: `-03:00`) e grava os registros de auditoria em `data/logs/api.log`.
 
 ### 3.2. Aplicativo Dashboard (`apps/dashboard`)
 Uma SPA moderna construída com React e TypeScript para validação manual dos dados.
@@ -131,6 +133,19 @@ TENANT_ID=seu_tenant_id_azure
 CLIENT_ID=seu_client_id_azure
 CLIENT_SECRET=seu_client_secret_azure
 USER_EMAIL=email_monitorado@empresa.com.br
+
+# Serviço de Envio de E-mails (SMTP) para Alertas de Vencimento
+SMTP_HOST=smtp.exemplo.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=usuario@exemplo.com
+SMTP_PASS=senha_aqui
+SMTP_FROM=usuario@exemplo.com
+SMTP_TO=gestor@exemplo.com
+
+# Credenciais do Painel de Administração (Dashboard)
+ADMIN_EMAIL=admin@stoque.com.br
+ADMIN_PASSWORD=senha_secreta_dashboard
 ```
 
 ---
@@ -152,12 +167,17 @@ npm run dev
 ### 6.3. Executar o Painel de Curadoria (Dashboard + Servidor)
 Para rodar a interface de curadoria manual de forma completa, você precisará subir o Servidor API e o painel Frontend simultaneamente:
 
-1. **Iniciar a API Backend:**
+1. **Iniciar a API Backend em Modo Desenvolvimento (com recarregamento automático):**
    Abra um terminal na raiz e execute:
+   ```bash
+   npm run dev-api
+   ```
+   *O servidor iniciará escutando na porta `3001` monitorando alterações no código por meio do nodemon.*
+
+   *Nota: Caso prefira executar o servidor sem monitoramento automático de arquivos, utilize:*
    ```bash
    npm run api -w stoque-fiscal-intelligence
    ```
-   *O servidor iniciará escutando na porta `3001`.*
 
 2. **Iniciar o Painel Frontend:**
    Abra outro terminal na raiz e execute:
