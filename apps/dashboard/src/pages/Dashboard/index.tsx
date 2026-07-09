@@ -549,6 +549,30 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleArchiveNote = async (id: string) => {
+    try {
+      const noteToArchive = notes.find(n => n.id === id);
+      if (!noteToArchive) return;
+
+      const updatedData = { ...noteToArchive.data, status: 'arquivado' };
+      await updateNote(id, updatedData);
+      
+      const refreshedNotes = await fetchNotes();
+      setNotes(refreshedNotes);
+      
+      if (selectedNote?.id === id) {
+        setSelectedNote(null);
+        setFormData(null);
+      }
+      
+      showToast('Fatura arquivada com sucesso.', 'success');
+      loadUsageLogs();
+    } catch (error) {
+      console.error('Erro ao arquivar nota:', error);
+      showToast('Erro ao arquivar a fatura.', 'error');
+    }
+  };
+
   const handleLogoutWithToast = () => {
     setShowLogoutModal(true);
   };
@@ -653,6 +677,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               selectedNoteId={selectedNote?.id} 
               onSelectNote={handleSelectNote} 
               onDeleteNote={handleDeleteNote}
+              onArchiveNote={handleArchiveNote}
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
               style={{ '--sidebar-width-dynamic': `${sidebarWidth}px` } as React.CSSProperties}
@@ -956,6 +981,19 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                         <tr 
                           key={log.id} 
                           className="history-row"
+                          onClick={() => {
+                            if (log.statusArquivo !== 'Excluído') {
+                              const noteId = log.arquivo.replace(/\.[^/.]+$/, "");
+                              const foundNote = notes.find(n => n.id === noteId);
+                              if (foundNote) {
+                                handleSelectNote(foundNote);
+                                setActiveTab('notes');
+                              } else {
+                                showToast('Arquivo físico da fatura não foi localizado.', 'info');
+                              }
+                            }
+                          }}
+                          style={{ cursor: log.statusArquivo !== 'Excluído' ? 'pointer' : 'default' }}
                         >
                           <td style={{ padding: '12px 16px', color: '#6b7280', fontWeight: 'bold' }}>
                             #{log.id}
@@ -999,8 +1037,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                           </td>
                           <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <span style={{ 
-                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : '#eff6ff', 
-                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : '#1d4ed8', 
+                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#eff6ff', 
+                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#1d4ed8', 
                               padding: '2px 8px', 
                               borderRadius: '4px', 
                               fontSize: '0.7rem', 

@@ -419,6 +419,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               <table className="apportionment-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6', textAlign: 'left', borderBottom: '2px solid var(--border)' }}>
+                    <th style={{ padding: '10px', fontWeight: 600, width: '45px', textAlign: 'center' }}>ID</th>
                     <th style={{ padding: '10px', fontWeight: 600 }}>Descrição</th>
                     <th style={{ padding: '10px', fontWeight: 600, width: '50px' }}>Qtd</th>
                     <th style={{ padding: '10px', fontWeight: 600, width: '90px' }}>Unitário</th>
@@ -446,6 +447,9 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                     })
                     .map(({ item, originalIndex }: any) => (
                       <tr key={originalIndex} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#4b5563', fontWeight: '600' }}>
+                          {originalIndex + 1}
+                        </td>
                         <td style={{ padding: '8px 10px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.description}>
                           {item.description}
                         </td>

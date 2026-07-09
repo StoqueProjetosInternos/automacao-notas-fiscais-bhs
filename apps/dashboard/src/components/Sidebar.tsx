@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, Archive } from 'lucide-react';
 import type { Note } from '../types';
 
 interface SidebarProps {
@@ -7,6 +7,7 @@ interface SidebarProps {
   selectedNoteId?: string;
   onSelectNote: (note: Note) => void;
   onDeleteNote: (id: string) => Promise<void>;
+  onArchiveNote: (id: string) => Promise<void>;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   style?: React.CSSProperties;
@@ -42,6 +43,7 @@ export const Sidebar = ({
   selectedNoteId, 
   onSelectNote, 
   onDeleteNote,
+  onArchiveNote,
   searchTerm, 
   onSearchChange,
   style
@@ -49,6 +51,7 @@ export const Sidebar = ({
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [noteIdDeleting, setNoteIdDeleting] = useState<string | null>(null);
+  const [noteIdArchiving, setNoteIdArchiving] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   // Gerenciamento síncrono de reset de página quando a busca ou ordenação mudam
@@ -65,6 +68,9 @@ export const Sidebar = ({
   }
   
   const filteredNotes = notes.filter(n => {
+    // Ocultar notas arquivadas da lista de faturas ativas
+    if (n.data.status === 'arquivado') return false;
+
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
 
@@ -247,14 +253,16 @@ export const Sidebar = ({
       </div>
 
       <div className="note-list">
-        {currentNotes.map(note => {
+        {currentNotes.map((note, idx) => {
+          const absoluteIndex = indexOfFirstItem + idx + 1;
           const isConfirmingDelete = noteIdDeleting === note.id;
+          const isConfirmingArchive = noteIdArchiving === note.id;
 
           return (
             <div 
               key={note.id} 
               className={`note-item ${selectedNoteId === note.id ? 'active' : ''}`}
-              onClick={() => !isConfirmingDelete && onSelectNote(note)}
+              onClick={() => !isConfirmingDelete && !isConfirmingArchive && onSelectNote(note)}
             >
               {isConfirmingDelete ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
@@ -297,6 +305,47 @@ export const Sidebar = ({
                     </button>
                   </div>
                 </div>
+              ) : isConfirmingArchive ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
+                  <span style={{ fontSize: '0.7rem', color: '#1e40af', fontWeight: 600 }}>Arquivar esta fatura?</span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={async () => {
+                        await onArchiveNote(note.id);
+                        setNoteIdArchiving(null);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '4px 8px',
+                        fontSize: '0.65rem',
+                        background: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      Arquivar
+                    </button>
+                    <button
+                      onClick={() => setNoteIdArchiving(null)}
+                      style={{
+                        flex: 1,
+                        padding: '4px 8px',
+                        fontSize: '0.65rem',
+                        background: '#e5e7eb',
+                        color: '#374151',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 500
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   {/* Nome do Fornecedor em Destaque + Lixeira */}
@@ -308,36 +357,58 @@ export const Sidebar = ({
                     marginBottom: '3px'
                   }}>
                     <div style={{ 
-                      fontSize: '0.75rem', 
-                      fontWeight: 700,
-                      color: selectedNoteId === note.id ? '#1e40af' : '#111827', 
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      flex: 1
+                       fontSize: '0.75rem', 
+                       fontWeight: 700,
+                       color: selectedNoteId === note.id ? '#1e40af' : '#111827', 
+                       whiteSpace: 'nowrap',
+                       overflow: 'hidden',
+                       textOverflow: 'ellipsis',
+                       flex: 1
                     }} title={note.data.supplier?.name || 'Fornecedor não identificado'}>
-                      {note.data.supplier?.name || 'Fornecedor Não Identificado'}
+                      {absoluteIndex} - {note.data.supplier?.name || 'Fornecedor Não Identificado'}
                     </div>
-                    <button
-                      className="delete-btn-container"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNoteIdDeleting(note.id);
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        outline: 'none'
-                      }}
-                      title="Excluir fatura"
-                    >
-                      <Trash2 size={13} color="#ef4444" />
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button
+                        className="archive-btn-container"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNoteIdArchiving(note.id);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          outline: 'none'
+                        }}
+                        data-tooltip="Arquivar fatura"
+                      >
+                        <Archive size={13} color="#2563eb" />
+                      </button>
+                      <button
+                        className="delete-btn-container"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNoteIdDeleting(note.id);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          outline: 'none'
+                        }}
+                        data-tooltip="Excluir fatura"
+                      >
+                        <Trash2 size={13} color="#ef4444" />
+                      </button>
+                    </div>
                   </div>
                   
                   {/* Nome do Arquivo como tag secundária */}

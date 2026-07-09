@@ -246,6 +246,8 @@ export class NoteService {
               fileStatus = 'Validado';
             } else if (status === 'pendente') {
               fileStatus = 'Pendente';
+            } else if (status === 'arquivado') {
+              fileStatus = 'Arquivado';
             } else {
               fileStatus = 'Processado';
             }

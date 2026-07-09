@@ -78,7 +78,12 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  });
   const todayStr = new Date().toLocaleDateString("pt-BR"); // ex: 08/06/2026
 
   const prompt = `

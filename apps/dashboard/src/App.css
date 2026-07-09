@@ -114,11 +114,13 @@ html, body, #root {
   background-color: #ffffff;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s;
+  position: relative;
 }
 
 .note-item:hover {
   background: #f9fafb;
   border-color: #d1d5db;
+  z-index: 10;
 }
 
 .note-item.active {
@@ -670,4 +672,49 @@ html, body, #root {
 .modal-delete-btn:hover {
   opacity: 1;
   transform: scale(1.15);
+}
+
+.archive-btn-container {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.note-item:hover .archive-btn-container {
+  opacity: 1;
+}
+
+.archive-btn-container:hover {
+  transform: scale(1.1);
+  transition: transform 0.1s ease;
+}
+
+/* Tooltip customizada elegante baseada em data-attribute */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  right: 135%; /* Posiciona a esquerda do botao no corpo do item */
+  transform: translate(4px, -50%) scale(0.9);
+  background-color: #1f2937;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 9999;
+  border: 1px solid #374151;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translate(0, -50%) scale(1);
 }

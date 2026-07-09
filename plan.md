@@ -2544,6 +2544,55 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- .github/workflows/deploy.yml`
 - Status: Aplicado
 
+### CHG-0173 — Otimização de Performance e Paralelização de Processamento de Faturas
+
+- Data/Hora: 2026-07-09 12:10
+- Contexto: Redução do gargalo de processamento sequencial de anexos PDFs de faturas no integrador de e-mails.
+- Objetivo: Implementar Promise.all no processamento de anexos e configurar Structured Outputs no Gemini.
+- Escopo:
+  - Backend: [searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts), [aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+- Riscos: Estourar limites de requisições (Rate Limits) do Gemini em volumes elevados de e-mails simultâneos.
+- Proposta: Introduzir paralelização em lote e tipar a resposta do modelo para JSON bruto.
+- Testes:
+  - Medir latência antes e após a modificação em chamadas de múltiplos arquivos.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/email/searchDataFromEmail.ts apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+
+### CHG-0174 — Implementação de Arquivamento de Faturas e Consulta por Histórico
+
+- Data/Hora: 2026-07-09 12:20
+- Contexto: Fornecer mecanismos para arquivar faturas validadas/processadas, ocultando-as da lista ativa e permitindo consulta via aba de histórico.
+- Objetivo: Inserir botão de arquivamento na Sidebar, criar o manipulador handleArchiveNote, habilitar clique nas linhas da tabela de histórico, criar tooltips CSS elegantes e animadas e ocultar o botão até o hover do item.
+- Escopo:
+  - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+  - Frontend: [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. Ocultar e classificar como arquivado no JSON preserva o arquivo intacto no sistema.
+- Proposta: Integrar ícone Archive com confirmação inline, clique de navegação reversa no histórico, tooltips baseadas em data-tooltip no CSS e comportamento de hover de opacidade.
+- Testes:
+  - Validar cliques no histórico e arquivar faturas de teste.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/noteService.ts apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0175 — Adição de Identificador Sequencial nos Itens Faturados do Rateio e Faturas na Sidebar
+
+- Data/Hora: 2026-07-09 12:30
+- Contexto: Facilitar a identificação de faturas e itens específicos de notas fiscais pelo usuário ao editar dados ou conversar sobre itens específicos.
+- Objetivo: Inserir a coluna ID sequencial baseada no índice original estável de cada item na tabela de rateio e exibir o índice absoluto das faturas ao lado do nome do fornecedor na Sidebar.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Nenhum. A alteração é apenas visual e não altera a estrutura dos dados enviados no payload à API.
+- Proposta: Inserir ID no cabeçalho e corpo do modal de rateio e absoluteIndex ao lado do fornecedor no Sidebar.tsx (sem caractere hash).
+- Testes:
+  - Validar a compilação do frontend e observar se os IDs sequenciais aparecem nas faturas e itens.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/components/Sidebar.tsx`
+- Status: Aplicado
+
+
+
+
 
 
 

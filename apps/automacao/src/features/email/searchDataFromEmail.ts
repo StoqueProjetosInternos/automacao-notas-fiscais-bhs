@@ -243,13 +243,12 @@ export class GraphEmailPdfProcessor {
 
         if (email.hasAttachments) {
           const attachments = await this.fetchAttachments(email.id);
-          console.log(`[Email Sync] Encontrado(s) ${attachments.length} anexo(s) no e-mail.`);
+          const pdfAttachments = attachments.filter(file => file.name?.toLowerCase().endsWith(".pdf"));
+          console.log(`[Email Sync] Encontrado(s) ${pdfAttachments.length} anexo(s) PDF para processamento paralelo.`);
 
-          for (const file of attachments) {
-            if (!file.name?.toLowerCase().endsWith(".pdf")) continue;
-
-            const ok = await this.processPdfAttachment(file);
-            if (!ok) processedAllPdfs = false;
+          const results = await Promise.all(pdfAttachments.map(file => this.processPdfAttachment(file)));
+          if (results.includes(false)) {
+            processedAllPdfs = false;
           }
         }
 
