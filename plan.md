@@ -2497,4 +2497,38 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
 
+### CHG-0168 — Configuração de Roteamento e Workflow Nativo para GitHub Pages
+
+- Data/Hora: 2026-07-09 09:35
+- Contexto: Configuração do dashboard para suportar hospedagem estática no GitHub Pages utilizando o ecossistema oficial do GitHub Actions.
+- Objetivo: Modificar o roteador para HashRouter, configurar a base path no Vite e adicionar o arquivo de workflow (.github/workflows/deploy.yml) sem instalar dependências externas.
+- Escopo:
+  - Frontend: [vite.config.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/vite.config.ts), [App.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.tsx)
+  - CI/CD: .github/workflows/deploy.yml
+- Riscos: Exposição da URL de produção da API nos logs de compilação ou nos arquivos compilados acessíveis publicamente.
+- Proposta: Alterar para HashRouter no App.tsx, base path no vite.config.ts e criar o workflow do GitHub Actions.
+- Testes:
+  - Rodar build local para conferir caminhos de importação.
+- Rollback:
+  1) `git checkout -- apps/dashboard/vite.config.ts apps/dashboard/src/App.tsx`
+  2) Excluir o arquivo .github/workflows/deploy.yml
+- Status: Aplicado
+
+### CHG-0171 — Correção de Caminho Base do Repositório para Deploy
+
+- Data/Hora: 2026-07-09 10:10
+- Contexto: Ajuste na configuração do Vite para sincronizar com o nome real do repositório remoto no GitHub.
+- Objetivo: Modificar a propriedade base de /automacao_notas_fisicais_v2/ para /automacao-notas-fiscais-bhs/.
+- Escopo:
+  - Frontend: [vite.config.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/vite.config.ts)
+- Riscos: Nenhum. Correção necessária para resolução de erros de caminhos estáticos (assets).
+- Proposta: Alterar o valor do base path no arquivo de configurações do Vite.
+- Testes:
+  - Validar a compilação local e checar o link de saída.
+- Rollback:
+  1) `git checkout -- apps/dashboard/vite.config.ts`
+- Status: Aplicado
+
+
+
 
