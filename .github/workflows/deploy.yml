@@ -35,7 +35,7 @@ jobs:
 
       - name: Build Dashboard
         env:
-          VITE_API_URL: "https://sua-api-no-render.onrender.com"
+          VITE_API_URL: "https://automacao-notas-fiscais-bhs.onrender.com"
         run: |
           cd apps/dashboard
           npm run build

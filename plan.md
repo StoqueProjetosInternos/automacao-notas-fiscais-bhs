@@ -2529,6 +2529,22 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/vite.config.ts`
 - Status: Aplicado
 
+### CHG-0172 — Atualização da URL Base da API do Render no Workflow de Deploy
+
+- Data/Hora: 2026-07-09 11:15
+- Contexto: Configuração do frontend com a URL do backend hospedado no Render para habilitar comunicações HTTP reais em produção.
+- Objetivo: Modificar a variável VITE_API_URL no arquivo de workflow deploy.yml para apontar para a URL do Render.
+- Escopo:
+  - CI/CD: [.github/workflows/deploy.yml](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.github/workflows/deploy.yml)
+- Riscos: Exposição pública do endpoint da API (seguro mediante autenticação de sessão e tokens JWT ativos).
+- Proposta: Substituir o placeholder no deploy.yml pela URL base definitiva do Render.
+- Testes:
+  - Validar a compilação do dashboard e observar o envio correto das requisições na nuvem.
+- Rollback:
+  1) `git checkout -- .github/workflows/deploy.yml`
+- Status: Aplicado
+
+
 
 
 
