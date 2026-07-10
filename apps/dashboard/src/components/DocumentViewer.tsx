@@ -24,11 +24,13 @@ export const DocumentViewer = ({ selectedNote, isDragging }: DocumentViewerProps
       <div className="pdf-wrapper">
         {selectedNote?.files.pdf ? (
           <iframe 
+            key={selectedNote.id}
             src={`${getFileUrl(selectedNote.files.pdf)}#toolbar=0`} 
             title="Document Viewer"
+            className="fade-in"
           />
         ) : (
-          <div className="paper-sheet">
+          <div className="paper-sheet fade-in" key="no-pdf">
             <div className="no-pdf-message">
               <AlertCircle size={48} />
               <p>PDF original não encontrado nesta pasta.</p>

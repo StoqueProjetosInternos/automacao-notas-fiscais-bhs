@@ -2920,3 +2920,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/pages/Home/index.tsx`
 - Status: Aplicado
+
+### CHG-0198 — Transição Suave no Visualizador de PDF
+
+- Data/Hora: 2026-07-10 13:50
+- Contexto: O carregamento de arquivos PDF no visualizador do painel principal ocorria de forma instantânea e sem suavização na interface.
+- Objetivo: Implementar a transição suave de entrada fade-in no visualizador de documentos do dashboard.
+- Escopo:
+  - Frontend: [DocumentViewer.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DocumentViewer.tsx)
+- Riscos: Nenhum. Ajustes estéticos locais em JSX.
+- Proposta: Vincular a propriedade key ao id da fatura selecionada para forçar o React a recriar o iframe, e aplicar a classe fade-in na exibição do PDF e no aviso do OCR.
+- Testes:
+  - Validar a compilação do dashboard React local.
+  - Selecionar diferentes faturas na barra lateral e verificar se os documentos surgem na tela em fade-in suave.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/DocumentViewer.tsx`
+- Status: Aplicado
