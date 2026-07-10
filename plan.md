@@ -2563,12 +2563,12 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 
 - Data/Hora: 2026-07-09 12:20
 - Contexto: Fornecer mecanismos para arquivar faturas validadas/processadas, ocultando-as da lista ativa e permitindo consulta via aba de histórico.
-- Objetivo: Inserir botão de arquivamento na Sidebar, criar o manipulador handleArchiveNote, habilitar clique nas linhas da tabela de histórico, criar tooltips CSS elegantes e animadas e ocultar o botão até o hover do item.
+- Objetivo: Inserir botão de arquivamento na Sidebar, criar o manipulador handleArchiveNote, habilitar clique nas linhas da tabela de histórico, criar tooltips CSS elegantes e animadas, ocultar o botão até o hover do item e ajustar o contador total da Sidebar para desconsiderar arquivados.
 - Escopo:
   - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
   - Frontend: [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
 - Riscos: Nenhum. Ocultar e classificar como arquivado no JSON preserva o arquivo intacto no sistema.
-- Proposta: Integrar ícone Archive com confirmação inline, clique de navegação reversa no histórico, tooltips baseadas em data-tooltip no CSS e comportamento de hover de opacidade.
+- Proposta: Integrar ícone Archive com confirmação inline, clique de navegação reversa no histórico, tooltips baseadas em data-tooltip no CSS, comportamento de hover de opacidade e correção de contagem de faturas ativas.
 - Testes:
   - Validar cliques no histórico e arquivar faturas de teste.
 - Rollback:
@@ -2590,10 +2590,252 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/components/Sidebar.tsx`
 - Status: Aplicado
 
+### CHG-0176 — Exportação do Histórico de Processamento para Excel e PDF
 
+- Data/Hora: 2026-07-09 12:40
+- Contexto: Permitir a exportação dos relatórios e logs auditáveis do histórico de consumo do Gemini para planilhas e relatórios formatados em PDF.
+- Objetivo: Inserir botões de exportação no cabeçalho do Histórico de Processamento e programar funções locais de geração de Blob CSV (UTF-8 com BOM) e visualização de impressão HTML para PDF.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. A exportação é feita localmente no cliente (navegador).
+- Proposta: Integrar botões de Exportar Planilha e Exportar PDF conectados a rotas locais de exportação via Javascript Blob e print stylesheets.
+- Testes:
+  - Validar a compilação do frontend e testar a geração dos arquivos de download na tela de Histórico.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
 
+### CHG-0177 — Estilização Visual de Links de Faturas na Tabela de Histórico
 
+- Data/Hora: 2026-07-09 12:45
+- Contexto: Tornar o recurso de abertura de faturas a partir do histórico intuitivo e autoexplicativo para o usuário.
+- Objetivo: Estilizar o nome do arquivo na tabela do histórico como link azul e sublinhado clássico e adicionar efeitos de hover no CSS.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. Alteração puramente visual na UI.
+- Proposta: Adicionar condicional de cor e textDecoration no inline style e regra de hover no App.css.
+- Testes:
+  - Verificar se a coluna de Arquivo reage visualmente no hover sobre os itens ativos.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/App.css`
+- Status: Aplicado
 
+### CHG-0178 — Adição de Filtro de Faturas Arquivadas no Histórico
 
+- Data/Hora: 2026-07-09 12:50
+- Contexto: Permitir ao usuário filtrar os logs do Histórico de Processamento especificamente pelo status de faturas arquivadas.
+- Objetivo: Adicionar a opção "Arquivado" no dropdown de Status do Arquivo (historyFileStatusFilter) na tela de histórico.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. O filtro utiliza a propriedade statusArquivo já populada no log.
+- Proposta: Inserir <option value="Arquivado">Arquivado</option> no select de status.
+- Testes:
+  - Validar a filtragem de faturas com status arquivado na tabela do histórico.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
 
+### CHG-0179 — Resolução do Mapeamento de Faturas pelo Histórico (noteId Match)
 
+- Data/Hora: 2026-07-09 13:00
+- Contexto: Correção de falha onde faturas ativas no histórico não abriam por divergência entre o nome do arquivo físico original e a pasta final de armazenamento (ID).
+- Objetivo: Injetar a propriedade noteId descoberta pelo algoritmo de busca no backend e realizar a correspondência de faturas na UI diretamente usando essa propriedade estável.
+- Escopo:
+  - Backend: [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+  - Frontend: [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. A correspondência lógica baseada no algoritmo robusto do backend garante precisão de mapeamento.
+- Proposta: Retornar noteId no payload de logs de consumo e alterar o manipulador onClick para foundNote usando log.noteId.
+- Testes:
+  - Validar cliques no histórico e confirmar a abertura de faturas antigas e novas com sucesso.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/noteService.ts apps/dashboard/src/services/api.ts apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0180 — Visualização de PDF do Histórico via Modal Inline
+
+- Data/Hora: 2026-07-09 13:05
+- Contexto: Melhorar a experiência de auditoria do histórico permitindo visualizar a fatura original no mesmo painel, sem a necessidade de redirecionar a aba de navegação principal.
+- Objetivo: Criar estados de preview do PDF, alterar a ação de clique para atribuir a URL do PDF e renderizar um modal overlay com iframe carregando o arquivo do histórico.
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. O modal é controlado localmente e renderiza o arquivo PDF estático seguro da nota.
+- Proposta: Adicionar estados historyPreviewPdfUrl/Title, redirecionar o clique da linha do histórico para carregar a URL do PDF e renderizar o componente modal.
+- Testes:
+  - Validar a compilação do Vite e testar se ao clicar na linha da tabela do histórico, o modal abre centralizado com o PDF e o botão de fechar funciona corretamente.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+
+### CHG-0181 — Controle de Acesso Baseado em Roles (RBAC) Seguro (ADMIN e USER)
+
+- Data/Hora: 2026-07-09 13:10
+- Contexto: Dotar a aplicação de segurança estruturada e separar permissões entre perfis operacionais e gerenciais.
+- Objetivo: Restringir ações administrativas (exclusão, reprocessamento OCR, logs e sync) ao perfil ADMIN, configurar credenciais no authController com fallbacks e atualizar a UI no frontend para ocultar/desabilitar ações do perfil USER.
+- Escopo:
+  - Backend: [authController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/authController.ts), [authMiddleware.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/middlewares/authMiddleware.ts), [noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts), [app.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/app.ts), `roleMiddleware.ts`
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Nenhum. Permissões controladas de forma idônea tanto no servidor quanto no cliente.
+- Proposta: Injetar middleware requireAdmin no backend, proteger a API de faturas e customizar as visualizações do frontend conforme user.role.
+- Testes:
+  - Validar fluxos de login e ações restritas para cada um dos perfis.
+- Rollback:
+  1) Excluir `apps/automacao/src/server/middlewares/roleMiddleware.ts`
+  2) `git checkout -- apps/automacao/src/server/controllers/authController.ts apps/automacao/src/server/middlewares/authMiddleware.ts apps/automacao/src/server/routes/noteRoutes.ts apps/automacao/src/server/app.ts apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/components/Header.tsx apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/components/DataEditor.tsx`
+- Status: Aplicado
+
+### CHG-0182 — Credenciais de Autenticação Dinâmicas no Backend e Dropdown de Perfil no Frontend
+
+- Data/Hora: 2026-07-09 13:16
+- Contexto: Tornar as informações de perfis dinâmicas e fornecer interface de consulta cadastral do usuário no dashboard.
+- Objetivo: Ler todos os dados de ADMIN e USER do process.env no authController e desenvolver um menu dropdown premium com avatar e iniciais no Header, que exibe as informações completas no clique e fecha no clique externo.
+- Escopo:
+  - Backend: [authController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/authController.ts)
+  - Frontend: [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. O dropdown interativo é controlado por hooks reativos seguros e o backend simula comportamento produtivo sem expor chaves.
+- Proposta: Injetar variáveis de ambiente dinâmicas no controller de login, programar a abertura do dropdown com refs do React e adicionar estilos CSS no App.css.
+- Testes:
+  - Testar login dinâmico com customização de dados do .env e a usabilidade do menu dropdown.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/controllers/authController.ts apps/dashboard/src/components/Header.tsx apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0183 — Portal de Entrada (Home) com Métricas de Faturamento em Tempo Real e Novidades
+
+- Data/Hora: 2026-07-09 13:25
+- Contexto: Melhorar a experiência do usuário de entrada na aplicação provendo uma página de boas-vindas com contadores analíticos dinâmicos de processamento.
+- Objetivo: Criar rota de métricas anônima no backend (/api/auth/metrics) agregando dados de logs do NoteService e desenvolver a página Home com layout moderno, KPIs flutuantes com glassmorphism, cards de funcionalidades e timeline de novidades (Changelog), integrando-a na rota raiz (/) do frontend.
+- Escopo:
+  - Backend: [authRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/authRoutes.ts), [authController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/authController.ts)
+  - Frontend: [Home/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Home/index.tsx), [App.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. A rota do backend é puramente estatística agregada e a página é indexável e segura.
+- Proposta: Injetar endpoint de metrics no AuthController do backend e programar página Home responsiva no frontend conectada à rota /.
+- Testes:
+  - Carregar a rota raiz do sistema (/) sem autenticação e verificar o layout moderno e o fetch das contagens de faturas, tempos e acertos.
+- Rollback:
+  1) Excluir `apps/dashboard/src/pages/Home`
+  2) `git checkout -- apps/automacao/src/server/routes/authRoutes.ts apps/automacao/src/server/controllers/authController.ts apps/dashboard/src/App.tsx apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0184 — Navegabilidade e Link de Retorno para a Home no Header
+
+- Data/Hora: 2026-07-09 13:30
+- Contexto: Permitir ao usuário alternar de volta para a Home a partir do Dashboard para checar novidades/KPIs.
+- Objetivo: Modificar o clique do logotipo no Header para navegar até a Home (/) e adicionar um botão interativo "Página Inicial" dentro do dropdown de perfil de usuário.
+- Escopo:
+  - Frontend: [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Nenhum. Lógica local controlada pelo hook useNavigate do react-router-dom.
+- Proposta: Integrar useNavigate no Header.tsx, mudar onClick do logo e adicionar botão de navegação Home no dropdown.
+- Testes:
+  - Acessar o Dashboard, abrir o dropdown de perfil, clicar em "Página Inicial" e verificar o redirecionamento. Testar também o clique sobre o logotipo.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Header.tsx`
+- Status: Aplicado
+
+### CHG-0185 — Correção do Scroll Vertical na Tela Home
+
+- Data/Hora: 2026-07-09 15:22
+- Contexto: Resolução de falha onde a rolagem vertical de tela (scroll) era bloqueada na Home devido a regras globais de overflow do root.
+- Objetivo: Modificar a definição da classe CSS .home-layout para estabelecer a altura do contêiner em 100vh e habilitar a rolagem vertical interna de forma isolada do Dashboard.
+- Escopo:
+  - Frontend: [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. A alteração está contida estritamente na classe de layout da Home, sem efeito colateral no Dashboard.
+- Proposta: Mudar a propriedade min-height para height: 100vh e injetar overflow-y: auto na classe .home-layout.
+- Testes:
+  - Carregar a tela Home e atestar que a rolagem vertical de mouse/touch navega suavemente do Hero até o Footer.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0186 — Mapeamento da Rota de Home (/home) e Ajuste de Redirecionamentos
+
+- Data/Hora: 2026-07-09 15:27
+- Contexto: Correção e padronização da URL de boas-vindas do portal institucional da Stoque.
+- Objetivo: Mapear a rota de Home para o caminho virtual /home (/#/home) e fazer com que a rota raiz (/) redirecione de forma inteligente para /dashboard (se logado) ou /home (se deslogado).
+- Escopo:
+  - Frontend: [App.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.tsx), [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Nenhum. Mapeamento local utilizando recursos nativos de roteamento hash do react-router-dom.
+- Proposta: Mudar rota de Home para /home, implementar Navigate condicional na rota raiz e atualizar links de navegabilidade no Header para /home.
+- Testes:
+  - Acessar o sistema deslogado e validar redirecionamento automático para /home. Logar e validar se cliques no logotipo e atalho de perfil levam para /home.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.tsx apps/dashboard/src/components/Header.tsx`
+- Status: Aplicado
+
+### CHG-0187 — Fixação da Rota Raiz (/) como Home Pública Permanente
+
+- Data/Hora: 2026-07-09 15:29
+- Contexto: Correção do fluxo onde a rota raiz do portal redirecionava de forma indevida usuários logados ao Dashboard, impedindo a visualização da Home.
+- Objetivo: Consolidar a rota raiz (/) para sempre renderizar a página Home de forma estática e independente de sessão, e atestar que os atalhos de navegação no Header apontem estritamente para /.
+- Escopo:
+  - Frontend: [App.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.tsx), [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Nenhum. Simplificação lógica do roteador.
+- Proposta: Remover a rota /home, definir a Home na rota raiz / de forma estática e reverter atalhos de rota no Header para /.
+- Testes:
+  - Validar se o acesso direto a URL raiz renderiza a Home e o fluxo de login redireciona conforme esperado.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.tsx apps/dashboard/src/components/Header.tsx`
+- Status: Aplicado
+
+### CHG-0188 — Importação Manual de PDFs (Upload e Processamento OCR Gemini) via Dashboard
+
+- Data/Hora: 2026-07-09 15:48
+- Contexto: Criação de fluxo alternativo (fallback) de contingência para processar faturas caso a integração Microsoft Graph/Outlook esteja indisponível.
+- Objetivo: Desenvolver endpoint de recebimento de upload manual (/api/notes/upload) via stream binária de alta performance no backend, sem dependências de terceiros, e criar área de Dropzone interativa (Drag & Drop) com input de arquivo e animações de progresso no painel central do Dashboard quando nenhuma nota estiver selecionada.
+- Escopo:
+  - Backend: [noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts), [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts), [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+  - Frontend: [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Consumo de tokens do Gemini em uploads manuais excessivos. O controle de segurança do Express e do React mitigam chamadas maliciosas.
+- Proposta: Injetar método uploadPdf com body stream do request no backend e desenvolver componente Dropzone de arrastar e soltar (com input file alternativo) no frontend, conectando com a chamada do NoteService.
+- Testes:
+  - Arrastar ou selecionar um arquivo PDF na Dropzone do Dashboard desmarcado, atestar o loader de processamento e confirmar se a fatura recém-criada carrega na sidebar e abre automaticamente.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/routes/noteRoutes.ts apps/automacao/src/server/controllers/noteController.ts apps/automacao/src/server/services/noteService.ts apps/dashboard/src/services/api.ts apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/App.css`
+- Status: Proposto
+
+### CHG-0189 — Ajuste no Tamanho dos Títulos de Seção na Curadoria de Dados
+
+- Data/Hora: 2026-07-10 09:47
+- Contexto: Conflito de estilização global onde a classe `.section-title` foi configurada para a página Home, afetando o painel de curadoria.
+- Objetivo: Isolar os títulos das seções do editor de dados utilizando um escopo restrito de classe CSS, devolvendo o dimensionamento apropriado para visualização.
+- Escopo:
+  - Frontend: [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. A alteração está contida sob o seletor `.section-card` e não afeta outros elementos.
+- Proposta: Adicionar a classe `.section-card .section-title` para sobrescrever os estilos globais apenas dentro do editor de curadoria.
+- Testes:
+  - Abrir o dashboard de curadoria de dados, carregar uma fatura e verificar se os cabeçalhos internos do editor possuem tamanho compacto.
+  - Acessar a página inicial (Home) e garantir que a seção de features permaneça inalterada.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0190 — Inclusão de Componente Stepper de Processo na Curadoria de Dados
+
+- Data/Hora: 2026-07-10 10:00
+- Contexto: Necessidade de indicar ao usuário em qual etapa do fluxo de processamento de faturas o documento atual se encontra.
+- Objetivo: Desenvolver um componente de Stepper horizontal fluido e fixado no topo do editor de dados, refletindo visualmente os passos de Captura, Leitura IA, Rateio, Curadoria e Integração.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Quebra de layout em painéis muito estreitos. Mitigado usando tamanhos de fontes reduzidos, flexbox fluido e controle de quebra.
+- Proposta: Inserir a estrutura JSX do Stepper no DataEditor.tsx e as regras CSS correspondentes no App.css, definindo o status dinâmico a partir do status da fatura.
+- Testes:
+  - Selecionar notas com status 'pendente' e verificar se a etapa 'Curadoria' consta como ativa e as anteriores como concluídas.
+  - Validar nota com status 'validado' e confirmar que todas as etapas, incluindo 'Integração', passam a constar como concluídas.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0191 — Filtro e Ação de Desarquivamento na Lista de Faturas
+
+- Data/Hora: 2026-07-10 10:10
+- Contexto: Necessidade de visualizar faturas arquivadas e permitir a reversão deste estado lógico no painel.
+- Objetivo: Implementar chaveamento de abas na barra lateral (Ativas vs Arquivadas) e habilitar a opção de desarquivamento que altera o status do item de volta para 'pendente'.
+- Escopo:
+  - Frontend: [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Visualização indevida ou alterações em faturas inativas. Mitigado desmarcando a fatura selecionada ao alternar entre abas.
+- Proposta: Inserir controle de abas de status no cabeçalho da barra lateral e ajustar o comportamento visual dos botões e tooltips baseando-se em data.status.
+- Testes:
+  - Clicar na aba de 'Arquivadas' e verificar se as notas arquivadas são listadas corretamente.
+  - Selecionar uma nota arquivada, confirmar o desarquivamento e atestar se ela retorna para a aba de 'Ativas' no status pendente.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado

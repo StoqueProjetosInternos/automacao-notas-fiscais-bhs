@@ -17,7 +17,7 @@ app.use('/files', express.static(FILES_DIR));
 // Rotas de Autenticação
 app.use('/api/auth', authRoutes);
 
-// Rotas de Notas
-app.use('/api/notes', noteRoutes);
+// Rotas de Notas protegidas por autenticação
+app.use('/api/notes', authMiddleware, noteRoutes);
 
 export default app;

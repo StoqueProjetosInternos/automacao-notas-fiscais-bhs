@@ -4,6 +4,7 @@ import { FILES_DIR } from '../config/paths.js';
 import { generateRateioExcel } from '../../features/excel/generateRateioExcel.js';
 import { enrichData } from '../../features/pdf/dataEnrichment.js';
 import { GraphEmailPdfProcessor } from '../../features/email/searchDataFromEmail.js';
+import { extractDataFromPDF } from '../../features/pdf/extractDataFromPDF.js';
 
 export class NoteService {
   public static listAllNotes() {
@@ -255,6 +256,7 @@ export class NoteService {
 
           logs.push({
             id: i,
+            noteId: matchingNote ? matchingNote.id : undefined,
             dataHora: this.parseCsvDate(cols[0]),
             arquivo: cols[1],
             modeloIa: cols[2],
@@ -414,5 +416,21 @@ export class NoteService {
 
     console.log(`[SMTP] Relatório preventivo de vencimento enviado com sucesso para: ${smtpTo}`);
     return { success: true, message: `Alertas de vencimento enviados com sucesso para ${smtpTo}.` };
+  }
+
+  public static async importManualNote(tempPdfPath: string) {
+    try {
+      // 1. Extração via IA Gemini
+      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath);
+      
+      // 2. Geração da planilha Excel de rateio correspondente
+      await generateRateioExcel(parsedContent, outputDir);
+      
+      console.log(`[NoteService] Importação manual de fatura concluída na pasta: ${outputDir}`);
+      return { success: true, folder: outputDir, data: parsedContent };
+    } catch (err) {
+      console.error('[NoteService] Erro ao importar fatura manual:', err);
+      throw err;
+    }
   }
 }

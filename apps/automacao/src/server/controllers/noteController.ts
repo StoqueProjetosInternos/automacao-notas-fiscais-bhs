@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService.js';
 import { getLogsContent } from '../config/logger.js';
+import fs from 'fs';
+import path from 'path';
+import { FILES_DIR } from '../config/paths.js';
 
 export class NoteController {
   public static getAllNotes(req: Request, res: Response) {
@@ -114,6 +117,63 @@ export class NoteController {
     } catch (error) {
       console.error('[Error] Falha ao ler logs do sistema:', error);
       res.status(500).json({ error: 'Erro ao obter logs da API' });
+    }
+  }
+
+  public static async uploadPdf(req: Request, res: Response) {
+    try {
+      const fileNameHeader = req.headers['x-file-name'];
+      if (!fileNameHeader) {
+        return res.status(400).json({ error: 'Cabeçalho X-File-Name é obrigatório.' });
+      }
+
+      const originalName = decodeURIComponent(String(fileNameHeader));
+      if (!originalName.toLowerCase().endsWith('.pdf')) {
+        return res.status(400).json({ error: 'Apenas arquivos PDF são permitidos.' });
+      }
+
+      const chunks: Buffer[] = [];
+      
+      req.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+
+      req.on('end', async () => {
+        try {
+          const fileBuffer = Buffer.concat(chunks);
+          if (fileBuffer.length === 0) {
+            return res.status(400).json({ error: 'O corpo do arquivo enviado está vazio.' });
+          }
+
+          const tempDir = path.resolve(FILES_DIR, '..', '..', '.tmp');
+          if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+          }
+
+          const tempPath = path.join(tempDir, `upload_${Date.now()}_${originalName.replace(/\s+/g, '_')}`);
+          fs.writeFileSync(tempPath, fileBuffer);
+
+          console.log(`[API] Upload temporário salvo em: ${tempPath}`);
+
+          const result = await NoteService.importManualNote(tempPath);
+          
+          if (fs.existsSync(tempPath)) {
+            fs.unlinkSync(tempPath);
+          }
+
+          res.json({
+            success: true,
+            message: 'Fatura importada e processada via Gemini com sucesso.',
+            data: result.data
+          });
+        } catch (innerError: any) {
+          console.error('[API] Erro ao ler body do arquivo ou processar OCR:', innerError);
+          res.status(500).json({ error: innerError.message || 'Erro ao processar arquivo' });
+        }
+      });
+    } catch (error: any) {
+      console.error('[API] Falha no upload manual de PDF:', error);
+      res.status(500).json({ error: 'Erro no recebimento da fatura manual' });
     }
   }
 }

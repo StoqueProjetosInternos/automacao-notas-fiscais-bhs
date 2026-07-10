@@ -1,5 +1,6 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { checkAuthSession, logoutUser, getCookie } from './services/api';
@@ -54,6 +55,9 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Rota Raiz (Boas-vindas) - Sempre renderiza a Home de forma fixa */}
+        <Route path="/" element={<Home />} />
+
         {/* Rota de Login */}
         <Route 
           path="/login" 
@@ -73,7 +77,7 @@ function App() {
         {/* Redirecionamento Padrão */}
         <Route 
           path="*" 
-          element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
+          element={<Navigate to={user ? "/dashboard" : "/"} replace />} 
         />
       </Routes>
     </Router>

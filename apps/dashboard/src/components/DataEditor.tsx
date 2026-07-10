@@ -10,6 +10,7 @@ interface DataEditorProps {
   onSave: (statusOverride?: string, silent?: boolean) => void;
   onReprocess: () => void;
   onDeleteApportionmentRow: (index: number) => void;
+  userRole: string;
 }
 
 const labelMap: Record<string, string> = {
@@ -106,11 +107,21 @@ const getLabel = (key: string) => {
   return labelMap[key] || key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').toUpperCase();
 };
 
-export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onSave, onReprocess, onDeleteApportionmentRow }: DataEditorProps) => {
+export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onSave, onReprocess, onDeleteApportionmentRow, userRole }: DataEditorProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [rowToDelete, setRowToDelete] = useState<number | null>(null);
   const [skipConfirm, setSkipConfirm] = useState(() => localStorage.getItem('skip_apportionment_delete_confirm') === 'true');
+
+  const steps = [
+    { key: 'capture', label: 'Captura', desc: selectedNote?.fileName.startsWith('manual_') ? 'Upload' : 'E-mail' },
+    { key: 'ocr', label: 'Leitura IA', desc: 'Gemini' },
+    { key: 'enrich', label: 'Rateio', desc: 'Concluído' },
+    { key: 'curation', label: 'Curadoria', desc: formData?.status === 'validado' ? 'Aprovada' : 'Revisão' },
+    { key: 'integration', label: 'Integração', desc: formData?.status === 'validado' ? 'Disponível' : 'Aguardando' }
+  ];
+
+  const currentStepIndex = formData?.status === 'validado' ? 5 : 3;
 
   const handleDeleteClick = (index: number) => {
     if (skipConfirm) {
@@ -238,6 +249,31 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         </div>
       </div>
 
+      {formData && (
+        <div className="editor-stepper-container">
+          <div className="editor-stepper">
+            {steps.map((step, index) => {
+              const isCompleted = index < currentStepIndex;
+              const isActive = index === currentStepIndex;
+              return (
+                <div key={step.key} className={`stepper-step ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`}>
+                  <div className="stepper-node">
+                    <div className="stepper-circle">
+                      {isCompleted ? '✓' : index + 1}
+                    </div>
+                    {index < steps.length - 1 && <div className="stepper-line" />}
+                  </div>
+                  <div className="stepper-text">
+                    <div className="stepper-label">{step.label}</div>
+                    <div className="stepper-desc">{step.desc}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="editor-content">
         {formData ? (
           <>
@@ -321,19 +357,25 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         <button 
           className="btn" 
           onClick={onReprocess}
-          disabled={loading || !selectedNote}
+          disabled={loading || !selectedNote || userRole !== 'ADMIN'}
           style={{ 
             display: 'inline-flex', 
             alignItems: 'center', 
             gap: '6px', 
             marginRight: 'auto',
-            backgroundColor: '#10b981',
-            color: 'white',
+            backgroundColor: userRole !== 'ADMIN' ? '#d1d5db' : '#10b981',
+            color: userRole !== 'ADMIN' ? '#9ca3af' : 'white',
             border: 'none',
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
+            cursor: userRole !== 'ADMIN' ? 'not-allowed' : 'pointer'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+          onMouseOver={(e) => {
+            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#059669';
+          }}
+          onMouseOut={(e) => {
+            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#10b981';
+          }}
+          title={userRole !== 'ADMIN' ? 'Apenas administradores podem reprocessar OCR' : 'Reprocessar OCR Google Gemini'}
         >
           <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
           Reprocessar

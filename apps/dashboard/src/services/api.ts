@@ -75,6 +75,7 @@ export interface UsageLog {
   valorFatura?: number;
   status?: string;
   statusArquivo?: string;
+  noteId?: string;
 }
 
 export const fetchUsageLog = async (): Promise<UsageLog[]> => {
@@ -131,4 +132,14 @@ export const sendDeadlineAlerts = async (items: any[]): Promise<{ success: boole
 export const fetchApiLogs = async (): Promise<string> => {
   const response = await apiClient.get<{ logs: string }>('/api/notes/logs');
   return response.data.logs;
+};
+
+export const uploadManualPdf = async (file: File): Promise<any> => {
+  const response = await apiClient.post('/api/notes/upload', file, {
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'X-File-Name': encodeURIComponent(file.name)
+    }
+  });
+  return response.data;
 };

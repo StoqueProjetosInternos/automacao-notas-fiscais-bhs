@@ -3,9 +3,9 @@ import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
-import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, sendDeadlineAlerts, type UsageLog } from '../../services/api';
+import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, sendDeadlineAlerts, getFileUrl, uploadManualPdf, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
-import { ArrowLeft, RefreshCcw, Loader2 } from 'lucide-react';
+import { ArrowLeft, RefreshCcw, Loader2, FileSpreadsheet, FileText, Upload } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
 import baseFornecedores from '../../assets/base_fornecedores_faturas.json';
 
@@ -77,6 +77,9 @@ interface Toast {
 export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs' | 'deadlines'>('notes');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -88,6 +91,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [historyModelFilter, setHistoryModelFilter] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   const [historyFileStatusFilter, setHistoryFileStatusFilter] = useState('');
+  const [historyPreviewPdfUrl, setHistoryPreviewPdfUrl] = useState<string | null>(null);
+  const [historyPreviewTitle, setHistoryPreviewTitle] = useState<string>('');
   const [historyAiStatusFilter, setHistoryAiStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
@@ -192,9 +197,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     if (activeTab === 'history') {
       loadUsageLogs();
     } else if (activeTab === 'logs') {
-      loadApiLogs();
+      if (user.role !== 'ADMIN') {
+        setActiveTab('notes');
+        showToast('Acesso negado. A aba de logs é restrita para administradores.', 'error');
+      } else {
+        loadApiLogs();
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const parseBrazilianDate = (dateStr?: string): Date | null => {
     if (!dateStr) return null;
@@ -373,9 +383,58 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       });
   }, []);
 
-  const handleSelectNote = (note: Note) => {
+  const handleSelectNote = (note: Note | null) => {
     setSelectedNote(note);
-    setFormData(JSON.parse(JSON.stringify(note.data)));
+    if (note) {
+      setFormData(JSON.parse(JSON.stringify(note.data)));
+    } else {
+      setFormData(null);
+    }
+  };
+
+  const handleUploadFile = async (file: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('Apenas arquivos PDF são permitidos.', 'error');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    showToast('Fazendo upload e processando OCR via Gemini...', 'info');
+
+    try {
+      const result = await uploadManualPdf(file);
+      
+      showToast('Fatura manual processada com sucesso!', 'success');
+      
+      const updatedNotes = await fetchNotes();
+      setNotes(updatedNotes);
+
+      const folderName = result.folder ? result.folder.replace(/\\/g, '/').split('/').pop() : null;
+      if (folderName) {
+        const newNote = updatedNotes.find(n => n.id === folderName);
+        if (newNote) {
+          handleSelectNote(newNote);
+        }
+      } else {
+        const sortedByCreated = [...updatedNotes].sort((a, b) => {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tB - tA;
+        });
+        if (sortedByCreated.length > 0) {
+          handleSelectNote(sortedByCreated[0]);
+        }
+      }
+    } catch (err: any) {
+      console.error('[Upload] Falha no processamento:', err);
+      const errMsg = err.response?.data?.error || err.message || 'Erro ao processar fatura manual.';
+      setUploadError(errMsg);
+      showToast(errMsg, 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const refreshNotesList = async () => {
@@ -573,6 +632,158 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleUnarchiveNote = async (id: string) => {
+    try {
+      const noteToUnarchive = notes.find(n => n.id === id);
+      if (!noteToUnarchive) return;
+
+      const updatedData = { ...noteToUnarchive.data, status: 'pendente' };
+      await updateNote(id, updatedData);
+      
+      const refreshedNotes = await fetchNotes();
+      setNotes(refreshedNotes);
+      
+      showToast('Fatura restaurada com sucesso.', 'success');
+      loadUsageLogs();
+    } catch (error) {
+      console.error('Erro ao desarquivar nota:', error);
+      showToast('Erro ao desarquivar a fatura.', 'error');
+    }
+  };
+
+  const exportToExcel = () => {
+    try {
+      const headers = ['ID', 'Data/Hora', 'Arquivo', 'Modelo IA', 'Fornecedor', 'CNPJ Fornecedor', 'Status Fatura', 'Numero Documento', 'Valor Fatura', 'Tokens Entrada', 'Tokens Saida', 'Custo USD', 'Tempo Ms', 'Status IA', 'Zeev ID'];
+      
+      const rows = filteredUsageLogs.map(log => [
+        log.id,
+        new Date(log.dataHora).toLocaleString('pt-BR'),
+        log.arquivo,
+        log.modeloIa,
+        log.fornecedor,
+        log.cnpjFornecedor,
+        log.statusArquivo,
+        log.numeroDocumento,
+        log.valorFatura !== undefined ? log.valorFatura : '',
+        log.tokensEntrada,
+        log.tokensSaida,
+        log.custoUsd,
+        log.tempoProcessamentoMs,
+        log.status,
+        log.zeevId
+      ]);
+
+      const csvContent = [
+        headers.join(';'),
+        ...rows.map(e => e.map(val => {
+          if (val === undefined || val === null) return '';
+          const str = String(val).replace(/"/g, '""');
+          return str.includes(';') || str.includes('\n') || str.includes('"') ? `"${str}"` : str;
+        }).join(';'))
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `historico_processamento_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast('Planilha exportada com sucesso.', 'success');
+    } catch (err) {
+      console.error('Erro ao exportar planilha:', err);
+      showToast('Falha ao exportar planilha.', 'error');
+    }
+  };
+
+  const exportToPDF = () => {
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        showToast('Falha ao abrir janela de impressao. Verifique o bloqueador de pop-ups.', 'error');
+        return;
+      }
+
+      const rowsHtml = filteredUsageLogs.map(log => {
+        const valStr = log.valorFatura !== undefined && log.valorFatura !== null 
+          ? 'R$ ' + log.valorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+          : 'N/D';
+        return '<tr>' +
+          '<td>#' + log.id + '</td>' +
+          '<td>' + new Date(log.dataHora).toLocaleString('pt-BR') + '</td>' +
+          '<td>' + log.arquivo + '</td>' +
+          '<td>' + log.modeloIa + '</td>' +
+          '<td>' + (log.fornecedor || 'N/D') + '</td>' +
+          '<td>' + (log.statusArquivo || 'Pendente') + '</td>' +
+          '<td>' + (log.numeroDocumento || 'N/D') + '</td>' +
+          '<td style="text-align: right;">' + valStr + '</td>' +
+          '<td style="text-align: center;">' + (log.status || 'Sucesso') + '</td>' +
+          '<td>' + (log.zeevId || '') + '</td>' +
+          '</tr>';
+      }).join('');
+
+      const htmlContent = [
+        '<html>',
+        '<head>',
+        '<title>Relatorio - Historico de Processamento</title>',
+        '<style>',
+        'body { font-family: Arial, sans-serif; margin: 20px; color: #333; }',
+        'h2 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 20px; }',
+        'table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }',
+        'th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }',
+        'th { background-color: #f3f4f6; font-weight: bold; }',
+        'tr:nth-child(even) { background-color: #f9fafb; }',
+        '.footer { margin-top: 30px; font-size: 10px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px; }',
+        '</style>',
+        '</head>',
+        '<body>',
+        '<h2>Historico de Processamento - Stoque Fiscal Intelligence</h2>',
+        '<p style="font-size: 12px; margin-bottom: 15px;">',
+        '<strong>Total de Registros:</strong> ' + filteredUsageLogs.length + ' | ',
+        '<strong>Gerado em:</strong> ' + new Date().toLocaleString('pt-BR'),
+        '</p>',
+        '<table>',
+        '<thead>',
+        '<tr>',
+        '<th>ID</th>',
+        '<th>Data/Hora</th>',
+        '<th>Arquivo</th>',
+        '<th>Modelo IA</th>',
+        '<th>Fornecedor</th>',
+        '<th>Status Fatura</th>',
+        '<th>Doc Num</th>',
+        '<th style="text-align: right;">Valor</th>',
+        '<th style="text-align: center;">Status IA</th>',
+        '<th>Zeev ID</th>',
+        '</tr>',
+        '</thead>',
+        '<tbody>',
+        rowsHtml,
+        '</tbody>',
+        '</table>',
+        '<div class="footer">',
+        'Este relatorio foi gerado automaticamente pelo sistema Stoque Fiscal Intelligence.',
+        '</div>',
+        '<script>',
+        'window.onload = function() {',
+        'window.print();',
+        'setTimeout(function() { window.close(); }, 500);',
+        '};',
+        '</script>',
+        '</body>',
+        '</html>'
+      ].join('\n');
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (err) {
+      console.error('Erro ao exportar PDF:', err);
+      showToast('Falha ao exportar PDF.', 'error');
+    }
+  };
+
   const handleLogoutWithToast = () => {
     setShowLogoutModal(true);
   };
@@ -667,6 +878,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         activeTab={activeTab} 
         onChangeTab={setActiveTab} 
         onLogout={handleLogoutWithToast}
+        user={user}
       />
 
       <div className="content-area">
@@ -678,8 +890,11 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               onSelectNote={handleSelectNote} 
               onDeleteNote={handleDeleteNote}
               onArchiveNote={handleArchiveNote}
+              onUnarchiveNote={handleUnarchiveNote}
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
+              userRole={user.role}
+              onImportClick={() => handleSelectNote(null)}
               style={{ '--sidebar-width-dynamic': `${sidebarWidth}px` } as React.CSSProperties}
             />
 
@@ -713,13 +928,77 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                         onSave={handleSave}
                         onReprocess={handleReprocess}
                         onDeleteApportionmentRow={handleDeleteApportionmentRow}
+                        userRole={user.role}
                       />
                     )}
                   </div>
                 </>
               ) : (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.9rem' }}>
-                  Selecione uma fatura para auditar os lançamentos.
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', boxSizing: 'border-box' }}>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    style={{ display: 'none' }} 
+                    accept=".pdf"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        handleUploadFile(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  
+                  {isUploading ? (
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: '1rem',
+                      background: '#f8fafc',
+                      border: '2px dashed #bfdbfe',
+                      borderRadius: '16px',
+                      padding: '3rem 2rem',
+                      width: '100%',
+                      maxWidth: '500px',
+                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                    }}>
+                      <Loader2 className="animate-spin" size={48} color="#2563eb" />
+                      <div style={{ textAlign: 'center' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>Processando OCR Inteligente</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Extraindo rateios contábeis via Google Gemini...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      className="manual-upload-dropzone"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('drag-active');
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('drag-active');
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('drag-active');
+                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                          handleUploadFile(e.dataTransfer.files[0]);
+                        }
+                      }}
+                    >
+                      <Upload size={48} color="#3b82f6" style={{ marginBottom: '1.25rem', opacity: 0.8 }} />
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1e293b', margin: '0 0 6px' }}>Importar Fatura PDF</h3>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 16px', maxWidth: '300px' }}>
+                        Arraste e solte o arquivo PDF aqui ou clique para selecionar do computador
+                      </p>
+                      {uploadError && (
+                        <div style={{ fontSize: '0.75rem', color: '#ef4444', background: '#fef2f2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fee2e2' }}>
+                          Erro: {uploadError}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -727,37 +1006,57 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         ) : activeTab === 'history' ? (
           <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                <button
-                  onClick={() => setActiveTab('notes')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    border: '1px solid #e5e7eb',
-                    background: 'white',
-                    color: '#4b5563',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    outline: 'none'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    e.currentTarget.style.color = '#111827';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.color = '#4b5563';
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                </button>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                  Histórico de Processamento
-                </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    onClick={() => setActiveTab('notes')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      border: '1px solid #e5e7eb',
+                      background: 'white',
+                      color: '#4b5563',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.color = '#111827';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.color = '#4b5563';
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    Histórico de Processamento
+                  </h2>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={exportToExcel}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  >
+                    <FileSpreadsheet size={14} />
+                    Exportar Planilha
+                  </button>
+                  <button
+                    onClick={exportToPDF}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  >
+                    <FileText size={14} />
+                    Exportar PDF
+                  </button>
+                </div>
               </div>
 
               {/* Filtros de Busca */}
@@ -881,6 +1180,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     <option value="Validado">Validado</option>
                     <option value="Excluído">Excluído</option>
                     <option value="Pendente">Pendente</option>
+                    <option value="Arquivado">Arquivado</option>
                   </select>
                 </div>
 
@@ -982,14 +1282,13 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                           key={log.id} 
                           className="history-row"
                           onClick={() => {
-                            if (log.statusArquivo !== 'Excluído') {
-                              const noteId = log.arquivo.replace(/\.[^/.]+$/, "");
-                              const foundNote = notes.find(n => n.id === noteId);
-                              if (foundNote) {
-                                handleSelectNote(foundNote);
-                                setActiveTab('notes');
+                            if (log.statusArquivo !== 'Excluído' && log.noteId) {
+                              const foundNote = notes.find(n => n.id === log.noteId);
+                              if (foundNote && foundNote.files.pdf) {
+                                setHistoryPreviewPdfUrl(getFileUrl(foundNote.files.pdf));
+                                setHistoryPreviewTitle(log.arquivo);
                               } else {
-                                showToast('Arquivo físico da fatura não foi localizado.', 'info');
+                                showToast('Arquivo físico PDF da fatura não foi localizado.', 'info');
                               }
                             }
                           }}
@@ -1001,10 +1300,12 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                           <td style={{ padding: '12px 16px', color: '#111827' }}>
                             {new Date(log.dataHora).toLocaleString('pt-BR')}
                           </td>
-                          <td 
+                           <td 
+                            className={log.statusArquivo !== 'Excluído' ? 'history-file-link' : ''}
                             style={{ 
                               padding: '12px 16px', 
-                              color: '#4b5563', 
+                              color: log.statusArquivo !== 'Excluído' ? '#2563eb' : '#4b5563', 
+                              textDecoration: log.statusArquivo !== 'Excluído' ? 'underline' : 'none',
                               fontWeight: 500,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -1143,6 +1444,80 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   </button>
                 </div>
               </div>
+
+              {/* Modal de Pré-visualização do PDF no Histórico */}
+              {historyPreviewPdfUrl && (
+                <div 
+                  className="modal-overlay" 
+                  onClick={() => setHistoryPreviewPdfUrl(null)}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 99999
+                  }}
+                >
+                  <div 
+                    className="modal-container" 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ 
+                      width: '80%', 
+                      height: '85%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div 
+                      className="modal-header"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '16px 24px',
+                        borderBottom: '1px solid #e5e7eb'
+                      }}
+                    >
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+                        Visualização do Arquivo: {historyPreviewTitle}
+                      </h3>
+                      <button 
+                        className="modal-close-btn" 
+                        onClick={() => setHistoryPreviewPdfUrl(null)}
+                        style={{ 
+                          fontSize: '1.5rem', 
+                          background: 'none', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          padding: '0 8px',
+                          color: '#9ca3af',
+                          transition: 'color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.color = '#111827'}
+                        onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                    <div className="modal-body" style={{ flex: 1, padding: 0, overflow: 'hidden' }}>
+                      <iframe 
+                        src={historyPreviewPdfUrl} 
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        title="Visualizador de PDF no Histórico"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : activeTab === 'deadlines' ? (
