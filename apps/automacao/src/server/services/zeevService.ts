@@ -133,7 +133,21 @@ export class ZeevService {
       fs.writeFileSync(resultPath, JSON.stringify(apiResult, null, 2), 'utf-8');
       console.log(`[ZeevService] Resposta da simulação salva com sucesso em: ${resultPath}`);
     } catch (error: any) {
-      console.error(`[ZeevService] Falha na simulação de API para nota ${id}:`, error.message);
+      const apiErrorData = error.response?.data;
+      const detailedMessage = apiErrorData ? JSON.stringify(apiErrorData) : error.message;
+      console.error(`[ZeevService] Falha na simulação de API para nota ${id}:`, detailedMessage);
+      
+      try {
+        const errorPath = path.join(folderPath, 'zeev_response_error.json');
+        fs.writeFileSync(errorPath, JSON.stringify({
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: apiErrorData
+        }, null, 2), 'utf-8');
+      } catch (err) {
+        console.error('[ZeevService] Não foi possível salvar o JSON de erro em disco:', err);
+      }
     }
   }
 }

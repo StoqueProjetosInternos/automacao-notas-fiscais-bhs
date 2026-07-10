@@ -414,7 +414,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         }}>
           <AlertCircle size={14} style={{ flexShrink: 0, color: '#9ca3af' }} />
           <span style={{ paddingRight: '20px' }}>
-            Aviso: O processamento de dados e rateios contábeis foi realizado por inteligência artificial. É indispensável revisar e validar os campos antes de aprovar a fatura.
+            Aviso: O processamento de dados e rateios é realizado por inteligência artificial. É indispensável revisar e validar os campos antes de aprovar a fatura.
           </span>
           <button 
             type="button" 

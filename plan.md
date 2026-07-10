@@ -2984,3 +2984,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx`
 - Status: Aplicado
+
+### CHG-0202 — Depuração Detalhada de Erros da API do Zeev
+
+- Data/Hora: 2026-07-10 16:15
+- Contexto: Erros de integração com o Zeev (ex: HTTP 500) apresentavam mensagens genéricas do Axios no log, ocultando a causa real.
+- Objetivo: Capturar o payload de resposta de erros do Axios e salvá-lo localmente em zeev_response_error.json para permitir depuração fina de campos.
+- Escopo:
+  - Backend: [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+- Riscos: Nenhum. Melhoria local no tratamento de exceções.
+- Proposta: Ler error.response.data no bloco catch e salvá-lo em arquivo de diagnóstico físico na pasta da nota de auditoria.
+- Testes:
+  - Validar a compilação do TypeScript no backend.
+  - Testar aprovação e verificar se o arquivo zeev_response_error.json é gravado com o detalhamento das validações do Zeev.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado

@@ -978,8 +978,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     }}>
                       <Loader2 className="animate-spin" size={48} color="#2563eb" />
                       <div style={{ textAlign: 'center' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>Processando OCR Inteligente</h3>
-                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Extraindo rateios contábeis via Google Gemini...</p>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>Processando OCR</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Extraindo rateios via IA...</p>
                       </div>
                     </div>
                   ) : (
