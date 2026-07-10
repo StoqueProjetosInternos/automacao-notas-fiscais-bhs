@@ -2855,3 +2855,68 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/automacao/src/server/config/logger.ts`
 - Status: Aplicado
+
+### CHG-0194 — Estruturação de Payload e Simulação Dry-Run do Zeev
+
+- Data/Hora: 2026-07-10 11:55
+- Contexto: Início da integração com o Zeev para faturamento automático de faturas validadas (Fluxo 2044).
+- Objetivo: Implementar a estrutura de mapeamento de dados do formulário e conversão de anexos em Base64, salvando o payload Dry-Run localmente em disco ao aprovar uma nota, com risco zero de comunicação com a produção do cliente.
+- Escopo:
+  - Backend: [zeevClient.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/infra/zeev/zeevClient.ts), [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts), [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+- Riscos: Quebras de leitura de arquivos ou payloads incompletos. Mitigado usando validações de existência de arquivos no backend e logs defensivos.
+- Proposta: Injetar a callback de conversão Base64 e salvamento do JSON Dry-Run no controlador de salvamento do Express quando o status da fatura for alterado para 'validado'.
+- Testes:
+  - Validar a compilação do TypeScript no backend.
+  - Clicar em "Aprovar" em uma fatura ativa no dashboard e verificar se o arquivo zeev_payload_dryrun.json é criado corretamente na pasta da respectiva nota com os dados e anexos em Base64 estruturados.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/infra/zeev/zeevClient.ts apps/automacao/src/server/controllers/noteController.ts`
+  2) Remover o arquivo `apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+
+### CHG-0195 — Integração Ativa no Modo Simulação do Zeev
+
+- Data/Hora: 2026-07-10 13:30
+- Contexto: Necessidade de validar o payload de criação de instâncias do fluxo 2044 diretamente com o servidor de produção do Zeev.
+- Objetivo: Ativar a chamada HTTP real (POST /api/2/instances) mantendo o parâmetro isSimulation como true para validar os campos e arquivos em Base64 na API oficial, com risco zero de criar processos ativos.
+- Escopo:
+  - Backend: [zeevClient.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/infra/zeev/zeevClient.ts), [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+- Riscos: Retornos de erro da API do Zeev por inconsistência de dados ou falhas de credenciais (401/404). Tratado gravando o payload e a resposta em arquivos locais para verificação.
+- Proposta: Habilitar o Axios no ZeevClient e fazer com que o ZeevService dispare a requisição de simulação gravando a resposta retornada pela API do Zeev.
+- Testes:
+  - Validar a compilação do TypeScript no backend.
+  - Aprovar uma fatura no dashboard e verificar se o arquivo zeev_response_simulation.json é gerado com a resposta de sucesso ou erros emitidos pela API do Zeev.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/infra/zeev/zeevClient.ts apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+
+### CHG-0196 — Suavização de Transição entre Tela de Login e Dashboard
+
+- Data/Hora: 2026-07-10 13:35
+- Contexto: A transição entre a tela de login e o dashboard de curadoria ocorria de forma muito abrupta e ruidosa visualmente.
+- Objetivo: Suavizar o carregamento e descarregamento das telas do frontend aplicando animações de fade-in (entrada progressiva) e fade-out (esvanecimento com encolhimento de escala) com CSS Transitions e React States.
+- Escopo:
+  - Frontend: [Login/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Login/index.tsx), [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Nenhum. Mudanças estéticas locais em CSS e controle de timers no React.
+- Proposta: Inserir keyframes de fadeIn e fadeOut no CSS, gerenciar o estado isExiting no Login para postergar em 400ms o redirecionamento e aplicar as classes correspondentes nos wrappers de layout.
+- Testes:
+  - Validar a compilação do dashboard React local.
+  - Efetuar a autenticação corporativa na tela de Login e observar se o Login desvanece suavemente antes de montar a tela do Dashboard com efeito suave de entrada de 6px.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Login/index.tsx apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/App.css`
+- Status: Aplicado
+
+### CHG-0197 — Suavização de Transição de Retorno e Saída (Fade-Out)
+
+- Data/Hora: 2026-07-10 13:45
+- Contexto: Ação de retorno do painel à Home e desautenticação de perfil de acesso eram abruptas no frontend.
+- Objetivo: Implementar transição suave de desvanecimento na saída do Dashboard e da Home, e entrada suave fade-in na montagem da Home, unificando a fluidez visual em todos os fluxos de navegação.
+- Escopo:
+  - Frontend: [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx), [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx), [Home/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Home/index.tsx)
+- Riscos: Nenhum. Alterações estéticas locais em CSS e states do React.
+- Proposta: Introduzir a callback onExit no cabeçalho, acionar estado isExiting por 350ms de fade-out no Dashboard e na Home, e anexar a classe fade-in na raiz da Home.
+- Testes:
+  - Validar a compilação do dashboard React local.
+  - Efetuar logout ou clicar para retornar à Home e observar se a tela do Dashboard desvanece de forma fluida por 350ms antes do redirecionamento.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/pages/Home/index.tsx`
+- Status: Aplicado
