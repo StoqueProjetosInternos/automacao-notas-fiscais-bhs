@@ -8,6 +8,7 @@ interface SidebarProps {
   onSelectNote: (note: Note | null) => void;
   onDeleteNote: (id: string) => Promise<void>;
   onArchiveNote: (id: string) => Promise<void>;
+  onUnarchiveNote: (id: string) => Promise<void>;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   userRole: string;
@@ -46,6 +47,7 @@ export const Sidebar = ({
   onSelectNote, 
   onDeleteNote,
   onArchiveNote,
+  onUnarchiveNote,
   searchTerm, 
   onSearchChange,
   userRole,
@@ -57,6 +59,7 @@ export const Sidebar = ({
   const [noteIdDeleting, setNoteIdDeleting] = useState<string | null>(null);
   const [noteIdArchiving, setNoteIdArchiving] = useState<string | null>(null);
   const itemsPerPage = 10;
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
   // Gerenciamento síncrono de reset de página quando a busca ou ordenação mudam
   const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
@@ -72,8 +75,8 @@ export const Sidebar = ({
   }
   
   const filteredNotes = notes.filter(n => {
-    // Ocultar notas arquivadas da lista de faturas ativas
-    if (n.data.status === 'arquivado') return false;
+    const isNoteArchived = n.data.status === 'arquivado';
+    if (showArchived !== isNoteArchived) return false;
 
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
@@ -198,6 +201,46 @@ export const Sidebar = ({
           <Upload size={13} />
           Importar Fatura PDF
         </button>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
+          <button 
+            onClick={() => {
+              setShowArchived(false);
+              onSelectNote(null);
+            }} 
+            style={{ 
+              flex: 1, 
+              padding: '8px', 
+              background: !showArchived ? '#f3f4f6' : 'transparent',
+              border: 'none',
+              fontWeight: !showArchived ? 700 : 500,
+              color: !showArchived ? '#2563eb' : '#6b7280',
+              borderBottom: !showArchived ? '2px solid #2563eb' : 'none',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            Ativas
+          </button>
+          <button 
+            onClick={() => {
+              setShowArchived(true);
+              onSelectNote(null);
+            }} 
+            style={{ 
+              flex: 1, 
+              padding: '8px', 
+              background: showArchived ? '#f3f4f6' : 'transparent',
+              border: 'none',
+              fontWeight: showArchived ? 700 : 500,
+              color: showArchived ? '#2563eb' : '#6b7280',
+              borderBottom: showArchived ? '2px solid #2563eb' : 'none',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            Arquivadas
+          </button>
+        </div>
         <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: 12, color: '#9ca3af' }} />
           <input 
@@ -275,7 +318,7 @@ export const Sidebar = ({
           alignItems: 'center',
           fontWeight: 500
         }}>
-          <span>Total: {notes.filter(n => n.data.status !== 'arquivado').length}</span>
+          <span>Total: {notes.filter(n => showArchived ? n.data.status === 'arquivado' : n.data.status !== 'arquivado').length}</span>
           <span>
             {totalItems === 0 
               ? "Nenhum encontrado" 
@@ -340,18 +383,24 @@ export const Sidebar = ({
                 </div>
               ) : isConfirmingArchive ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
-                  <span style={{ fontSize: '0.7rem', color: '#1e40af', fontWeight: 600 }}>Arquivar esta fatura?</span>
+                  <span style={{ fontSize: '0.7rem', color: note.data.status === 'arquivado' ? '#059669' : '#1e40af', fontWeight: 600 }}>
+                    {note.data.status === 'arquivado' ? 'Desarquivar esta fatura?' : 'Arquivar esta fatura?'}
+                  </span>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       onClick={async () => {
-                        await onArchiveNote(note.id);
+                        if (note.data.status === 'arquivado') {
+                          await onUnarchiveNote(note.id);
+                        } else {
+                          await onArchiveNote(note.id);
+                        }
                         setNoteIdArchiving(null);
                       }}
                       style={{
                         flex: 1,
                         padding: '4px 8px',
                         fontSize: '0.65rem',
-                        background: '#3b82f6',
+                        background: note.data.status === 'arquivado' ? '#10b981' : '#3b82f6',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -359,7 +408,7 @@ export const Sidebar = ({
                         fontWeight: 600
                       }}
                     >
-                      Arquivar
+                      {note.data.status === 'arquivado' ? 'Desarquivar' : 'Arquivar'}
                     </button>
                     <button
                       onClick={() => setNoteIdArchiving(null)}
@@ -417,9 +466,9 @@ export const Sidebar = ({
                           justifyContent: 'center',
                           outline: 'none'
                         }}
-                        data-tooltip="Arquivar fatura"
+                        data-tooltip={note.data.status === 'arquivado' ? "Desarquivar fatura" : "Arquivar fatura"}
                       >
-                        <Archive size={13} color="#2563eb" />
+                        <Archive size={13} color={note.data.status === 'arquivado' ? "#10b981" : "#2563eb"} />
                       </button>
                       {userRole === 'ADMIN' && (
                         <button

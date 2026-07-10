@@ -632,6 +632,25 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleUnarchiveNote = async (id: string) => {
+    try {
+      const noteToUnarchive = notes.find(n => n.id === id);
+      if (!noteToUnarchive) return;
+
+      const updatedData = { ...noteToUnarchive.data, status: 'pendente' };
+      await updateNote(id, updatedData);
+      
+      const refreshedNotes = await fetchNotes();
+      setNotes(refreshedNotes);
+      
+      showToast('Fatura restaurada com sucesso.', 'success');
+      loadUsageLogs();
+    } catch (error) {
+      console.error('Erro ao desarquivar nota:', error);
+      showToast('Erro ao desarquivar a fatura.', 'error');
+    }
+  };
+
   const exportToExcel = () => {
     try {
       const headers = ['ID', 'Data/Hora', 'Arquivo', 'Modelo IA', 'Fornecedor', 'CNPJ Fornecedor', 'Status Fatura', 'Numero Documento', 'Valor Fatura', 'Tokens Entrada', 'Tokens Saida', 'Custo USD', 'Tempo Ms', 'Status IA', 'Zeev ID'];
@@ -871,6 +890,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               onSelectNote={handleSelectNote} 
               onDeleteNote={handleDeleteNote}
               onArchiveNote={handleArchiveNote}
+              onUnarchiveNote={handleUnarchiveNote}
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
               userRole={user.role}

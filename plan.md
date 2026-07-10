@@ -2823,3 +2823,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/App.css`
 - Status: Aplicado
+
+### CHG-0191 — Filtro e Ação de Desarquivamento na Lista de Faturas
+
+- Data/Hora: 2026-07-10 10:10
+- Contexto: Necessidade de visualizar faturas arquivadas e permitir a reversão deste estado lógico no painel.
+- Objetivo: Implementar chaveamento de abas na barra lateral (Ativas vs Arquivadas) e habilitar a opção de desarquivamento que altera o status do item de volta para 'pendente'.
+- Escopo:
+  - Frontend: [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx), [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Visualização indevida ou alterações em faturas inativas. Mitigado desmarcando a fatura selecionada ao alternar entre abas.
+- Proposta: Inserir controle de abas de status no cabeçalho da barra lateral e ajustar o comportamento visual dos botões e tooltips baseando-se em data.status.
+- Testes:
+  - Clicar na aba de 'Arquivadas' e verificar se as notas arquivadas são listadas corretamente.
+  - Selecionar uma nota arquivada, confirmar o desarquivamento e atestar se ela retorna para a aba de 'Ativas' no status pendente.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
