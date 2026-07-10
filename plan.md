@@ -2936,3 +2936,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/DocumentViewer.tsx`
 - Status: Aplicado
+
+### CHG-0199 — Padronização Global de Transições de Abas no Dashboard
+
+- Data/Hora: 2026-07-10 13:55
+- Contexto: A troca de abas internas do dashboard (Faturas, Histórico, Prazos, Logs) ocorria de forma seca e instantânea.
+- Objetivo: Padronizar e suavizar as transições de visualização em todas as abas internas do painel com animação fade-in.
+- Escopo:
+  - Frontend: [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Alterações puramente visuais na renderização do JSX do dashboard.
+- Proposta: Substituir o fragment React por uma div wrapper com a classe fade-in na aba 'notes' e adicionar a classe fade-in nos contêineres principais das abas 'history', 'deadlines' e 'logs'.
+- Testes:
+  - Validar a compilação do dashboard React local.
+  - Alternar repetidamente entre as opções Faturas, Histórico, Logs e Prazos do cabeçalho superior e observar a entrada progressiva (fade-in) e suave de cada painel.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado

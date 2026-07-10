@@ -898,7 +898,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
       <div className="content-area">
         {activeTab === 'notes' ? (
-          <>
+          <div className="fade-in" key="notes" style={{ display: 'flex', flex: 1, overflow: 'hidden', width: '100%' }}>
             <Sidebar 
               notes={notes} 
               selectedNoteId={selectedNote?.id} 
@@ -1017,9 +1017,9 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : activeTab === 'history' ? (
-          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+          <div className="fade-in" key="history" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1536,7 +1536,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
             </div>
           </div>
         ) : activeTab === 'deadlines' ? (
-          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+          <div className="fade-in" key="deadlines" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <button
@@ -1912,7 +1912,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
             </div>
           </div>
         ) : (
-          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+          <div className="fade-in" key="logs" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
