@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { Search, Trash2, Archive } from 'lucide-react';
+import { Search, Trash2, Archive, Upload } from 'lucide-react';
 import type { Note } from '../types';
 
 interface SidebarProps {
   notes: Note[];
   selectedNoteId?: string;
-  onSelectNote: (note: Note) => void;
+  onSelectNote: (note: Note | null) => void;
   onDeleteNote: (id: string) => Promise<void>;
   onArchiveNote: (id: string) => Promise<void>;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  userRole: string;
+  onImportClick: () => void;
   style?: React.CSSProperties;
 }
 
@@ -46,6 +48,8 @@ export const Sidebar = ({
   onArchiveNote,
   searchTerm, 
   onSearchChange,
+  userRole,
+  onImportClick,
   style
 }: SidebarProps) => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
@@ -165,6 +169,35 @@ export const Sidebar = ({
   return (
     <aside className="sidebar" style={style}>
       <div className="sidebar-header">
+        <button 
+          onClick={onImportClick}
+          className="btn"
+          style={{ 
+            width: '100%', 
+            marginBottom: '0.75rem',
+            padding: '8px 12px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)',
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+          onMouseOut={(e) => e.currentTarget.style.filter = 'none'}
+          title="Importar fatura PDF manualmente"
+        >
+          <Upload size={13} />
+          Importar Fatura PDF
+        </button>
         <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: 12, color: '#9ca3af' }} />
           <input 
@@ -242,7 +275,7 @@ export const Sidebar = ({
           alignItems: 'center',
           fontWeight: 500
         }}>
-          <span>Total: {notes.length}</span>
+          <span>Total: {notes.filter(n => n.data.status !== 'arquivado').length}</span>
           <span>
             {totalItems === 0 
               ? "Nenhum encontrado" 
@@ -388,26 +421,28 @@ export const Sidebar = ({
                       >
                         <Archive size={13} color="#2563eb" />
                       </button>
-                      <button
-                        className="delete-btn-container"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNoteIdDeleting(note.id);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: 0,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          outline: 'none'
-                        }}
-                        data-tooltip="Excluir fatura"
-                      >
-                        <Trash2 size={13} color="#ef4444" />
-                      </button>
+                      {userRole === 'ADMIN' && (
+                        <button
+                          className="delete-btn-container"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNoteIdDeleting(note.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            outline: 'none'
+                          }}
+                          data-tooltip="Excluir fatura"
+                        >
+                          <Trash2 size={13} color="#ef4444" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   
