@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService.js';
+import { ZeevService } from '../services/zeevService.js';
 import { getLogsContent } from '../config/logger.js';
 import fs from 'fs';
 import path from 'path';
@@ -23,6 +24,14 @@ export class NoteController {
 
     try {
       const result = await NoteService.updateNote(id as string, newData);
+
+      // Engatilha simulação Dry-Run se o status de transição for 'validado'
+      if (newData.status === 'validado') {
+        ZeevService.generateDryRunPayload(id as string, newData).catch(err => {
+          console.error('[API] Falha ao disparar Dry-Run do Zeev:', err);
+        });
+      }
+
       res.json({ ...result, message: 'Nota atualizada com sucesso' });
     } catch (error: any) {
       if (error.message === 'Nota não encontrada') {

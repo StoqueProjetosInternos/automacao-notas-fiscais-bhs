@@ -7,6 +7,30 @@ export interface ZeevFlowInfo {
   deploy: boolean;
 }
 
+export interface CreateInstanceFormField {
+  id?: number;
+  name: string;
+  value: string;
+  row?: number;
+}
+
+export interface CreateInstanceFile {
+  filename: string;
+  resume?: string;
+  requesterCanSee?: boolean;
+  docType?: string;
+  base64Content: string;
+}
+
+export interface CreateInstancePayload {
+  flowId: number;
+  isSimulation: boolean;
+  teamId?: number;
+  positionId?: number;
+  formFields?: CreateInstanceFormField[];
+  files?: CreateInstanceFile[];
+}
+
 export class ZeevClient {
   private static getHeaders() {
     const token = process.env.ZEEV_API_TOKEN;
@@ -60,5 +84,19 @@ export class ZeevClient {
     console.log(response.data, 'Encontra campos de formulário');
 
     return response.data || {};
+  }
+
+  /**
+   * Cria uma instância de processo enviando dados de formulário e anexos em Base64
+   * Utiliza a chamada HTTP real para testes de validação ou abertura.
+   */
+  public static async createInstance(payload: CreateInstancePayload): Promise<any> {
+    const url = `${this.getBaseUrl()}/api/2/instances`;
+    console.log(`[ZeevClient] Enviando requisição de instância para o Zeev: ${url}`);
+    const response = await axios.post(url, payload, {
+      headers: this.getHeaders(),
+      timeout: 45000
+    });
+    return response.data;
   }
 }
