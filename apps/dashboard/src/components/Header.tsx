@@ -1,4 +1,6 @@
-import { RefreshCcw, LogOut } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon } from 'lucide-react';
 
 interface HeaderProps {
   onSync: () => void;
@@ -7,9 +9,41 @@ interface HeaderProps {
   activeTab: 'notes' | 'history' | 'logs' | 'deadlines';
   onChangeTab: (tab: 'notes' | 'history' | 'logs' | 'deadlines') => void;
   onLogout: () => void;
+  user: {
+    name: string;
+    email: string;
+    role: string;
+  };
 }
 
-export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onLogout }: HeaderProps) => {
+export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onLogout, user }: HeaderProps) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  // Fecha o dropdown ao clicar fora do elemento
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Calcula as iniciais baseadas no nome
+  const getInitials = (fullName?: string): string => {
+    if (!fullName) return 'S';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    return parts[0].substring(0, 2).toUpperCase();
+  };
+
   return (
     <header className="header">
       <div className="logo">
@@ -19,7 +53,8 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           width="120" 
           height="34"
           style={{ display: 'block', cursor: 'pointer' }}
-          onClick={() => onChangeTab('notes')}
+          onClick={() => navigate('/')}
+          title="Ver página inicial"
         />
         <span style={{ 
           marginLeft: '8px', 
@@ -70,23 +105,27 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
         >
           Histórico
         </button>
-        <button 
-          style={{
-            background: 'transparent',
-            border: 'none',
-            fontSize: '0.85rem',
-            fontWeight: activeTab === 'logs' ? 700 : 500,
-            color: activeTab === 'logs' ? '#2563eb' : '#6b7280',
-            cursor: 'pointer',
-            padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'logs' ? '#2563eb' : 'transparent'}`,
-            transition: 'all 0.2s',
-            outline: 'none'
-          }}
-          onClick={() => onChangeTab('logs')}
-        >
-          Logs
-        </button>
+        
+        {user.role === 'ADMIN' && (
+          <button 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '0.85rem',
+              fontWeight: activeTab === 'logs' ? 700 : 500,
+              color: activeTab === 'logs' ? '#2563eb' : '#6b7280',
+              cursor: 'pointer',
+              padding: '6px 0',
+              borderBottom: `2px solid ${activeTab === 'logs' ? '#2563eb' : 'transparent'}`,
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+            onClick={() => onChangeTab('logs')}
+          >
+            Logs
+          </button>
+        )}
+
         <button 
           style={{
             background: 'transparent',
@@ -110,17 +149,18 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           className="btn btn-outline" 
           style={{ 
             padding: '6px 12px', 
-            opacity: isSyncing ? 0.7 : 1, 
-            cursor: isSyncing ? 'not-allowed' : 'pointer',
+            opacity: isSyncing || user.role !== 'ADMIN' ? 0.6 : 1, 
+            cursor: isSyncing || user.role !== 'ADMIN' ? 'not-allowed' : 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px'
           }} 
           onClick={onSync}
-          disabled={isSyncing}
+          disabled={isSyncing || user.role !== 'ADMIN'}
+          title={user.role !== 'ADMIN' ? 'Disponível apenas para administradores' : 'Sincronizar faturas do email'}
         >
           <RefreshCcw size={14} className={isSyncing ? 'animate-spin' : ''} />
-          {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+          {isSyncing ? 'Sincronizando...' : user.role !== 'ADMIN' ? 'Sincronizar (Admin)' : 'Sincronizar'}
         </button>
         <div style={{ 
           display: 'flex', 
@@ -147,21 +187,76 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             {isApiOnline ? 'API Online' : 'API Offline'}
           </span>
         </div>
-        <button 
-          className="btn btn-outline" 
-          style={{ 
-            padding: '6px 12px', 
-            borderColor: '#ef4444', 
-            color: '#ef4444',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px'
-          }} 
-          onClick={onLogout}
-        >
-          <LogOut size={14} />
-          Sair
-        </button>
+
+        {/* Menu de Perfil Interativo */}
+        <div className="profile-menu" ref={dropdownRef}>
+          <button 
+            className="profile-trigger" 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            aria-expanded={isDropdownOpen}
+          >
+            <div className={`profile-avatar ${user.role !== 'ADMIN' ? 'profile-avatar-user' : ''}`}>
+              {getInitials(user.name)}
+            </div>
+            <ChevronDown size={14} style={{ color: '#4b5563', transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="profile-dropdown">
+              <div className="dropdown-user-info">
+                <span className="dropdown-user-name" title={user.name}>{user.name}</span>
+                <span className="dropdown-user-email" title={user.email}>{user.email}</span>
+              </div>
+              <div className="dropdown-divider"></div>
+              <div className="dropdown-user-role-container">
+                <span style={{ color: '#4b5563', fontWeight: 500 }}>Perfil de Acesso:</span>
+                <span style={{ 
+                  fontSize: '0.62rem', 
+                  fontWeight: 700, 
+                  color: user.role === 'ADMIN' ? '#1d4ed8' : '#047857',
+                  background: user.role === 'ADMIN' ? '#eff6ff' : '#ecfdf5',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  border: `1px solid ${user.role === 'ADMIN' ? '#dbeafe' : '#a7f3d0'}`,
+                  letterSpacing: '0.05em'
+                }}>
+                  {user.role}
+                </span>
+              </div>
+              <div className="dropdown-divider"></div>
+              
+              <button 
+                className="btn btn-outline" 
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  navigate('/');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  borderColor: '#d1d5db',
+                  color: '#374151',
+                  marginBottom: '4px'
+                }}
+              >
+                <HomeIcon size={14} />
+                Página Inicial
+              </button>
+
+              <button className="dropdown-logout-btn" onClick={onLogout}>
+                <LogOut size={14} />
+                Sair da Conta
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
