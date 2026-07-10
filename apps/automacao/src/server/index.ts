@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`
    =========================================
-           API Iniciada
+          SFI API Started on port ${PORT}
    -----------------------------------------
    Endpoint: http://localhost:${PORT}/api/notes
    Arquivos: http://localhost:${PORT}/files

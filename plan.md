@@ -2839,3 +2839,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
+
+### CHG-0193 — Controle de Linhas de Log e Limpeza Automática do api.log
+
+- Data/Hora: 2026-07-10 11:25
+- Contexto: Risco de crescimento excessivo do arquivo de logs de auditoria do backend em disco.
+- Objetivo: Limitar a extensão do arquivo api.log a um limite rígido de 3.000 linhas de registro, zerando o arquivo automaticamente quando a cota for atingida.
+- Escopo:
+  - Backend: [logger.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/config/logger.ts)
+- Riscos: Perda histórica de logs após 3.000 entradas. Reduzido pois o volume suporta o acompanhamento de auditoria de runtime adequado.
+- Proposta: Contar as linhas na inicialização do backend, gerenciar a contagem incremental de escrita em memória e truncar o arquivo com conteúdo vazio ao atingir o limite.
+- Testes:
+  - Iniciar o backend e atestar que a inicialização do contador ocorre corretamente.
+  - Provocar escritas massivas e verificar se, ao atingir a marca de 3.000 linhas, o arquivo api.log é zerado e reiniciado perfeitamente.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/config/logger.ts`
+- Status: Aplicado

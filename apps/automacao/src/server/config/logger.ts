@@ -12,6 +12,16 @@ if (!fs.existsSync(LOGS_DIR)) {
   fs.mkdirSync(LOGS_DIR, { recursive: true });
 }
 
+let lineCount = 0;
+try {
+  if (fs.existsSync(LOG_FILE)) {
+    const content = fs.readFileSync(LOG_FILE, 'utf8');
+    lineCount = content.split('\n').filter(line => line.trim().length > 0).length;
+  }
+} catch (e) {
+  lineCount = 0;
+}
+
 let logStream = fs.createWriteStream(LOG_FILE, { flags: 'a', encoding: 'utf8' });
 
 const originalLog = console.log;
@@ -67,17 +77,14 @@ function writeLog(level: string, ...args: any[]) {
 
   const logLine = `[${timestamp}] [${level}] ${safeMessage}\n`;
   logStream.write(logLine);
+  lineCount++;
 
   try {
-    const stats = fs.statSync(LOG_FILE);
-    if (stats.size > 5 * 1024 * 1024) {
+    if (lineCount >= 3000) {
       logStream.end();
-      const backupFile = path.join(LOGS_DIR, 'api.old.log');
-      if (fs.existsSync(backupFile)) {
-        fs.unlinkSync(backupFile);
-      }
-      fs.renameSync(LOG_FILE, backupFile);
+      fs.writeFileSync(LOG_FILE, '', 'utf8');
       logStream = fs.createWriteStream(LOG_FILE, { flags: 'a', encoding: 'utf8' });
+      lineCount = 0;
     }
   } catch (err) {
     // ignorar falhas de rotação
