@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
@@ -113,6 +114,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [deadlineSearchSupplier, setDeadlineSearchSupplier] = useState('');
   const [isSendingAlerts, setIsSendingAlerts] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const navigate = useNavigate();
 
   // Monitor de Inatividade de 15 Minutos (se inativo, chama logout)
   useActivityTimeout(onLogout, 15 * 60 * 1000);
@@ -651,6 +654,16 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleExitDashboard = async (target: string) => {
+    if (target === 'logout') {
+      handleLogoutWithToast();
+      return;
+    }
+    setIsExiting(true);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    navigate(target);
+  };
+
   const exportToExcel = () => {
     try {
       const headers = ['ID', 'Data/Hora', 'Arquivo', 'Modelo IA', 'Fornecedor', 'CNPJ Fornecedor', 'Status Fatura', 'Numero Documento', 'Valor Fatura', 'Tokens Entrada', 'Tokens Saida', 'Custo USD', 'Tempo Ms', 'Status IA', 'Zeev ID'];
@@ -788,12 +801,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogoutAction = () => {
+  const confirmLogoutAction = async () => {
     setShowLogoutModal(false);
     showToast('Obrigado por utilizar o Fiscal Intelligence (SFI). Até logo!', 'success');
-    setTimeout(() => {
-      onLogout();
-    }, 1500);
+    // Aguarda 1.1s mostrando o toast, depois inicia o fade-out por 400ms (total 1.5s)
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    setIsExiting(true);
+    await new Promise(resolve => setTimeout(resolve, 400));
+    onLogout();
   };
 
   // Computação e Paginação da Lista de Prazos combinando reais e mocks
@@ -870,14 +885,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const paginatedDeadlines = filteredDeadlines.slice(deadlinesStartIndex, deadlinesStartIndex + deadlinesRecordsPerPage);
 
   return (
-    <div className="layout">
+    <div className={`layout fade-in ${isExiting ? 'fade-out' : ''}`}>
       <Header 
         onSync={refreshNotesList} 
         isApiOnline={isApiOnline} 
         isSyncing={isSyncing} 
         activeTab={activeTab} 
         onChangeTab={setActiveTab} 
-        onLogout={handleLogoutWithToast}
+        onExit={handleExitDashboard}
         user={user}
       />
 

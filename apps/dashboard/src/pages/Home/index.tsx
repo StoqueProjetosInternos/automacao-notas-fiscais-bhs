@@ -8,6 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 export const Home = () => {
   const navigate = useNavigate();
   const [metrics, setMetrics] = useState({ totalProcessed: 0, avgTimeMs: 2.5, successRate: 100 });
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     const loadMetrics = async () => {
@@ -21,8 +22,14 @@ export const Home = () => {
     loadMetrics();
   }, []);
 
+  const handleNavigateToLogin = async () => {
+    setIsExiting(true);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    navigate('/login');
+  };
+
   return (
-    <div className="home-layout">
+    <div className={`home-layout fade-in ${isExiting ? 'fade-out' : ''}`}>
       {/* Navbar */}
       <nav className="home-navbar">
         <div className="home-logo">
@@ -35,7 +42,7 @@ export const Home = () => {
         </div>
         <button 
           className="btn-primary-gradient" 
-          onClick={() => navigate('/login')}
+          onClick={handleNavigateToLogin}
         >
           Acessar Plataforma
           <ArrowRight size={14} style={{ marginLeft: '4px' }} />
@@ -53,7 +60,7 @@ export const Home = () => {
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '4rem' }}>
           <button 
             className="btn-primary-gradient big-btn" 
-            onClick={() => navigate('/login')}
+            onClick={handleNavigateToLogin}
           >
             Acessar Meu Painel
           </button>

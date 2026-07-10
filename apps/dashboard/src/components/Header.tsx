@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon } from 'lucide-react';
 
 interface HeaderProps {
@@ -8,7 +7,7 @@ interface HeaderProps {
   isSyncing: boolean;
   activeTab: 'notes' | 'history' | 'logs' | 'deadlines';
   onChangeTab: (tab: 'notes' | 'history' | 'logs' | 'deadlines') => void;
-  onLogout: () => void;
+  onExit: (target: string) => void;
   user: {
     name: string;
     email: string;
@@ -16,10 +15,9 @@ interface HeaderProps {
   };
 }
 
-export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onLogout, user }: HeaderProps) => {
+export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onExit, user }: HeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   // Fecha o dropdown ao clicar fora do elemento
   useEffect(() => {
@@ -53,7 +51,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           width="120" 
           height="34"
           style={{ display: 'block', cursor: 'pointer' }}
-          onClick={() => navigate('/')}
+          onClick={() => onExit('/')}
           title="Ver página inicial"
         />
         <span style={{ 
@@ -229,7 +227,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
                 className="btn btn-outline" 
                 onClick={() => {
                   setIsDropdownOpen(false);
-                  navigate('/');
+                  onExit('/');
                 }}
                 style={{
                   display: 'flex',
@@ -250,7 +248,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
                 Página Inicial
               </button>
 
-              <button className="dropdown-logout-btn" onClick={onLogout}>
+              <button className="dropdown-logout-btn" onClick={() => onExit('logout')}>
                 <LogOut size={14} />
                 Sair da Conta
               </button>

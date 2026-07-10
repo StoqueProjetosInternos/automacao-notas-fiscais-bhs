@@ -12,6 +12,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,8 +28,10 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
     try {
       const response = await loginUser(email, password);
       setAuthSuccess(true);
-      // Aguarda 1.2 segundos para suavizar a transição para o usuário
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Aguarda 800ms mostrando sucesso, depois inicia fade-out por 400ms (total 1.2s)
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsExiting(true);
+      await new Promise(resolve => setTimeout(resolve, 400));
       onLoginSuccess(response.user);
       navigate('/dashboard');
     } catch (err: any) {
@@ -40,14 +43,17 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: '100vh',
-      width: '100vw',
-      backgroundColor: '#f9fafb',
-      fontFamily: 'Inter, sans-serif',
-      boxSizing: 'border-box'
-    }}>
+    <div 
+      className={isExiting ? 'fade-out' : 'fade-in'}
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        width: '100vw',
+        backgroundColor: '#f9fafb',
+        fontFamily: 'Inter, sans-serif',
+        boxSizing: 'border-box'
+      }}
+    >
       {/* Coluna Esquerda: Banner Institucional Stoque (Cores do SFI) */}
       <div style={{
         flex: 1,
