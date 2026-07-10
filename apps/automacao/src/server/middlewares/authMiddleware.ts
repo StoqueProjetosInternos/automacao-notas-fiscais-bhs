@@ -21,6 +21,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     return res.status(401).json({ error: 'Não autorizado. Sessão de login expirada ou inválida.' });
   }
 
-  // Sessão válida, prossegue
+  // Sessão válida, prossegue e anexa o usuário no request para controle de RBAC
+  (req as any).user = session.user;
   next();
 };
