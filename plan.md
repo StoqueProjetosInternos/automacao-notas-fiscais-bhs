@@ -2968,3 +2968,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/Header.tsx`
 - Status: Aplicado
+
+### CHG-0201 — Adição de Nota de Rodapé com Alerta de IA no Painel de Curadoria
+
+- Data/Hora: 2026-07-10 14:05
+- Contexto: Risco de aceitação direta de preenchimentos e rateios contábeis gerados por Inteligência Artificial (Google Gemini) sem revisão dos analistas.
+- Objetivo: Alertar visivelmente o usuário sobre a necessidade de validação e revisão humana antes da aprovação final da fatura.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Nenhum. Alteração estética informativa local no formulário do editor.
+- Proposta: Inserir uma nota de rodapé estilizada abaixo da barra de botões com texto de aviso sobre processamento automatizado por IA e a obrigatoriedade da validação dos campos.
+- Testes:
+  - Validar a compilação do dashboard React local.
+  - Selecionar uma fatura atrativa na sidebar, rolar o editor de dados até o fim e constatar se o banner de aviso legal de IA é renderizado perfeitamente sob os botões de controle de ações.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx`
+- Status: Aplicado

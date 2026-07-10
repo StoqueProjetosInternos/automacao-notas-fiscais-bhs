@@ -112,6 +112,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
   const [searchTerm, setSearchTerm] = useState('');
   const [rowToDelete, setRowToDelete] = useState<number | null>(null);
   const [skipConfirm, setSkipConfirm] = useState(() => localStorage.getItem('skip_apportionment_delete_confirm') === 'true');
+  const [showIaDisclaimer, setShowIaDisclaimer] = useState(true);
 
   const steps = [
     { key: 'capture', label: 'Captura', desc: selectedNote?.fileName.startsWith('manual_') ? 'Upload' : 'E-mail' },
@@ -397,6 +398,49 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           {formData?.status === 'validado' ? 'Validado' : 'Aprovar'}
         </button>
       </div>
+
+      {showIaDisclaimer && (
+        <div style={{
+          padding: '0.75rem 1.25rem',
+          fontSize: '0.7rem',
+          color: '#6b7280',
+          backgroundColor: '#f9fafb',
+          borderTop: '1px solid #e5e7eb',
+          lineHeight: '1.4',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          position: 'relative'
+        }}>
+          <AlertCircle size={14} style={{ flexShrink: 0, color: '#9ca3af' }} />
+          <span style={{ paddingRight: '20px' }}>
+            Aviso: O processamento de dados e rateios contábeis foi realizado por inteligência artificial. É indispensável revisar e validar os campos antes de aprovar a fatura.
+          </span>
+          <button 
+            type="button" 
+            onClick={() => setShowIaDisclaimer(false)} 
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: '#9ca3af',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              outline: 'none'
+            }}
+            title="Minimizar aviso"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Modal de Edição Detalhada de Rateio */}
       {isModalOpen && formData && formData.apportionment && (
