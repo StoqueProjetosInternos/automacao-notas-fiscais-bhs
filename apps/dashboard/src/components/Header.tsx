@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon } from 'lucide-react';
+import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon, User } from 'lucide-react';
 
 interface HeaderProps {
   onSync: () => void;
@@ -32,15 +32,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
     };
   }, []);
 
-  // Calcula as iniciais baseadas no nome
-  const getInitials = (fullName?: string): string => {
-    if (!fullName) return 'S';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-    }
-    return parts[0].substring(0, 2).toUpperCase();
-  };
+
 
   return (
     <header className="header">
@@ -193,8 +185,8 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             aria-expanded={isDropdownOpen}
           >
-            <div className={`profile-avatar ${user.role !== 'ADMIN' ? 'profile-avatar-user' : ''}`}>
-              {getInitials(user.name)}
+            <div className={`profile-avatar ${user.role !== 'ADMIN' ? 'profile-avatar-user' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={16} />
             </div>
             <ChevronDown size={14} style={{ color: '#4b5563', transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>

@@ -2952,3 +2952,19 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
 - Status: Aplicado
+
+### CHG-0200 — Substituição de Iniciais por Ícone Tradicional de Usuário no Cabeçalho
+
+- Data/Hora: 2026-07-10 13:58
+- Contexto: O avatar do perfil de usuário no cabeçalho superior do dashboard exibia apenas as iniciais do nome do usuário.
+- Objetivo: Exibir um ícone de usuário tradicional (User) para melhorar a identificação e padronização visual da barra de ferramentas do dashboard.
+- Escopo:
+  - Frontend: [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Nenhum. Alteração meramente visual e de marcação JSX.
+- Proposta: Importar o componente de ícone User da biblioteca lucide-react, remover o método não mais utilizado getInitials no Header e substituir a chamada de iniciais pelo ícone centralizado vertical e horizontalmente.
+- Testes:
+  - Validar a compilação do dashboard React local.
+  - Carregar a tela do dashboard e certificar-se de que o avatar do usuário no cabeçalho superior direito renderiza o ícone de usuário clássico de forma correta e sem desalinhar os outros componentes do Header.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Header.tsx`
+- Status: Aplicado
