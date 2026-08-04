@@ -4,9 +4,10 @@ import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
-import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, sendDeadlineAlerts, getFileUrl, uploadManualPdf, type UsageLog } from '../../services/api';
+import { RateioPreviewModal } from '../../components/RateioPreviewModal';
+import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, clearApiLogs, sendDeadlineAlerts, getFileUrl, uploadManualPdf, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
-import { ArrowLeft, RefreshCcw, Loader2, FileSpreadsheet, FileText, Upload } from 'lucide-react';
+import { ArrowLeft, RefreshCcw, Loader2, FileSpreadsheet, FileText, Upload, Trash2 } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
 import baseFornecedores from '../../assets/base_fornecedores_faturas.json';
 
@@ -86,6 +87,9 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [apiLogs, setApiLogs] = useState<string>('');
   const [loadingApiLogs, setLoadingApiLogs] = useState(false);
+  const [clearingLogs, setClearingLogs] = useState(false);
+  const [showClearLogsModal, setShowClearLogsModal] = useState(false);
+  const [isRateioPreviewOpen, setIsRateioPreviewOpen] = useState(false);
 
   // Estados para Filtros e Paginação do Histórico
   const [historySearchTerm, setHistorySearchTerm] = useState('');
@@ -193,6 +197,25 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       showToast('Falha ao carregar logs do servidor.', 'error');
     } finally {
       setLoadingApiLogs(false);
+    }
+  };
+
+  const handleClearLogs = () => {
+    setShowClearLogsModal(true);
+  };
+
+  const confirmClearLogsAction = async () => {
+    setShowClearLogsModal(false);
+    setClearingLogs(true);
+    try {
+      await clearApiLogs();
+      setApiLogs('');
+      showToast('Logs de execução limpos com sucesso.', 'success');
+    } catch (error) {
+      console.error('Erro ao limpar logs da API:', error);
+      showToast('Falha ao limpar logs do servidor.', 'error');
+    } finally {
+      setClearingLogs(false);
     }
   };
 
@@ -395,6 +418,28 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleDownloadSelectedNoteRateio = () => {
+    if (!selectedNote) return;
+    const excelFile = selectedNote.files?.excel || `${selectedNote.id}/${selectedNote.id}.xlsx`;
+    const downloadUrl = getFileUrl(excelFile);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${selectedNote.id}_rateio.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportPdfClick = () => {
+    handleSelectNote(null);
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
+    }, 50);
+  };
+
   const handleUploadFile = async (file: File) => {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.pdf')) {
@@ -554,7 +599,11 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     setLoading(true);
     try {
       await updateNote(selectedNote.id, copy);
-      showToast('Dados contábeis e planilha de rateio salvos.', 'success');
+      if (statusOverride === 'validado') {
+        showToast('O processo foi criado no Zeev com sucesso.', 'success');
+      } else {
+        showToast('Dados contábeis e planilha de rateio salvos.', 'success');
+      }
       
       const refreshedNotes = await fetchNotes();
       setNotes(refreshedNotes);
@@ -563,9 +612,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         setSelectedNote(updated);
         setFormData(JSON.parse(JSON.stringify(updated.data)));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar dados contábeis:', error);
-      showToast('Erro ao salvar os dados contábeis.', 'error');
+      const backendError = error.response?.data?.error;
+      const defaultError = statusOverride === 'validado'
+        ? 'Erro ao criar o processo no Zeev.'
+        : 'Erro ao salvar os dados contábeis.';
+      const msg = backendError || defaultError;
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -886,6 +940,17 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
   return (
     <div className={`layout fade-in ${isExiting ? 'fade-out' : ''}`}>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".pdf"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleUploadFile(e.target.files[0]);
+          }
+        }}
+      />
       <Header 
         onSync={refreshNotesList} 
         isApiOnline={isApiOnline} 
@@ -894,6 +959,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         onChangeTab={setActiveTab} 
         onExit={handleExitDashboard}
         user={user}
+        onDownloadRateio={() => setIsRateioPreviewOpen(true)}
+        hasSelectedNote={!!selectedNote}
       />
 
       <div className="content-area">
@@ -909,7 +976,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
               userRole={user.role}
-              onImportClick={() => handleSelectNote(null)}
+              onImportClick={handleImportPdfClick}
               style={{ '--sidebar-width-dynamic': `${sidebarWidth}px` } as React.CSSProperties}
             />
 
@@ -950,17 +1017,6 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 </>
               ) : (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', boxSizing: 'border-box' }}>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    style={{ display: 'none' }} 
-                    accept=".pdf"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleUploadFile(e.target.files[0]);
-                      }
-                    }}
-                  />
                   
                   {isUploading ? (
                     <div style={{ 
@@ -1292,7 +1348,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                         </td>
                       </tr>
                     ) : (
-                      paginatedUsageLogs.map((log) => (
+                      paginatedUsageLogs.map((log, index) => (
                         <tr 
                           key={log.id} 
                           className="history-row"
@@ -1307,7 +1363,18 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                               }
                             }
                           }}
-                          style={{ cursor: log.statusArquivo !== 'Excluído' ? 'pointer' : 'default' }}
+                          style={{ 
+                            cursor: log.statusArquivo !== 'Excluído' ? 'pointer' : 'default',
+                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                            borderBottom: '1px solid #f1f5f9',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f1f5f9';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                          }}
                         >
                           <td style={{ padding: '12px 16px', color: '#6b7280', fontWeight: 'bold' }}>
                             #{log.id}
@@ -1950,6 +2017,32 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     className="btn btn-outline"
+                    onClick={handleClearLogs}
+                    disabled={loadingApiLogs || clearingLogs}
+                    style={{ 
+                      padding: '6px 12px',
+                      opacity: (loadingApiLogs || clearingLogs) ? 0.7 : 1,
+                      cursor: (loadingApiLogs || clearingLogs) ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderColor: '#ef4444',
+                      color: '#ef4444'
+                    }}
+                    onMouseOver={(e) => {
+                      if (!loadingApiLogs && !clearingLogs) {
+                        e.currentTarget.style.backgroundColor = '#fef2f2';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    {clearingLogs ? 'Limpando...' : 'Limpar Logs'}
+                  </button>
+                  <button
+                    className="btn btn-outline"
                     onClick={loadApiLogs}
                     disabled={loadingApiLogs}
                     style={{ 
@@ -2168,6 +2261,102 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação de Limpeza de Logs */}
+      {showClearLogsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          animation: 'fadeIn 0.2s ease-out'
+        }} onClick={() => setShowClearLogsModal(false)}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '400px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #e2e8f0',
+            animation: 'slideUp 0.2s ease-out'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              color: '#0f172a'
+            }}>
+              Confirmar Limpeza de Logs
+            </h3>
+            <p style={{
+              margin: '0 0 24px 0',
+              fontSize: '0.875rem',
+              color: '#475569',
+              lineHeight: '1.5'
+            }}>
+              Deseja realmente limpar todos os logs de execução do servidor? Esta ação não pode ser desfeita.
+            </p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+                onClick={() => setShowClearLogsModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                onClick={confirmClearLogsAction}
+              >
+                Confirmar Limpeza
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Pré-visualização do Rateio Excel */}
+      <RateioPreviewModal 
+        isOpen={isRateioPreviewOpen} 
+        onClose={() => setIsRateioPreviewOpen(false)} 
+        selectedNote={selectedNote} 
+        onDownload={handleDownloadSelectedNoteRateio} 
+      />
     </div>
   );
 };

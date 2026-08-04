@@ -126,3 +126,16 @@ export function getLogsContent(limitLines = 200): string {
     return `Erro ao ler os logs: ${error}`;
   }
 }
+
+export function clearLogsContent(): void {
+  try {
+    logStream.end();
+    fs.writeFileSync(LOG_FILE, '', 'utf8');
+    logStream = fs.createWriteStream(LOG_FILE, { flags: 'a', encoding: 'utf8' });
+    lineCount = 0;
+    console.log('[SYSTEM] Logs limpos pelo administrador.');
+  } catch (error) {
+    console.error('Erro ao limpar arquivo de logs:', error);
+    throw error;
+  }
+}

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { FILES_DIR } from '../config/paths.js';
 import { generateRateioExcel } from '../../features/excel/generateRateioExcel.js';
-import { enrichData } from '../../features/pdf/dataEnrichment.js';
+import { enrichData, getCrDescription, getNaturezaDescription } from '../../features/pdf/dataEnrichment.js';
 import { GraphEmailPdfProcessor } from '../../features/email/searchDataFromEmail.js';
 import { extractDataFromPDF } from '../../features/pdf/extractDataFromPDF.js';
 
@@ -64,7 +64,11 @@ export class NoteService {
         const newContract = newData.accountingFields.contract;
 
         if (oldCr !== newCr) {
-          newData.accountingFields.crDescription = newCr && newCr !== 'N/A' ? `Centro de Custo ${newCr}` : 'N/A';
+          newData.accountingFields.crDescription = getCrDescription(newCr);
+        }
+
+        if (oldNatureza !== newNatureza) {
+          newData.accountingFields.naturezaDescription = getNaturezaDescription(newNatureza);
         }
 
         if (newData.apportionment && Array.isArray(newData.apportionment)) {
@@ -73,10 +77,11 @@ export class NoteService {
             
             if (oldCr && updatedItem.cr === oldCr) {
               updatedItem.cr = newCr;
-              updatedItem.crDescription = newCr && newCr !== 'N/A' ? `Centro de Custo ${newCr}` : 'N/A';
+              updatedItem.crDescription = getCrDescription(newCr);
             }
             if (oldNatureza && updatedItem.naturezaCode === oldNatureza) {
               updatedItem.naturezaCode = newNatureza;
+              updatedItem.naturezaDescription = getNaturezaDescription(newNatureza);
             }
             if (oldContract && updatedItem.contract === oldContract) {
               updatedItem.contract = newContract;

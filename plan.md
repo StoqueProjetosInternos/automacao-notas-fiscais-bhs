@@ -3000,3 +3000,190 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Rollback:
   1) `git checkout -- apps/automacao/src/server/services/zeevService.ts`
 - Status: Aplicado
+
+### CHG-0203 — Vinculação do Catálogo Oficial de Centros de Resultado (CR) da Raiz
+
+- Data/Hora: 2026-07-13 09:55
+- Contexto: A descrição do Centro de Resultado (CR) nas notas fiscais e rateios era gerada dinamicamente via template literal fixo. O usuário solicitou que as descrições sejam lidas de um catálogo oficial localizado na raiz do projeto (suportando cr.json e cd.json).
+- Objetivo: Implementar a leitura e cache do catálogo de CRs e vincular as descrições correspondentes aos códigos de CR durante os processos de curadoria e edição manual de rateios.
+- Escopo:
+  - Backend: [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts), [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+- Riscos:
+  - Divergência de nomes: Tratado suportando cr.json e cd.json na raiz do projeto.
+  - Performance: Mitigada cacheando os dados em memória no carregamento do módulo.
+  - Elementos não listados no catálogo: Mitigado com fallback dinâmico para a descrição genérica de Centro de Custo.
+- Proposta:
+  - Declarar helper getCrDescription() em dataEnrichment.ts que busca a descrição a partir do arquivo JSON da raiz.
+  - Atualizar todas as concatenações de "Centro de Custo" em dataEnrichment.ts e noteService.ts.
+- Testes:
+  - Validar build TypeScript: `npm run build -w stoque-fiscal-intelligence`
+  - Validar reprocessamento de nota e verificar se a descrição mudou para a do catálogo oficial.
+  - Editar CR no painel e comprovar se a descrição se atualizou de forma sincronizada com o catálogo.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts apps/automacao/src/server/services/noteService.ts`
+- Status: Aplicado
+- Observações: Vinculação concluída sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0204 — Vinculação do Catálogo Oficial de Naturezas Contábeis da Raiz
+
+- Data/Hora: 2026-07-13 10:25
+- Contexto: A descrição da natureza contábil nos rateios e faturas utilizava fallbacks estáticos como "Rateio Geral". Há necessidade de vincular as descrições correspondentes a partir do arquivo catálogo oficial.
+- Objetivo: Carregar, cachear e vincular descrições a partir de naturezas.json na raiz do projeto durante o processamento inicial e a edição interativa de notas fiscais.
+- Escopo:
+  - Backend: [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts), [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+- Riscos:
+  - Chaves não cadastradas: Mitigado com fallback dinâmico para a descrição genérica "Rateio Geral".
+  - Performance: Mitigada cacheando os dados em memória na inicialização.
+- Proposta:
+  - Declarar helper getNaturezaDescription() em dataEnrichment.ts para carregar e obter os dados do arquivo naturezas.json.
+  - Substituir descrições estáticas por chamadas ao helper no enriquecimento e no NoteService.
+- Testes:
+  - Validar compilação TypeScript: `npm run build -w stoque-fiscal-intelligence`
+  - Testar fluxo de enriquecimento e edição no Dashboard observando se a natureza assume a descrição do catálogo oficial.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts apps/automacao/src/server/services/noteService.ts`
+- Status: Aplicado
+- Observações: Vinculação de naturezas concluída sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0205 — Higienização Defensiva de Token da API do Zeev
+
+- Data/Hora: 2026-07-13 15:15
+- Contexto: A simulação da API do Zeev retornou erro de TokenNotValid (401). A análise da documentação confirmou que o cabeçalho Authorization está correto, sugerindo que o token pode estar vindo com aspas ou espaços residuais do arquivo .env.
+- Objetivo: Implementar a remoção automática de aspas e espaços do token lido do ambiente antes de enviar a requisição HTTP.
+- Escopo:
+  - Backend: [zeevClient.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/infra/zeev/zeevClient.ts)
+- Riscos: Nenhum. É um tratamento preventivo de strings de autenticação.
+- Proposta:
+  - Adicionar trim() e substituição regex de aspas simples e duplas no método getHeaders() do ZeevClient.
+- Testes:
+  - Compilar o backend com sucesso.
+  - Verificar se a chamada para a API do Zeev passa a enviar o token higienizado.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/infra/zeev/zeevClient.ts`
+- Status: Aplicado
+- Observações: Higienização implementada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0206 — Sincronização e Validação do Zeev Antes de Aprovar Notas
+
+- Data/Hora: 2026-07-13 15:20
+- Contexto: Ao aprovar uma nota, o status era alterado para "validado" no arquivo JSON mesmo ocorrendo erros na chamada de integração do Zeev (que rodava assincronamente).
+- Objetivo: Tornar a validação do Zeev síncrona com o fluxo de salvar. Impedir que a nota seja salva como "validado" em caso de erro da API e apresentar o erro detalhado do Zeev no Dashboard.
+- Escopo:
+  - Backend: [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts), [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum impacto destrutivo. Em caso de queda do Zeev, a nota permanece no status anterior ("analisar"), protegendo a integridade do fluxo.
+- Proposta:
+  - Relançar o erro detalhado de API em ZeevService.
+  - Alterar NoteController para aguardar a validação e, se falhar, não persistir o status e retornar HTTP 400.
+  - Modificar handleSave no frontend para ler e exibir o erro específico da resposta.
+- Testes:
+  - Clicar em "Aprovar" com token inválido e verificar se o toast exibe a mensagem de erro do Zeev e se o status da nota permanece em "analisar".
+  - Validar compilação do backend e frontend.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/zeevService.ts apps/automacao/src/server/controllers/noteController.ts apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Validação síncrona implementada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0207 — Botão para Reabrir Faturas Validadas no Dashboard
+
+- Data/Hora: 2026-07-13 15:30
+- Contexto: Uma vez aprovada ("validado"), a nota fiscal ficava com o status bloqueado em definitivo no Dashboard, sem opção simples de retorno para correção.
+- Objetivo: Adicionar um botão dinâmico de reabertura ("Reabrir Fatura") para notas com status "validado". Esse botão moverá o status contábil de volta para "pendente", reativando as opções de edição e re-aprovação.
+- Escopo:
+  - Frontend: [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Nenhum. É uma alteração de interface contábil puramente local.
+- Proposta:
+  - Renderizar condicionalmente o botão de reabertura disparando a alteração para o status "pendente" nas notas validadas.
+- Testes:
+  - Selecionar uma nota "validado" no Dashboard e clicar em "Reabrir Fatura".
+  - Comprovar se ela retorna para o status "pendente" e se a edição e o botão de aprovação ficam novamente habilitados.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx`
+- Status: Aplicado
+- Observações: Reabertura de faturas implementada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0209 — Parametrização Opcional de Perfil de Requisitante do Zeev
+
+- Data/Hora: 2026-07-13 15:45
+- Contexto: A chamada da API do Zeev resultava em erro 500 de requisitante devido ao cadastro da conta de integração não possuir um perfil (time e cargo) padrão configurado na plataforma.
+- Objetivo: Injetar opcionalmente ZEEV_TEAM_ID e ZEEV_POSITION_ID no payload de criação de instâncias a partir de variáveis de ambiente.
+- Escopo:
+  - Backend: [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+  - Configuração: [.env.example](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.env.example)
+- Riscos: Nenhum. Se os IDs não forem providos, a aplicação continuará enviando a requisição padrão.
+- Proposta:
+  - Tratar a leitura e conversão para inteiros de ZEEV_TEAM_ID e ZEEV_POSITION_ID na montagem do payload do ZeevService.
+- Testes:
+  - Compilar a aplicação backend.
+  - Verificar o envio correto no payload se as chaves forem preenchidas.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/zeevService.ts .env.example`
+- Status: Aplicado
+- Observações: Injeção opcional do perfil do requisitante implementada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0210 — Botão de Limpeza do Arquivo de Logs de Execução
+
+- Data/Hora: 2026-07-14 14:10
+- Contexto: A aba de logs de console exibe os logs gravados no servidor, mas não havia funcionalidade para limpar a tela ou truncar o arquivo de forma a facilitar o monitoramento em tempo de depuração.
+- Objetivo: Prover um botão com confirmação de segurança na interface administrativa que zera o arquivo de logs físico e atualiza a interface.
+- Escopo:
+  - Backend:
+    - [logger.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/config/logger.ts)
+    - [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+    - [noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts)
+  - Frontend:
+    - [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+    - [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Perda permanente do histórico local de console gravado no servidor. Risco mitigado pela restrição de privilégios de administrador e modal de confirmação.
+- Proposta:
+  - Implementar método no logger backend para recriar com segurança o stream e esvaziar o arquivo.
+  - Disponibilizar rota POST controlada por middleware de autenticação.
+  - Implementar o botão "Limpar Logs" estilizado e funcional na interface.
+- Testes:
+  - Validar compilação typescript em ambos os pacotes.
+  - Testar fluxo completo de confirmação e limpeza via UI do Administrador.
+  - Validar gravação correta de logs novos após a limpeza do arquivo.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/config/logger.ts apps/automacao/src/server/controllers/noteController.ts apps/automacao/src/server/routes/noteRoutes.ts apps/dashboard/src/services/api.ts apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Botão de limpeza de logs implementado com sucesso sob aprovação explícita [APROVAR-CODIGO].
+
+### CHG-0211 — Padronização de Modal para Limpeza de Logs
+
+- Data/Hora: 2026-07-14 14:18
+- Contexto: A confirmação de limpeza de logs utilizava window.confirm nativo, destoando da experiência do modal estilizado usado na confirmação de logout.
+- Objetivo: Implementar modal estilizado e alinhado com a identidade visual do dashboard para confirmar a ação de limpeza de logs.
+- Escopo:
+  - Frontend:
+    - [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Trata-se de alteração puramente cosmética e de usabilidade no fluxo do componente.
+- Proposta:
+  - Adicionar o estado showClearLogsModal.
+  - Implementar handlers handleClearLogs e confirmClearLogsAction.
+  - Renderizar o modal no mesmo padrão estético de botões e overlays.
+- Testes:
+  - Abrir o painel, clicar em Limpar Logs e validar abertura e fechamento do modal.
+  - Confirmar exclusão e testar se a rotina de exclusão ocorre sem falhas.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Modal de confirmação estilizado e padronizado implementado sob aprovação explícita [APROVAR-CODIGO].
+
+### CHG-0212 - Mensagens Customizadas de Toast para o Fluxo de Aprovação no Zeev
+
+- Data/Hora: 2026-07-15 10:45
+- Contexto: A mensagem de sucesso ao aprovar uma fatura no dashboard exibia um texto genérico sobre dados contábeis salvos, não indicando que o processo foi iniciado no Zeev.
+- Objetivo: Exibir mensagem de toast customizada informando que o processo foi criado no Zeev com sucesso (ou detalhando o erro, caso a integração falhe).
+- Escopo:
+  - Frontend: [index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo risco. Alteração estrita nos feedbacks visuais (toasters) do componente de Dashboard.
+- Proposta: Inserir condicionais na rotina handleSave para validar se a transição é de aprovação (status validado), ajustando as strings de sucesso e de falha correspondentes.
+- Testes:
+  - Validar build local do dashboard com npx tsc -b.
+  - Clicar em "Aprovar" e confirmar se o toast de sucesso reporta a criação do processo no Zeev.
+  - Simular erro na chamada (ex: enviando dados inválidos) e comprovar se a falha é exibida de forma correta.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Nenhuma.
+

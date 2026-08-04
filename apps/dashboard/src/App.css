@@ -3,8 +3,8 @@
 :root {
   --bg-main: #f3f4f6;
   --bg-panel: #ffffff;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --primary: #2FC808;
+  --primary-hover: #26a306;
   --text-main: #111827;
   --text-muted: #6b7280;
   --border: #e5e7eb;
@@ -1014,7 +1014,7 @@ html, body, #root {
 }
 
 .btn-primary-gradient {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #2FC808 0%, #26a306 100%);
   color: white;
   border: none;
   padding: 8px 18px;
@@ -1025,13 +1025,13 @@ html, body, #root {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 10px rgba(47, 200, 8, 0.25);
   transition: all 0.2s ease-in-out;
 }
 
 .btn-primary-gradient:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 14px rgba(47, 200, 8, 0.35);
 }
 
 .btn-primary-gradient.big-btn {
@@ -1057,7 +1057,7 @@ html, body, #root {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #2FC808 0%, #26a306 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -1099,7 +1099,7 @@ html, body, #root {
 .metric-value {
   font-size: 2.25rem;
   font-weight: 800;
-  color: #2563eb;
+  color: #26a306;
   letter-spacing: -0.02em;
 }
 

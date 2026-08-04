@@ -33,10 +33,11 @@ export interface CreateInstancePayload {
 
 export class ZeevClient {
   private static getHeaders() {
-    const token = process.env.ZEEV_API_TOKEN;
+    let token = process.env.ZEEV_API_TOKEN;
     if (!token) {
       throw new Error('ZEEV_API_TOKEN não está definido nas variáveis de ambiente.');
     }
+    token = token.trim().replace(/^["']|["']$/g, '');
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -92,6 +93,7 @@ export class ZeevClient {
    */
   public static async createInstance(payload: CreateInstancePayload): Promise<any> {
     const url = `${this.getBaseUrl()}/api/2/instances`;
+    // console.log(payload, 'Payload Zeev')
     console.log(`[ZeevClient] Enviando requisição de instância para o Zeev: ${url}`);
     const response = await axios.post(url, payload, {
       headers: this.getHeaders(),

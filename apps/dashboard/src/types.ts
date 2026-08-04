@@ -78,5 +78,6 @@ export interface Note {
     json: string;
     pdf: string | null;
     txt: string | null;
+    excel?: string | null;
   };
 }

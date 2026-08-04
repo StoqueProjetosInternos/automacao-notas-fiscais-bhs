@@ -134,6 +134,11 @@ export const fetchApiLogs = async (): Promise<string> => {
   return response.data.logs;
 };
 
+export const clearApiLogs = async (): Promise<{ success: boolean, message: string }> => {
+  const response = await apiClient.post<{ success: boolean, message: string }>('/api/notes/logs/clear');
+  return response.data;
+};
+
 export const uploadManualPdf = async (file: File): Promise<any> => {
   const response = await apiClient.post('/api/notes/upload', file, {
     headers: {

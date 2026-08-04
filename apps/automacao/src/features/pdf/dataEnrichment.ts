@@ -12,6 +12,85 @@ const BASE_PATH = path.resolve(__dirname, "../../../../../data/base_referencia.c
 const ITEMS_MAPPING_PATH = path.resolve(__dirname, "../../../../../data/mapeamento_itens.json");
 const CNPJ_ALIASES_PATH = path.resolve(__dirname, "../../../../../data/cnpj_aliases.json");
 const BASE_FORNECEDORES_JSON_PATH = path.resolve(__dirname, "../../../../../data/base_fornecedores_faturas.json");
+const ROOT_CR_JSON_PATH = path.resolve(__dirname, "../../../../../cr.json");
+const ROOT_CD_JSON_PATH = path.resolve(__dirname, "../../../../../cd.json");
+const ROOT_NATUREZAS_JSON_PATH = path.resolve(__dirname, "../../../../../naturezas.json");
+
+// Cache e carregamento de descrições das Naturezas Contábeis da raiz
+let naturezaDescriptionsMap: Record<string, string> = {};
+
+function loadNaturezaDescriptions() {
+  const jsonPath = ROOT_NATUREZAS_JSON_PATH;
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const content = fs.readFileSync(jsonPath, "utf8");
+      const data = JSON.parse(content);
+      if (Array.isArray(data)) {
+        naturezaDescriptionsMap = {};
+        for (const item of data) {
+          const code = String(item.codNat).trim().replace(/\D/g, "");
+          naturezaDescriptionsMap[code] = item.descricao;
+        }
+      }
+    } catch (err) {
+      console.error("[Enrichment] Falha ao carregar catálogo de naturezas da raiz:", err);
+    }
+  }
+}
+
+loadNaturezaDescriptions();
+
+export function getNaturezaDescription(natCode: string | number | undefined | null): string {
+  if (natCode === undefined || natCode === null) return "Rateio Geral";
+  const cleanCode = String(natCode).split("-")[0].trim().replace(/\D/g, "");
+  if (cleanCode === "") return "Rateio Geral";
+  
+  if (Object.keys(naturezaDescriptionsMap).length === 0) {
+    loadNaturezaDescriptions();
+  }
+  
+  return naturezaDescriptionsMap[cleanCode] || "Rateio Geral";
+}
+
+// Cache e carregamento de descrições dos Centros de Resultado (CR) da raiz
+let crDescriptionsMap: Record<string, string> = {};
+
+function loadCrDescriptions() {
+  let jsonPath = ROOT_CR_JSON_PATH;
+  if (!fs.existsSync(jsonPath) && fs.existsSync(ROOT_CD_JSON_PATH)) {
+    jsonPath = ROOT_CD_JSON_PATH;
+  }
+  
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const content = fs.readFileSync(jsonPath, "utf8");
+      const data = JSON.parse(content);
+      if (Array.isArray(data)) {
+        crDescriptionsMap = {};
+        for (const item of data) {
+          const code = String(item.codCencus).trim();
+          crDescriptionsMap[code] = item.descricao;
+        }
+      }
+    } catch (err) {
+      console.error("[Enrichment] Falha ao carregar catálogo de CRs da raiz:", err);
+    }
+  }
+}
+
+loadCrDescriptions();
+
+export function getCrDescription(cr: string | number | undefined | null): string {
+  if (cr === undefined || cr === null) return "N/A";
+  const cleanCr = String(cr).trim();
+  if (cleanCr === "" || cleanCr.toUpperCase() === "N/A") return "N/A";
+  
+  if (Object.keys(crDescriptionsMap).length === 0) {
+    loadCrDescriptions();
+  }
+  
+  return crDescriptionsMap[cleanCr] || `Centro de Custo ${cleanCr}`;
+}
 
 // Mapeamento de CNPJs de fornecedores conhecidos (fallback em memória)
 let CNPJ_TO_PARTNER: Record<string, string> = {
@@ -159,9 +238,9 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
 
   let defaultAccounting = {
     cr: fallback.cr,
-    crDescription: fallback.cr === "N/A" ? "N/A" : "Centro de Custo " + fallback.cr,
+    crDescription: getCrDescription(fallback.cr),
     naturezaCode: fallback.naturezaCode,
-    naturezaDescription: fallback.naturezaDescription || "Rateio Geral",
+    naturezaDescription: getNaturezaDescription(fallback.naturezaCode),
     contract: fallback.contract !== "0" && fallback.contract !== "" ? fallback.contract : "0"
   };
 
@@ -214,9 +293,9 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
   if (matchedRateios && matchedRateios.length === 1) {
     defaultAccounting = {
       cr: matchedRateios[0].cr,
-      crDescription: "Centro de Custo " + matchedRateios[0].cr,
+      crDescription: getCrDescription(matchedRateios[0].cr),
       naturezaCode: matchedRateios[0].naturezaCode || defaultAccounting.naturezaCode,
-      naturezaDescription: defaultAccounting.naturezaDescription,
+      naturezaDescription: getNaturezaDescription(matchedRateios[0].naturezaCode || defaultAccounting.naturezaCode),
       contract: matchedRateios[0].contract && matchedRateios[0].contract !== "0" ? matchedRateios[0].contract : defaultAccounting.contract
     };
   }
@@ -247,9 +326,9 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
             return {
               ...item,
               cr: sMap.cr,
-              crDescription: "Centro de Custo " + sMap.cr,
+              crDescription: getCrDescription(sMap.cr),
               naturezaCode: sMap.naturezaCode || item.naturezaCode || defaultAccounting.naturezaCode,
-              naturezaDescription: "Equipamento por Série",
+              naturezaDescription: getNaturezaDescription(sMap.naturezaCode || item.naturezaCode || defaultAccounting.naturezaCode),
               contract: sMap.contract && sMap.contract !== "0" && sMap.contract !== "" ? sMap.contract : "0",
               serialNumber: code
             };
@@ -263,21 +342,32 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
         return {
           ...item,
           cr: matchedItem.cr,
-          crDescription: "Centro de Custo " + matchedItem.cr,
+          crDescription: getCrDescription(matchedItem.cr),
           naturezaCode: matchedItem.naturezaCode,
-          naturezaDescription: matchedItem.naturezaDescription || "Rateio Textual",
+          naturezaDescription: getNaturezaDescription(matchedItem.naturezaCode),
           contract: matchedItem.contract || defaultAccounting.contract
         };
       }
 
       // III. Fallback para os dados contábeis padrões (tratando "N/A" como ausente)
+      const itemCr = (!item.cr || item.cr === "N/A") ? defaultAccounting.cr : item.cr;
+      const itemCrDesc = (!item.crDescription || item.crDescription === "Centro de Custo N/A" || item.crDescription === "N/A" || item.crDescription.startsWith("Centro de Custo "))
+        ? getCrDescription(itemCr)
+        : item.crDescription;
+      
+      const itemNatCode = (!item.naturezaCode || item.naturezaCode === "N/A") ? defaultAccounting.naturezaCode : item.naturezaCode;
+
       return {
         ...item,
-        cr: (!item.cr || item.cr === "N/A") ? defaultAccounting.cr : item.cr,
-        crDescription: (!item.crDescription || item.crDescription === "Centro de Custo N/A" || item.crDescription === "N/A") ? defaultAccounting.crDescription : item.crDescription,
-        naturezaCode: (!item.naturezaCode || item.naturezaCode === "N/A") ? defaultAccounting.naturezaCode : item.naturezaCode,
-        naturezaDescription: (!item.naturezaDescription || item.naturezaDescription === "Rateio Geral" || item.naturezaDescription === "N/A") ? defaultAccounting.naturezaDescription : item.naturezaDescription,
-        contract: (!item.contract || item.contract === "0" || item.contract === "-") ? defaultAccounting.contract : item.contract
+        cr: itemCr,
+        crDescription: itemCrDesc,
+        naturezaCode: itemNatCode,
+        naturezaDescription: (!item.naturezaDescription || item.naturezaDescription === "Rateio Geral" || item.naturezaDescription === "N/A" || item.naturezaDescription === "Rateio Textual" || item.naturezaDescription === "Equipamento por Série")
+          ? getNaturezaDescription(itemNatCode)
+          : item.naturezaDescription,
+        contract: (!item.contract || item.contract === "0" || item.contract === "-") 
+          ? (defaultAccounting.contract && defaultAccounting.contract !== "-" ? defaultAccounting.contract : "0") 
+          : item.contract
       };
     });
 
@@ -287,7 +377,7 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
       crDescription: defaultAccounting.crDescription,
       naturezaCode: defaultAccounting.naturezaCode,
       naturezaDescription: defaultAccounting.naturezaDescription,
-      contract: defaultAccounting.contract !== "0" ? defaultAccounting.contract : "-"
+      contract: defaultAccounting.contract && defaultAccounting.contract !== "0" && defaultAccounting.contract !== "-" ? defaultAccounting.contract : "0"
     };
   } else {
     // Caso de fatura com rateio simplificado (único)
@@ -296,7 +386,7 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
       crDescription: defaultAccounting.crDescription,
       naturezaCode: defaultAccounting.naturezaCode,
       naturezaDescription: defaultAccounting.naturezaDescription,
-      contract: defaultAccounting.contract !== "0" ? defaultAccounting.contract : "-"
+      contract: defaultAccounting.contract && defaultAccounting.contract !== "0" && defaultAccounting.contract !== "-" ? defaultAccounting.contract : "0"
     };
 
     // Preenche o apportionment com item único correspondente ao valor total
@@ -333,9 +423,9 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
         unitValue: data.financial?.chargedValue || 0,
         value: data.financial?.chargedValue || 0,
         cr: itemCr,
-        crDescription: "Centro de Custo " + itemCr,
+        crDescription: getCrDescription(itemCr),
         naturezaCode: itemNatCode,
-        naturezaDescription: defaultAccounting.naturezaDescription,
+        naturezaDescription: getNaturezaDescription(itemNatCode),
         contract: itemContract,
         serialNumber: matchedSerial
       }

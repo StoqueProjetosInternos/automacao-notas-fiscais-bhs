@@ -112,7 +112,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                 width: '40px',
                 height: '40px',
                 border: '3px solid #f3f4f6',
-                borderTop: '3px solid #2563eb',
+                borderTop: '3px solid #2FC808',
                 borderRadius: '50%',
                 margin: '0 auto 1.5rem',
                 animation: 'spin 1s linear infinite'
@@ -251,19 +251,19 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     color: 'white',
-                    backgroundColor: loading ? 'rgba(37, 99, 235, 0.6)' : '#2563eb',
+                    backgroundColor: loading ? 'rgba(47, 200, 8, 0.6)' : '#2FC808',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: loading ? 'not-allowed' : 'pointer',
                     marginTop: '0.5rem',
                     transition: 'background-color 0.2s, transform 0.1s ease',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)'
+                    boxShadow: '0 4px 12px rgba(47, 200, 8, 0.2)'
                   }}
                   onMouseOver={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#1d4ed8';
+                    if (!loading) e.currentTarget.style.backgroundColor = '#26a306';
                   }}
                   onMouseOut={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#2563eb';
+                    if (!loading) e.currentTarget.style.backgroundColor = '#2FC808';
                   }}
                   onMouseDown={(e) => {
                     if (!loading) e.currentTarget.style.transform = 'scale(0.98)';

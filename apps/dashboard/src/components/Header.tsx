@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon, User } from 'lucide-react';
+import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon, User, FileSpreadsheet } from 'lucide-react';
 
 interface HeaderProps {
   onSync: () => void;
@@ -13,9 +13,11 @@ interface HeaderProps {
     email: string;
     role: string;
   };
+  onDownloadRateio?: () => void;
+  hasSelectedNote?: boolean;
 }
 
-export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onExit, user }: HeaderProps) => {
+export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onExit, user, onDownloadRateio, hasSelectedNote }: HeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -67,10 +69,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             border: 'none',
             fontSize: '0.85rem',
             fontWeight: activeTab === 'notes' ? 700 : 500,
-            color: activeTab === 'notes' ? '#2563eb' : '#6b7280',
+            color: activeTab === 'notes' ? '#2FC808' : '#6b7280',
             cursor: 'pointer',
             padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'notes' ? '#2563eb' : 'transparent'}`,
+            borderBottom: `2px solid ${activeTab === 'notes' ? '#2FC808' : 'transparent'}`,
             transition: 'all 0.2s',
             outline: 'none'
           }}
@@ -84,10 +86,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             border: 'none',
             fontSize: '0.85rem',
             fontWeight: activeTab === 'history' ? 700 : 500,
-            color: activeTab === 'history' ? '#2563eb' : '#6b7280',
+            color: activeTab === 'history' ? '#2FC808' : '#6b7280',
             cursor: 'pointer',
             padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'history' ? '#2563eb' : 'transparent'}`,
+            borderBottom: `2px solid ${activeTab === 'history' ? '#2FC808' : 'transparent'}`,
             transition: 'all 0.2s',
             outline: 'none'
           }}
@@ -103,10 +105,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
               border: 'none',
               fontSize: '0.85rem',
               fontWeight: activeTab === 'logs' ? 700 : 500,
-              color: activeTab === 'logs' ? '#2563eb' : '#6b7280',
+              color: activeTab === 'logs' ? '#2FC808' : '#6b7280',
               cursor: 'pointer',
               padding: '6px 0',
-              borderBottom: `2px solid ${activeTab === 'logs' ? '#2563eb' : 'transparent'}`,
+              borderBottom: `2px solid ${activeTab === 'logs' ? '#2FC808' : 'transparent'}`,
               transition: 'all 0.2s',
               outline: 'none'
             }}
@@ -122,10 +124,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             border: 'none',
             fontSize: '0.85rem',
             fontWeight: activeTab === 'deadlines' ? 700 : 500,
-            color: activeTab === 'deadlines' ? '#2563eb' : '#6b7280',
+            color: activeTab === 'deadlines' ? '#2FC808' : '#6b7280',
             cursor: 'pointer',
             padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'deadlines' ? '#2563eb' : 'transparent'}`,
+            borderBottom: `2px solid ${activeTab === 'deadlines' ? '#2FC808' : 'transparent'}`,
             transition: 'all 0.2s',
             outline: 'none'
           }}
@@ -134,7 +136,29 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           Prazos
         </button>
       </nav>
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
+        {onDownloadRateio && (
+          <button 
+            className="btn btn-outline" 
+            style={{ 
+              padding: '6px 9px', 
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderColor: '#a7f3d0',
+              backgroundColor: '#ecfdf5',
+              borderRadius: '6px',
+              cursor: hasSelectedNote ? 'pointer' : 'not-allowed',
+              opacity: hasSelectedNote ? 1 : 0.4,
+              transition: 'all 0.15s ease'
+            }} 
+            onClick={onDownloadRateio}
+            disabled={!hasSelectedNote}
+            title={hasSelectedNote ? 'Baixar planilha Excel (.xlsx) de rateio da fatura selecionada' : 'Selecione uma fatura para baixar o rateio'}
+          >
+            <FileSpreadsheet size={16} color="#059669" />
+          </button>
+        )}
         <button 
           className="btn btn-outline" 
           style={{ 

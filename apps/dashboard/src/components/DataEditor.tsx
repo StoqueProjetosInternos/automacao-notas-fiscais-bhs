@@ -280,45 +280,46 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           <>
             {/* Seção Especial de Classificação Contábil no Topo */}
             <div className="section-card" style={{ borderLeft: '4px solid #10b981', background: '#f9fafb' }}>
-              <span className="section-title" style={{ color: '#0f766e', fontWeight: 700, display: 'block', marginBottom: '1rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span className="section-title" style={{ color: '#0f766e' }}>
                 Classificação Contábil (Rateio)
               </span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="field-group" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Código CR</label>
-                  <input 
-                    className="field-input"
-                    type="text" 
-                    value={(formData.accountingFields as any)?.cr || ''} 
-                    onChange={(e) => onInputChange(['accountingFields', 'cr'], e.target.value)}
-                  />
-                  {(formData.accountingFields as any)?.crDescription && (
-                    <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
-                      {(formData.accountingFields as any).crDescription}
-                    </span>
-                  )}
-                </div>
-                <div className="field-group" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Código de Natureza</label>
-                  <input 
-                    className="field-input"
-                    type="text" 
-                    value={(formData.accountingFields as any)?.naturezaCode || ''} 
-                    onChange={(e) => onInputChange(['accountingFields', 'naturezaCode'], e.target.value)}
-                  />
-                  {(formData.accountingFields as any)?.naturezaDescription && (
-                    <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
-                      {(formData.accountingFields as any).naturezaDescription}
-                    </span>
-                  )}
-                </div>
+              
+              <div className="field-group">
+                <label className="field-label">Código CR</label>
+                <input 
+                  className="field-input"
+                  type="text" 
+                  value={(formData.accountingFields as any)?.cr || ''} 
+                  onChange={(e) => onInputChange(['accountingFields', 'cr'], e.target.value)}
+                />
+                {(formData.accountingFields as any)?.crDescription && (
+                  <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
+                    {(formData.accountingFields as any).crDescription}
+                  </span>
+                )}
               </div>
-              <div className="field-group" style={{ marginTop: '12px', marginBottom: 0 }}>
+
+              <div className="field-group">
+                <label className="field-label">Código de Natureza</label>
+                <input 
+                  className="field-input"
+                  type="text" 
+                  value={(formData.accountingFields as any)?.naturezaCode || ''} 
+                  onChange={(e) => onInputChange(['accountingFields', 'naturezaCode'], e.target.value)}
+                />
+                {(formData.accountingFields as any)?.naturezaDescription && (
+                  <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
+                    {(formData.accountingFields as any).naturezaDescription}
+                  </span>
+                )}
+              </div>
+
+              <div className="field-group" style={{ marginBottom: 0 }}>
                 <label className="field-label">Contrato</label>
                 <input 
                   className="field-input"
                   type="text" 
-                  value={(formData.accountingFields as any)?.contract || ''} 
+                  value={(formData.accountingFields as any)?.contract === '-' ? '0' : ((formData.accountingFields as any)?.contract || '')} 
                   onChange={(e) => onInputChange(['accountingFields', 'contract'], e.target.value)}
                 />
               </div>
@@ -364,17 +365,17 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             alignItems: 'center', 
             gap: '6px', 
             marginRight: 'auto',
-            backgroundColor: userRole !== 'ADMIN' ? '#d1d5db' : '#10b981',
+            backgroundColor: userRole !== 'ADMIN' ? '#e5e7eb' : '#2563eb',
             color: userRole !== 'ADMIN' ? '#9ca3af' : 'white',
             border: 'none',
             transition: 'background-color 0.2s',
             cursor: userRole !== 'ADMIN' ? 'not-allowed' : 'pointer'
           }}
           onMouseOver={(e) => {
-            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#059669';
+            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#1d4ed8';
           }}
           onMouseOut={(e) => {
-            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#10b981';
+            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#2563eb';
           }}
           title={userRole !== 'ADMIN' ? 'Apenas administradores podem reprocessar OCR' : 'Reprocessar OCR Google Gemini'}
         >
@@ -389,14 +390,33 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           <Save size={14} />
           Salvar
         </button>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => onSave('validado')}
-          disabled={loading || !selectedNote || formData?.status === 'validado'}
-        >
-          <Check size={14} />
-          {formData?.status === 'validado' ? 'Validado' : 'Aprovar'}
-        </button>
+        {formData?.status === 'validado' ? (
+          <button 
+            className="btn btn-outline" 
+            style={{
+              borderColor: '#f97316',
+              color: '#f97316',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onClick={() => onSave('pendente')}
+            disabled={loading || !selectedNote}
+            title="Mudar o status da fatura de volta para Pendente para revisão"
+          >
+            <RefreshCcw size={14} />
+            Reabrir Fatura
+          </button>
+        ) : (
+          <button 
+            className="btn btn-primary" 
+            onClick={() => onSave('validado')}
+            disabled={loading || !selectedNote}
+          >
+            <Check size={14} />
+            Aprovar
+          </button>
+        )}
       </div>
 
       {showIaDisclaimer && (
@@ -571,7 +591,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                             type="text"
                             className="field-input"
                             value={item.contract || ''}
-                            placeholder={(formData.accountingFields?.contract && formData.accountingFields?.contract !== '-') ? formData.accountingFields?.contract : ''}
+                            placeholder={(formData.accountingFields?.contract && formData.accountingFields?.contract !== '-') ? formData.accountingFields?.contract : '0'}
                             onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'contract'], e.target.value)}
                             style={{ padding: '6px', fontSize: '0.75rem' }}
                           />

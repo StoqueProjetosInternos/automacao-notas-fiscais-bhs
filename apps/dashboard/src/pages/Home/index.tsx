@@ -55,7 +55,7 @@ export const Home = () => {
           Automação Fiscal e Rateio Financeiro de <span className="text-gradient">Faturas com IA</span>
         </h1>
         <p className="home-subtitle">
-          A plataforma da Stoque que realiza OCR inteligente via Google Gemini, enriquecimento contábil imediato e conciliação ágil de despesas corporativas em segundos.
+          A plataforma da Stoque que realiza OCR inteligente via <strong>inteligência artificial</strong>, enriquecimento contábil imediato e conciliação ágil de despesas corporativas em segundos.
         </p>
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '4rem' }}>
           <button 
@@ -88,7 +88,7 @@ export const Home = () => {
         <h2 className="section-title">Tecnologias Integradas na Plataforma</h2>
         <div className="features-grid">
           <div className="feature-card">
-            <Zap className="feature-icon" color="#2563eb" />
+            <Zap className="feature-icon" color="#2FC808" />
             <h3>Extração OCR Inteligente</h3>
             <p>Leitura de arquivos faturas e boletos em lote estruturado pelo modelo Google Gemini-2.5-Flash.</p>
           </div>

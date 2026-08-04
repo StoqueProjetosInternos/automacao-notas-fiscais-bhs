@@ -112,12 +112,19 @@ export class ZeevService {
       ];
 
       const flowId = parseInt(process.env.ZEEV_FLOW_ID || '2044', 10);
-      const payload = {
+      const payload: any = {
         flowId,
-        isSimulation: true,
+        isSimulation: false,
         formFields,
         files
       };
+
+      if (process.env.ZEEV_TEAM_ID) {
+        payload.teamId = parseInt(process.env.ZEEV_TEAM_ID, 10);
+      }
+      if (process.env.ZEEV_POSITION_ID) {
+        payload.positionId = parseInt(process.env.ZEEV_POSITION_ID, 10);
+      }
 
       // 8. Grava o JSON gerado em disco na pasta da nota correspondente (Backup de Auditoria)
       const outputPath = path.join(folderPath, 'zeev_payload_dryrun.json');
@@ -127,6 +134,7 @@ export class ZeevService {
       // 9. Dispara a chamada HTTP real para validação (Simulação no Zeev)
       console.log(`[ZeevService] Disparando requisição real de simulação para a API do Zeev...`);
       const apiResult = await ZeevClient.createInstance(payload);
+      console.log(`Resultado da API: ${apiResult}`)
       
       // Grava o resultado da resposta da API em disco para auditoria
       const resultPath = path.join(folderPath, 'zeev_response_simulation.json');
@@ -148,6 +156,10 @@ export class ZeevService {
       } catch (err) {
         console.error('[ZeevService] Não foi possível salvar o JSON de erro em disco:', err);
       }
+
+      // Relança o erro com detalhes apropriados para que o controlador capture a falha
+      const errorMsg = apiErrorData?.error?.message || apiErrorData?.message || error.message;
+      throw new Error(`[Zeev] ${errorMsg}`);
     }
   }
 }

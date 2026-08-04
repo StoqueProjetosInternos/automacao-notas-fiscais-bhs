@@ -1,0 +1,50 @@
+{
+  "name": "stoque-fiscal-intelligence-desktop",
+  "version": "1.0.0",
+  "description": "Stoque Fiscal Intelligence - Aplicação Desktop Electron",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build:main": "tsc",
+    "build:dashboard": "npm --workspace=stoque-fiscal-intelligence-dashboard run build",
+    "build:automacao": "npm --workspace=stoque-fiscal-intelligence run build",
+    "dev": "npm run build:automacao && npm run build:dashboard && npm run build:main && electron .",
+    "dist": "npm run build:automacao && npm run build:dashboard && npm run build:main && electron-builder",
+    "pack": "npm run build:automacao && npm run build:dashboard && npm run build:main && electron-builder --dir"
+  },
+  "keywords": [
+    "electron",
+    "stoque",
+    "fiscal",
+    "intelligence"
+  ],
+  "author": "Stoque",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^6.0.2",
+    "@types/node": "^25.5.0"
+  },
+  "build": {
+    "appId": "br.com.stoque.fiscalintelligence",
+    "productName": "Stoque Fiscal Intelligence",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "../automacao/dist/**/*",
+      "../dashboard/dist/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    }
+  }
+}
