@@ -92,32 +92,6 @@ export const RateioPreviewModal: React.FC<RateioPreviewModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              onClick={onDownload}
-              className="btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: '#10b981',
-                color: '#ffffff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#059669'; }}
-              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; }}
-              title="Baixar a planilha Excel oficial (.xlsx)"
-            >
-              <Download size={15} />
-              Baixar Excel (.xlsx)
-            </button>
-
             <button 
               onClick={onClose}
               style={{
@@ -236,7 +210,7 @@ export const RateioPreviewModal: React.FC<RateioPreviewModalProps> = ({
                 Itens de Rateio ({items.length})
               </span>
               <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                Planilha Excel formatada para integração contábil
+                Planilha Excel
               </span>
             </div>
 

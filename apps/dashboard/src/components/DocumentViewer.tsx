@@ -57,7 +57,7 @@ export const DocumentViewer = ({ selectedNote, isDragging }: DocumentViewerProps
         {selectedNote?.files.pdf ? (
           <iframe 
             key={selectedNote.id}
-            src={`${getFileUrl(selectedNote.files.pdf)}#toolbar=0`} 
+            src={`${getFileUrl(selectedNote.files.pdf)}#toolbar=0&navpanes=0&view=FitH`} 
             title="Document Viewer"
             className="fade-in"
           />

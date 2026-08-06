@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trash2, Archive, Upload, Mail, CheckCircle2, AlertCircle, Clock, Calendar } from 'lucide-react';
+import { Search, Trash2, Archive, Upload, Mail, CheckCircle2, AlertCircle, Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Note } from '../types';
 
 interface SidebarProps {
@@ -157,12 +157,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [noteIdDeleting, setNoteIdDeleting] = useState<string | null>(null);
   const [noteIdArchiving, setNoteIdArchiving] = useState<string | null>(null);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  // Gerenciamento síncrono de reset de página quando a busca ou ordenação mudam
+  // Gerenciamento síncrono de reset de página quando a busca, ordenação ou aba mudam
   const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
   const [prevSortBy, setPrevSortBy] = useState(sortBy);
+  const [prevShowArchived, setPrevShowArchived] = useState(showArchived);
+
+  // Mapeia o ID permanente sequencial de cada nota em ordem cronológica de criação (1, 2, 3...)
+  const chronologicalIdMap = React.useMemo(() => {
+    const sorted = [...notes].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.id.localeCompare(b.id, undefined, { numeric: true });
+    });
+
+    const map = new Map<string, number>();
+    sorted.forEach((note, index) => {
+      map.set(note.id, index + 1);
+    });
+    return map;
+  }, [notes]);
 
   if (searchTerm !== prevSearchTerm) {
     setPrevSearchTerm(searchTerm);
@@ -170,6 +187,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }
   if (sortBy !== prevSortBy) {
     setPrevSortBy(sortBy);
+    setCurrentPage(1);
+  }
+  if (showArchived !== prevShowArchived) {
+    setPrevShowArchived(showArchived);
     setCurrentPage(1);
   }
   
@@ -448,12 +469,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Lista de Cards Compactos de Faturas */}
       <div className="note-list" style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', flex: 1 }}>
         {currentNotes.map((note, idx) => {
-          const absoluteIndex = indexOfFirstItem + idx + 1;
+          const displaySeqId = chronologicalIdMap.get(note.id) || (indexOfFirstItem + idx + 1);
           const isSelected = selectedNoteId === note.id;
           const isConfirmingDelete = noteIdDeleting === note.id;
           const isConfirmingArchive = noteIdArchiving === note.id;
           const supplierName = note.data.supplier?.name || 'Fornecedor não identificado';
           const value = note.data.financial?.originalValue || note.data.valorTotal;
+          const docType = note.data.documentType || (note.data.documentIdentifiers as any)?.documentType || 'Fatura';
           const status = note.data.status || 'pendente';
 
           // Define a cor da borda de acento lateral com base no estado
@@ -607,7 +629,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         padding: '1px 4px',
                         borderRadius: '3px'
                       }}>
-                        #{absoluteIndex}
+                        #{displaySeqId}
                       </span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {supplierName}
@@ -667,7 +689,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Linha 2: Tags de Origem (E-mail / Upload) e Código do Arquivo */}
+                  {/* Linha 2: Tags de Origem (E-mail / Upload) e Tipo de Documento */}
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -688,8 +710,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       maxWidth: '170px'
-                    }} title={note.id}>
-                      {note.id}
+                    }} title={`Tipo de Documento: ${docType}`}>
+                      {docType}
                     </span>
                   </div>
 
@@ -734,55 +756,107 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navegação de Paginação */}
-      {totalPages > 1 && (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          padding: '0.75rem 1rem', 
-          borderTop: '1px solid #e2e8f0',
-          backgroundColor: '#ffffff',
-          flexShrink: 0
-        }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        padding: '0.75rem 0.85rem', 
+        borderTop: '1px solid #e2e8f0',
+        backgroundColor: '#ffffff',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+        width: '100%',
+        gap: '8px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ 
+            fontSize: '0.72rem', 
+            color: '#475569', 
+            fontWeight: 600,
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            padding: '2px 10px',
+            borderRadius: '12px'
+          }}>
+            Página {currentPageSafe} de {totalPages}
+          </div>
+
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            style={{
+              padding: '2px 6px',
+              fontSize: '0.7rem',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              cursor: 'pointer',
+              fontWeight: 600,
+              outline: 'none'
+            }}
+            title="Quantidade de faturas por página"
+          >
+            <option value={5}>5 / pág</option>
+            <option value={10}>10 / pág</option>
+            <option value={20}>20 / pág</option>
+            <option value={50}>50 / pág</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', width: '100%', gap: '8px' }}>
           <button 
-            disabled={currentPageSafe === 1}
+            disabled={currentPageSafe <= 1}
             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
             style={{
-              padding: '0.3rem 0.6rem',
-              fontSize: '0.7rem',
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0.42rem 0.5rem',
+              fontSize: '0.74rem',
               borderRadius: '6px',
               border: '1px solid #cbd5e1',
-              backgroundColor: currentPageSafe === 1 ? '#f8fafc' : '#ffffff',
-              color: currentPageSafe === 1 ? '#94a3b8' : '#334155',
-              cursor: currentPageSafe === 1 ? 'not-allowed' : 'pointer',
+              backgroundColor: currentPageSafe <= 1 ? '#f8fafc' : '#ffffff',
+              color: currentPageSafe <= 1 ? '#94a3b8' : '#334155',
+              cursor: currentPageSafe <= 1 ? 'not-allowed' : 'pointer',
               fontWeight: 600,
-              transition: 'background-color 0.2s'
+              transition: 'all 0.15s ease'
             }}
           >
+            <ChevronLeft size={14} />
             Anterior
           </button>
-          <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600 }}>
-            Pág. {currentPageSafe} de {totalPages}
-          </span>
+
           <button 
-            disabled={currentPageSafe === totalPages}
+            disabled={currentPageSafe >= totalPages}
             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
             style={{
-              padding: '0.3rem 0.6rem',
-              fontSize: '0.7rem',
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0.42rem 0.5rem',
+              fontSize: '0.74rem',
               borderRadius: '6px',
               border: '1px solid #cbd5e1',
-              backgroundColor: currentPageSafe === totalPages ? '#f8fafc' : '#ffffff',
-              color: currentPageSafe === totalPages ? '#94a3b8' : '#334155',
-              cursor: currentPageSafe === totalPages ? 'not-allowed' : 'pointer',
+              backgroundColor: currentPageSafe >= totalPages ? '#f8fafc' : '#ffffff',
+              color: currentPageSafe >= totalPages ? '#94a3b8' : '#334155',
+              cursor: currentPageSafe >= totalPages ? 'not-allowed' : 'pointer',
               fontWeight: 600,
-              transition: 'background-color 0.2s'
+              transition: 'all 0.15s ease'
             }}
           >
             Próximo
+            <ChevronRight size={14} />
           </button>
         </div>
-      )}
+      </div>
     </aside>
   );
 };
