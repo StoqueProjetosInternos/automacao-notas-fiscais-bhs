@@ -1745,14 +1745,15 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                           </td>
                           <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <span style={{ 
-                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#eff6ff', 
-                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#1d4ed8', 
+                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#fef3c7', 
+                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#b45309', 
+                              border: `1px solid ${log.statusArquivo === 'Excluído' ? '#fecaca' : log.statusArquivo === 'Validado' ? '#a7f3d0' : log.statusArquivo === 'Arquivado' ? '#cbd5e1' : '#fde68a'}`,
                               padding: '2px 8px', 
-                              borderRadius: '4px', 
-                              fontSize: '0.7rem', 
-                              fontWeight: 600 
+                              borderRadius: '12px', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700 
                             }}>
-                              {log.statusArquivo || 'Pendente'}
+                              {log.statusArquivo === 'Pendente' || !log.statusArquivo ? 'Pendente de Validação' : log.statusArquivo}
                             </span>
                           </td>
                           <td style={{ padding: '12px 16px', color: '#4b5563' }}>

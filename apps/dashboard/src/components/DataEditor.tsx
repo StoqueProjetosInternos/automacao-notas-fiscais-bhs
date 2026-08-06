@@ -376,11 +376,11 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             fontSize: '0.65rem', 
             fontWeight: 700, 
             textTransform: 'uppercase',
-            background: formData?.status === 'validado' ? '#ecfdf5' : '#fff7ed',
-            color: formData?.status === 'validado' ? '#059669' : '#d97706',
-            border: `1px solid ${formData?.status === 'validado' ? '#a7f3d0' : '#fed7aa'}`
+            background: formData?.status === 'validado' ? '#ecfdf5' : '#fef3c7',
+            color: formData?.status === 'validado' ? '#059669' : '#b45309',
+            border: `1px solid ${formData?.status === 'validado' ? '#a7f3d0' : '#fde68a'}`
           }}>
-            {formData?.status || 'pendente'}
+            {formData?.status === 'validado' ? 'VALIDADO' : 'PENDENTE DE VALIDAÇÃO'}
           </div>
         </div>
       </div>
@@ -688,15 +688,15 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
       <div className="action-bar" style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         gap: '8px', 
         padding: '0.75rem 1rem', 
         maxWidth: '100%', 
-        boxSizing: 'border-box',
-        overflow: 'hidden' 
+        boxSizing: 'border-box'
       }}>
+        {/* Reprocessar (Ação Secundária com Contorno) */}
         <button 
-          className="btn" 
+          className="btn btn-outline" 
           onClick={() => {
             setActiveAction('reprocess');
             onReprocess();
@@ -710,17 +710,23 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             flex: '0 0 auto',
             padding: '0.5rem 0.75rem',
             fontSize: '0.75rem',
-            backgroundColor: userRole !== 'ADMIN' ? '#e5e7eb' : '#2563eb',
-            color: userRole !== 'ADMIN' ? '#9ca3af' : 'white',
-            border: 'none',
-            transition: 'background-color 0.2s',
-            cursor: userRole !== 'ADMIN' ? 'not-allowed' : 'pointer'
+            borderColor: userRole !== 'ADMIN' ? '#e5e7eb' : '#cbd5e1',
+            backgroundColor: userRole !== 'ADMIN' ? '#f1f5f9' : '#ffffff',
+            color: userRole !== 'ADMIN' ? '#9ca3af' : '#475569',
+            cursor: userRole !== 'ADMIN' ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
-            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#1d4ed8';
+            if (userRole === 'ADMIN') {
+              e.currentTarget.style.backgroundColor = '#f8fafc';
+              e.currentTarget.style.borderColor = '#94a3b8';
+            }
           }}
           onMouseOut={(e) => {
-            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#2563eb';
+            if (userRole === 'ADMIN') {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.borderColor = '#cbd5e1';
+            }
           }}
           title={userRole !== 'ADMIN' ? 'Apenas administradores podem reprocessar OCR' : 'Reprocessar OCR Google Gemini'}
         >
@@ -728,12 +734,59 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           {loading && activeAction === 'reprocess' ? 'Reprocessando...' : 'Reprocessar'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '0 0 auto' }}>
+        {/* Salvar (Ação Secundária) */}
+        <button 
+          className="btn btn-outline" 
+          onClick={() => {
+            setActiveAction('save');
+            onSave();
+          }}
+          disabled={loading || !selectedNote}
+          style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: '6px',
+            flex: '0 0 auto',
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.75rem'
+          }}
+        >
+          {loading && activeAction === 'save' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {loading && activeAction === 'save' ? 'Salvando...' : 'Salvar'}
+        </button>
+
+        {/* Aprovar (Ação Primária com Destaque Dourado/Verde) */}
+        {formData?.status === 'validado' ? (
           <button 
             className="btn btn-outline" 
+            style={{
+              borderColor: '#f97316',
+              color: '#f97316',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              flex: '0 0 auto',
+              padding: '0.5rem 0.75rem',
+              fontSize: '0.75rem'
+            }}
             onClick={() => {
-              setActiveAction('save');
-              onSave();
+              setActiveAction('reopen');
+              onSave('pendente');
+            }}
+            disabled={loading || !selectedNote}
+            title="Mudar o status da fatura de volta para Pendente para revisão"
+          >
+            <RefreshCcw size={14} className={loading && activeAction === 'reopen' ? 'animate-spin' : ''} />
+            {loading && activeAction === 'reopen' ? 'Reabrindo...' : 'Reabrir Fatura'}
+          </button>
+        ) : (
+          <button 
+            className="btn btn-primary" 
+            onClick={() => {
+              setActiveAction('approve');
+              onSave('validado');
             }}
             disabled={loading || !selectedNote}
             style={{ 
@@ -743,60 +796,15 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               gap: '6px',
               flex: '0 0 auto',
               padding: '0.5rem 0.75rem',
-              fontSize: '0.75rem'
+              fontSize: '0.75rem',
+              backgroundColor: '#059669',
+              borderColor: '#059669'
             }}
           >
-            {loading && activeAction === 'save' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {loading && activeAction === 'save' ? 'Salvando...' : 'Salvar'}
+            {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            {loading && activeAction === 'approve' ? 'Aprovando no Zeev...' : 'Aprovar'}
           </button>
-
-          {formData?.status === 'validado' ? (
-            <button 
-              className="btn btn-outline" 
-              style={{
-                borderColor: '#f97316',
-                color: '#f97316',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                flex: '0 0 auto',
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.75rem'
-              }}
-              onClick={() => {
-                setActiveAction('reopen');
-                onSave('pendente');
-              }}
-              disabled={loading || !selectedNote}
-              title="Mudar o status da fatura de volta para Pendente para revisão"
-            >
-              <RefreshCcw size={14} className={loading && activeAction === 'reopen' ? 'animate-spin' : ''} />
-              {loading && activeAction === 'reopen' ? 'Reabrindo...' : 'Reabrir Fatura'}
-            </button>
-          ) : (
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                setActiveAction('approve');
-                onSave('validado');
-              }}
-              disabled={loading || !selectedNote}
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                gap: '6px',
-                flex: '0 0 auto',
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.75rem'
-              }}
-            >
-              {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              {loading && activeAction === 'approve' ? 'Aprovando no Zeev...' : 'Aprovar'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {showIaDisclaimer && (
