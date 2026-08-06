@@ -108,13 +108,13 @@ const renderStatusBadge = (status?: string) => {
       fontSize: '0.66rem',
       fontWeight: 700,
       color: '#b45309',
-      backgroundColor: '#fffbeb',
+      backgroundColor: '#fef3c7',
       border: '1px solid #fde68a',
       padding: '2px 8px',
       borderRadius: '12px'
     }}>
-      <Clock size={11} color="#d97706" />
-      Pendente
+      <Clock size={11} color="#b45309" />
+      Pendente de Validação
     </span>
   );
 };

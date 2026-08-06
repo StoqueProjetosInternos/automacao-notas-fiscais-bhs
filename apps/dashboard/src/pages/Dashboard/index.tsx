@@ -101,6 +101,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [historyPreviewPdfUrl, setHistoryPreviewPdfUrl] = useState<string | null>(null);
   const [historyPreviewTitle, setHistoryPreviewTitle] = useState<string>('');
   const [historyAiStatusFilter, setHistoryAiStatusFilter] = useState('');
+  const [historySortField, setHistorySortField] = useState<string>('dataHora');
+  const [historySortOrder, setHistorySortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
@@ -135,7 +137,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [historySearchTerm, historyModelFilter, historyDateFilter, historyFileStatusFilter, historyAiStatusFilter, historyUserFilter, historyOriginFilter]);
+  }, [historySearchTerm, historyModelFilter, historyDateFilter, historyFileStatusFilter, historyAiStatusFilter, historyUserFilter, historyOriginFilter, historySortField, historySortOrder]);
 
   useEffect(() => {
     setDeadlinesCurrentPage(1);
@@ -144,6 +146,15 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   useEffect(() => {
     setDeadlinesCurrentPage(1);
   }, [deadlineStatusFilter, deadlineSortField, deadlineSortOrder, deadlineSearchSupplier]);
+
+  const handleSortHistory = (field: string) => {
+    if (historySortField === field) {
+      setHistorySortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setHistorySortField(field);
+      setHistorySortOrder('asc');
+    }
+  };
 
   const availableModels = Array.from(new Set(usageLogs.map(log => log.modeloIa).filter(Boolean)));
   const availableUsers = Array.from(new Set(usageLogs.map(log => log.usuarioEmail).filter(Boolean)));
@@ -181,6 +192,66 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
     
     return matchesSearch && matchesModel && matchesUser && matchesOrigin && matchesDate && matchesFileStatus && matchesAiStatus;
+  });
+
+  filteredUsageLogs.sort((a, b) => {
+    let comparison = 0;
+    switch (historySortField) {
+      case 'id':
+        comparison = Number(a.id) - Number(b.id);
+        break;
+      case 'dataHora':
+        comparison = new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime();
+        break;
+      case 'usuario':
+        comparison = (a.usuarioEmail || a.usuarioNome || '').localeCompare(b.usuarioEmail || b.usuarioNome || '');
+        break;
+      case 'origem':
+        comparison = (a.origem || '').localeCompare(b.origem || '');
+        break;
+      case 'arquivo':
+        comparison = (a.arquivo || '').localeCompare(b.arquivo || '');
+        break;
+      case 'modeloIa':
+        comparison = (a.modeloIa || '').localeCompare(b.modeloIa || '');
+        break;
+      case 'fornecedor':
+        comparison = (a.fornecedor || '').localeCompare(b.fornecedor || '');
+        break;
+      case 'cnpj':
+        comparison = (a.cnpjFornecedor || '').localeCompare(b.cnpjFornecedor || '');
+        break;
+      case 'statusArquivo':
+        comparison = (a.statusArquivo || '').localeCompare(b.statusArquivo || '');
+        break;
+      case 'numeroDocumento':
+        comparison = (a.numeroDocumento || '').localeCompare(b.numeroDocumento || '');
+        break;
+      case 'valorFatura':
+        comparison = (a.valorFatura || 0) - (b.valorFatura || 0);
+        break;
+      case 'tokensEntrada':
+        comparison = (a.tokensEntrada || 0) - (b.tokensEntrada || 0);
+        break;
+      case 'tokensSaida':
+        comparison = (a.tokensSaida || 0) - (b.tokensSaida || 0);
+        break;
+      case 'custoUsd':
+        comparison = (a.custoUsd || 0) - (b.custoUsd || 0);
+        break;
+      case 'tempoMs':
+        comparison = (parseInt(String(a.tempoProcessamentoMs)) || 0) - (parseInt(String(b.tempoProcessamentoMs)) || 0);
+        break;
+      case 'statusIa':
+        comparison = (a.status || '').localeCompare(b.status || '');
+        break;
+      case 'zeevId':
+        comparison = (parseInt(String(a.zeevId)) || 0) - (parseInt(String(b.zeevId)) || 0);
+        break;
+      default:
+        comparison = 0;
+    }
+    return historySortOrder === 'asc' ? comparison : -comparison;
   });
 
   const totalRecords = filteredUsageLogs.length;
@@ -395,8 +466,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Estados para o painel redimensionável
-  const [editorWidth, setEditorWidth] = useState(400);
-  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [editorWidth, setEditorWidth] = useState(500);
+  const [sidebarWidth, setSidebarWidth] = useState(340);
   const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
   const [isDraggingEditor, setIsDraggingEditor] = useState(false);
 
@@ -533,8 +604,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       let newWidth = window.innerWidth - moveEvent.clientX;
-      if (newWidth < 350) newWidth = 350;
-      if (newWidth > window.innerWidth * 0.55) newWidth = window.innerWidth * 0.55;
+      if (newWidth < 400) newWidth = 400;
+      if (newWidth > window.innerWidth * 0.60) newWidth = window.innerWidth * 0.60;
       setEditorWidth(newWidth);
     };
 
@@ -554,8 +625,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       let newWidth = moveEvent.clientX;
-      if (newWidth < 220) newWidth = 220;
-      if (newWidth > 450) newWidth = 450;
+      if (newWidth < 260) newWidth = 260;
+      if (newWidth > 500) newWidth = 500;
       setSidebarWidth(newWidth);
     };
 
@@ -618,6 +689,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       await updateNote(selectedNote.id, copy);
       if (statusOverride === 'validado') {
         showToast('O processo foi criado no Zeev com sucesso.', 'success');
+      } else if (statusOverride === 'pendente') {
+        showToast('Fatura reaberta com sucesso. O status retornou para Pendente de Validação.', 'info');
       } else {
         showToast('Dados contábeis e planilha de rateio salvos.', 'success');
       }
@@ -632,9 +705,12 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     } catch (error: any) {
       console.error('Erro ao salvar dados contábeis:', error);
       const backendError = error.response?.data?.error;
-      const defaultError = statusOverride === 'validado'
-        ? 'Erro ao criar o processo no Zeev.'
-        : 'Erro ao salvar os dados contábeis.';
+      let defaultError = 'Erro ao salvar os dados contábeis.';
+      if (statusOverride === 'validado') {
+        defaultError = 'Erro ao criar o processo no Zeev.';
+      } else if (statusOverride === 'pendente') {
+        defaultError = 'Erro ao reabrir a fatura.';
+      }
       const msg = backendError || defaultError;
       showToast(msg, 'error');
     } finally {
@@ -1433,23 +1509,125 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 <table style={{ width: '100%', minWidth: '2150px', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left', fontSize: '0.8rem', tableLayout: 'fixed' }}>
                   <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                     <tr style={{ background: '#f9fafb' }}>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '60px' }}>ID</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '150px' }}>Data/Hora</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '180px' }}>Usuário Responsável</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '130px' }}>Origem</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '200px' }}>Arquivo</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '120px' }}>Modelo</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '250px' }}>Fornecedor</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '140px' }}>CNPJ</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '130px' }}>Status do Arquivo</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '130px' }}>Doc. Fiscal</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'right', width: '120px' }}>Vlr. Fatura</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tokens Ent.</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tokens Saí.</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}>Custo (USD)</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tempo (ms)</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}>Status IA</th>
-                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '120px' }}>ID Zeev</th>
+                      <th 
+                        onClick={() => handleSortHistory('id')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'id' ? '#2563eb' : '#4b5563', width: '70px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por ID"
+                      >
+                        ID {historySortField === 'id' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('dataHora')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'dataHora' ? '#2563eb' : '#4b5563', width: '150px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Data/Hora"
+                      >
+                        Data/Hora {historySortField === 'dataHora' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('usuario')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'usuario' ? '#2563eb' : '#4b5563', width: '180px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Usuário Responsável"
+                      >
+                        Usuário Responsável {historySortField === 'usuario' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('origem')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'origem' ? '#2563eb' : '#4b5563', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Origem"
+                      >
+                        Origem {historySortField === 'origem' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('arquivo')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'arquivo' ? '#2563eb' : '#4b5563', width: '200px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Nome do Arquivo"
+                      >
+                        Arquivo {historySortField === 'arquivo' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('modeloIa')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'modeloIa' ? '#2563eb' : '#4b5563', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Modelo de IA"
+                      >
+                        Modelo {historySortField === 'modeloIa' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('fornecedor')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'fornecedor' ? '#2563eb' : '#4b5563', width: '250px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Fornecedor"
+                      >
+                        Fornecedor {historySortField === 'fornecedor' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('cnpj')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'cnpj' ? '#2563eb' : '#4b5563', width: '140px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por CNPJ do Fornecedor"
+                      >
+                        CNPJ {historySortField === 'cnpj' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('statusArquivo')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'statusArquivo' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '140px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Status do Arquivo"
+                      >
+                        Status do Arquivo {historySortField === 'statusArquivo' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('numeroDocumento')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'numeroDocumento' ? '#2563eb' : '#4b5563', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Número do Documento Fiscal"
+                      >
+                        Doc. Fiscal {historySortField === 'numeroDocumento' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('valorFatura')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'valorFatura' ? '#2563eb' : '#4b5563', textAlign: 'right', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Valor da Fatura"
+                      >
+                        Vlr. Fatura {historySortField === 'valorFatura' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('tokensEntrada')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'tokensEntrada' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Tokens de Entrada"
+                      >
+                        Tokens Ent. {historySortField === 'tokensEntrada' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('tokensSaida')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'tokensSaida' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Tokens de Saída"
+                      >
+                        Tokens Saí. {historySortField === 'tokensSaida' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('custoUsd')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'custoUsd' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Custo em USD"
+                      >
+                        Custo (USD) {historySortField === 'custoUsd' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('tempoMs')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'tempoMs' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Tempo de Processamento"
+                      >
+                        Tempo (ms) {historySortField === 'tempoMs' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('statusIa')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'statusIa' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Status da IA"
+                      >
+                        Status IA {historySortField === 'statusIa' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('zeevId')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'zeevId' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por ID Zeev"
+                      >
+                        ID Zeev {historySortField === 'zeevId' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1567,14 +1745,15 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                           </td>
                           <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <span style={{ 
-                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#eff6ff', 
-                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#1d4ed8', 
+                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#fef3c7', 
+                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#b45309', 
+                              border: `1px solid ${log.statusArquivo === 'Excluído' ? '#fecaca' : log.statusArquivo === 'Validado' ? '#a7f3d0' : log.statusArquivo === 'Arquivado' ? '#cbd5e1' : '#fde68a'}`,
                               padding: '2px 8px', 
-                              borderRadius: '4px', 
-                              fontSize: '0.7rem', 
-                              fontWeight: 600 
+                              borderRadius: '12px', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700 
                             }}>
-                              {log.statusArquivo || 'Pendente'}
+                              {log.statusArquivo === 'Pendente' || !log.statusArquivo ? 'Pendente de Validação' : log.statusArquivo}
                             </span>
                           </td>
                           <td style={{ padding: '12px 16px', color: '#4b5563' }}>

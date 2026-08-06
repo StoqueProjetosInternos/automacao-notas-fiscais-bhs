@@ -59,6 +59,33 @@ html, body, #root {
   gap: 0.5rem;
 }
 
+/* HEADER NAV TABS */
+.nav-tab {
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  outline: none;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.nav-tab:hover {
+  color: #111827;
+  background-color: #f3f4f6;
+}
+
+.nav-tab.active {
+  font-weight: 700;
+  color: #2FC808;
+  border-bottom-color: #2FC808;
+  background-color: #f0fdf4;
+}
+
 /* CONTENT AREA */
 .content-area {
   display: flex;

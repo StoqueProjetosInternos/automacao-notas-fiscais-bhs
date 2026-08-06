@@ -62,38 +62,16 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           Fiscal Intelligence (SFI)
         </span>
       </div>
-      <nav style={{ display: 'flex', gap: '16px', marginLeft: '32px' }}>
+      <nav style={{ display: 'flex', gap: '8px', marginLeft: '32px' }}>
         <button 
-          style={{
-            background: 'transparent',
-            border: 'none',
-            fontSize: '0.85rem',
-            fontWeight: activeTab === 'notes' ? 700 : 500,
-            color: activeTab === 'notes' ? '#2FC808' : '#6b7280',
-            cursor: 'pointer',
-            padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'notes' ? '#2FC808' : 'transparent'}`,
-            transition: 'all 0.2s',
-            outline: 'none'
-          }}
+          className={`nav-tab ${activeTab === 'notes' ? 'active' : ''}`}
           onClick={() => onChangeTab('notes')}
         >
           Faturas
         </button>
         {user.role === 'ADMIN' && (
           <button 
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '0.85rem',
-              fontWeight: activeTab === 'history' ? 700 : 500,
-              color: activeTab === 'history' ? '#2FC808' : '#6b7280',
-              cursor: 'pointer',
-              padding: '6px 0',
-              borderBottom: `2px solid ${activeTab === 'history' ? '#2FC808' : 'transparent'}`,
-              transition: 'all 0.2s',
-              outline: 'none'
-            }}
+            className={`nav-tab ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => onChangeTab('history')}
           >
             Histórico
@@ -102,18 +80,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
         
         {user.role === 'ADMIN' && (
           <button 
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '0.85rem',
-              fontWeight: activeTab === 'logs' ? 700 : 500,
-              color: activeTab === 'logs' ? '#2FC808' : '#6b7280',
-              cursor: 'pointer',
-              padding: '6px 0',
-              borderBottom: `2px solid ${activeTab === 'logs' ? '#2FC808' : 'transparent'}`,
-              transition: 'all 0.2s',
-              outline: 'none'
-            }}
+            className={`nav-tab ${activeTab === 'logs' ? 'active' : ''}`}
             onClick={() => onChangeTab('logs')}
           >
             Logs
@@ -121,18 +88,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
         )}
 
         <button 
-          style={{
-            background: 'transparent',
-            border: 'none',
-            fontSize: '0.85rem',
-            fontWeight: activeTab === 'deadlines' ? 700 : 500,
-            color: activeTab === 'deadlines' ? '#2FC808' : '#6b7280',
-            cursor: 'pointer',
-            padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'deadlines' ? '#2FC808' : 'transparent'}`,
-            transition: 'all 0.2s',
-            outline: 'none'
-          }}
+          className={`nav-tab ${activeTab === 'deadlines' ? 'active' : ''}`}
           onClick={() => onChangeTab('deadlines')}
         >
           Prazos
