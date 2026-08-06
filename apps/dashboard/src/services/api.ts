@@ -76,6 +76,9 @@ export interface UsageLog {
   status?: string;
   statusArquivo?: string;
   noteId?: string;
+  usuarioEmail?: string;
+  usuarioNome?: string;
+  origem?: string;
 }
 
 export const fetchUsageLog = async (): Promise<UsageLog[]> => {

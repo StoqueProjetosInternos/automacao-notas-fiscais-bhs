@@ -259,6 +259,11 @@ export class NoteService {
             }
           }
 
+          const isManual = cols[1]?.startsWith('manual_');
+          const defaultUserEmail = isManual ? 'Upload Manual' : 'SISTEMA (E-mail)';
+          const defaultUserName = isManual ? 'Upload Manual' : 'Integração E-mail';
+          const defaultOrigem = isManual ? 'Upload Manual' : 'E-mail Sync';
+
           logs.push({
             id: i,
             noteId: matchingNote ? matchingNote.id : undefined,
@@ -275,7 +280,10 @@ export class NoteService {
             numeroDocumento: cols[10] || '',
             valorFatura: cols[11] ? parseFloat(cols[11]) : undefined,
             status: cols[12] || 'Sucesso',
-            statusArquivo: fileStatus
+            statusArquivo: fileStatus,
+            usuarioEmail: cols[13] || defaultUserEmail,
+            usuarioNome: cols[14] || defaultUserName,
+            origem: cols[15] || defaultOrigem
           });
         }
       }
@@ -423,10 +431,10 @@ export class NoteService {
     return { success: true, message: `Alertas de vencimento enviados com sucesso para ${smtpTo}.` };
   }
 
-  public static async importManualNote(tempPdfPath: string) {
+  public static async importManualNote(tempPdfPath: string, userInfo?: { email?: string; name?: string }) {
     try {
       // 1. Extração via IA Gemini
-      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath);
+      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath, userInfo);
       
       // 2. Geração da planilha Excel de rateio correspondente
       await generateRateioExcel(parsedContent, outputDir);
