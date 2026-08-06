@@ -65,7 +65,7 @@ export class ZeevClient {
       timeout: 10000
     });
 
-    console.log(response.data, 'Encontra processos');
+    console.log(response.data, 'Encontra processoos');
 
     return response.data || [];
   }
@@ -100,5 +100,65 @@ export class ZeevClient {
       timeout: 45000
     });
     return response.data;
+  }
+
+  /**
+   * Adiciona mensagem a uma instância de solicitação no Zeev via POST /api/2/messages
+   * Suporta as 3 rotas do módulo de mensagens com retentativa inteligente.
+   */
+  public static async postInstanceMessage(instanceId: number | string, messageText: string): Promise<any> {
+    const numericId = parseInt(String(instanceId), 10);
+    const idVal = !isNaN(numericId) ? numericId : instanceId;
+
+    // Tentativa 1: Rota oficial POST /api/2/messages com instanceId numérico
+    const urlMain = `${this.getBaseUrl()}/api/2/messages`;
+    console.log(`[ZeevClient] Rota 1: Enviando POST /api/2/messages para a instância ID ${idVal}...`);
+    
+    try {
+      const response = await axios.post(urlMain, {
+        instanceId: idVal,
+        message: messageText
+      }, {
+        headers: this.getHeaders(),
+        timeout: 15000
+      });
+      console.log(`[ZeevClient] Mensagem vinculada com sucesso na Rota 1:`, response.data);
+      return response.data;
+    } catch (err1: any) {
+      console.warn(`[ZeevClient] Falha na Rota 1 (instanceId):`, err1.response?.data || err1.message);
+    }
+
+    // Tentativa 2: Rota POST /api/2/messages com instanceCode string
+    try {
+      const response = await axios.post(urlMain, {
+        instanceCode: String(idVal),
+        message: messageText
+      }, {
+        headers: this.getHeaders(),
+        timeout: 15000
+      });
+      console.log(`[ZeevClient] Mensagem vinculada com sucesso na Rota 2 (instanceCode):`, response.data);
+      return response.data;
+    } catch (err2: any) {
+      console.warn(`[ZeevClient] Falha na Rota 2 (instanceCode):`, err2.response?.data || err2.message);
+    }
+
+    // Tentativa 3: Rota POST /api/2/messages/instance-task
+    const urlTask = `${this.getBaseUrl()}/api/2/messages/instance-task`;
+    console.log(`[ZeevClient] Rota 3: Tentando POST /api/2/messages/instance-task...`);
+    try {
+      const response = await axios.post(urlTask, {
+        instanceTaskId: idVal,
+        message: messageText
+      }, {
+        headers: this.getHeaders(),
+        timeout: 15000
+      });
+      console.log(`[ZeevClient] Mensagem vinculada com sucesso na Rota 3:`, response.data);
+      return response.data;
+    } catch (err3: any) {
+      console.error(`[ZeevClient] Todas as rotas de mensagens falharam para a instância ${idVal}:`, err3.response?.data || err3.message);
+      throw new Error(`[Zeev Messages] Não foi possível vincular a mensagem à instância ${idVal}. Detalhes: ${JSON.stringify(err3.response?.data || err3.message)}`);
+    }
   }
 }
