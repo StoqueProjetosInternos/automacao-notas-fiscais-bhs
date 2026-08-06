@@ -80,23 +80,25 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
         >
           Faturas
         </button>
-        <button 
-          style={{
-            background: 'transparent',
-            border: 'none',
-            fontSize: '0.85rem',
-            fontWeight: activeTab === 'history' ? 700 : 500,
-            color: activeTab === 'history' ? '#2FC808' : '#6b7280',
-            cursor: 'pointer',
-            padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'history' ? '#2FC808' : 'transparent'}`,
-            transition: 'all 0.2s',
-            outline: 'none'
-          }}
-          onClick={() => onChangeTab('history')}
-        >
-          Histórico
-        </button>
+        {user.role === 'ADMIN' && (
+          <button 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '0.85rem',
+              fontWeight: activeTab === 'history' ? 700 : 500,
+              color: activeTab === 'history' ? '#2FC808' : '#6b7280',
+              cursor: 'pointer',
+              padding: '6px 0',
+              borderBottom: `2px solid ${activeTab === 'history' ? '#2FC808' : 'transparent'}`,
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+            onClick={() => onChangeTab('history')}
+          >
+            Histórico
+          </button>
+        )}
         
         {user.role === 'ADMIN' && (
           <button 
