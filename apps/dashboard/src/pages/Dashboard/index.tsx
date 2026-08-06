@@ -1753,7 +1753,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                               fontSize: '0.72rem', 
                               fontWeight: 700 
                             }}>
-                              {log.statusArquivo === 'Pendente' || !log.statusArquivo ? 'Pendente de Validação' : log.statusArquivo}
+                              {log.statusArquivo === 'Pendente' || !log.statusArquivo ? 'Pendente' : log.statusArquivo}
                             </span>
                           </td>
                           <td style={{ padding: '12px 16px', color: '#4b5563' }}>

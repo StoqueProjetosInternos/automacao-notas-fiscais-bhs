@@ -108,8 +108,24 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
               borderRadius: '6px',
               cursor: hasSelectedNote ? 'pointer' : 'not-allowed',
               opacity: hasSelectedNote ? 1 : 0.4,
-              transition: 'all 0.15s ease'
+              transition: 'all 0.2s ease'
             }} 
+            onMouseOver={(e) => {
+              if (hasSelectedNote) {
+                e.currentTarget.style.backgroundColor = '#d1fae5';
+                e.currentTarget.style.borderColor = '#059669';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 2px 6px rgba(5, 150, 105, 0.25)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (hasSelectedNote) {
+                e.currentTarget.style.backgroundColor = '#ecfdf5';
+                e.currentTarget.style.borderColor = '#a7f3d0';
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = 'none';
+              }
+            }}
             onClick={onDownloadRateio}
             disabled={!hasSelectedNote}
             title={hasSelectedNote ? 'Baixar planilha Excel (.xlsx) de rateio da fatura selecionada' : 'Selecione uma fatura para baixar o rateio'}

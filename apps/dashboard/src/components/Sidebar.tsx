@@ -114,7 +114,7 @@ const renderStatusBadge = (status?: string) => {
       borderRadius: '12px'
     }}>
       <Clock size={11} color="#b45309" />
-      Pendente de Validação
+      Pendente
     </span>
   );
 };
