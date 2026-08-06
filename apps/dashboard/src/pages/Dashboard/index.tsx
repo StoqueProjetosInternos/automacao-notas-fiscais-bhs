@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
-import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, sendDeadlineAlerts, getFileUrl, uploadManualPdf, type UsageLog } from '../../services/api';
+import { RateioPreviewModal } from '../../components/RateioPreviewModal';
+import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, clearApiLogs, sendDeadlineAlerts, getFileUrl, uploadManualPdf, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
-import { ArrowLeft, RefreshCcw, Loader2, FileSpreadsheet, FileText, Upload } from 'lucide-react';
+import { ArrowLeft, RefreshCcw, Loader2, FileSpreadsheet, FileText, Upload, Trash2, UserCheck, DollarSign, Clock } from 'lucide-react';
 import { useActivityTimeout } from '../../hooks/useActivityTimeout';
 import baseFornecedores from '../../assets/base_fornecedores_faturas.json';
 
@@ -28,8 +30,8 @@ const parseBrazilianNumber = (val: any): number => {
   } else if (clean.includes(',')) {
     clean = clean.replace(',', '.');
   }
-  const parsed = parseFloat(clean);
-  return isNaN(parsed) ? 0 : parsed;
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
 };
 
 const sanitizeNumericFields = (obj: any) => {
@@ -85,12 +87,17 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [apiLogs, setApiLogs] = useState<string>('');
   const [loadingApiLogs, setLoadingApiLogs] = useState(false);
+  const [clearingLogs, setClearingLogs] = useState(false);
+  const [showClearLogsModal, setShowClearLogsModal] = useState(false);
+  const [isRateioPreviewOpen, setIsRateioPreviewOpen] = useState(false);
 
   // Estados para Filtros e Paginação do Histórico
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [historyModelFilter, setHistoryModelFilter] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   const [historyFileStatusFilter, setHistoryFileStatusFilter] = useState('');
+  const [historyUserFilter, setHistoryUserFilter] = useState('');
+  const [historyOriginFilter, setHistoryOriginFilter] = useState('');
   const [historyPreviewPdfUrl, setHistoryPreviewPdfUrl] = useState<string | null>(null);
   const [historyPreviewTitle, setHistoryPreviewTitle] = useState<string>('');
   const [historyAiStatusFilter, setHistoryAiStatusFilter] = useState('');
@@ -113,13 +120,22 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [deadlineSearchSupplier, setDeadlineSearchSupplier] = useState('');
   const [isSendingAlerts, setIsSendingAlerts] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const navigate = useNavigate();
 
   // Monitor de Inatividade de 15 Minutos (se inativo, chama logout)
   useActivityTimeout(onLogout, 15 * 60 * 1000);
 
+  // Trava de segurança: Apenas ADMIN pode acessar Histórico e Logs
+  useEffect(() => {
+    if (user.role !== 'ADMIN' && (activeTab === 'history' || activeTab === 'logs')) {
+      setActiveTab('notes');
+    }
+  }, [user.role, activeTab]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [historySearchTerm, historyModelFilter, historyDateFilter, historyFileStatusFilter, historyAiStatusFilter]);
+  }, [historySearchTerm, historyModelFilter, historyDateFilter, historyFileStatusFilter, historyAiStatusFilter, historyUserFilter, historyOriginFilter]);
 
   useEffect(() => {
     setDeadlinesCurrentPage(1);
@@ -130,13 +146,21 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   }, [deadlineStatusFilter, deadlineSortField, deadlineSortOrder, deadlineSearchSupplier]);
 
   const availableModels = Array.from(new Set(usageLogs.map(log => log.modeloIa).filter(Boolean)));
+  const availableUsers = Array.from(new Set(usageLogs.map(log => log.usuarioEmail).filter(Boolean)));
+  const availableOrigins = Array.from(new Set(usageLogs.map(log => log.origem).filter(Boolean)));
 
   const filteredUsageLogs = usageLogs.filter((log) => {
+    const searchLower = historySearchTerm.toLowerCase();
     const matchesSearch = 
-      log.arquivo.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
-      log.fornecedor.toLowerCase().includes(historySearchTerm.toLowerCase());
+      log.arquivo.toLowerCase().includes(searchLower) ||
+      log.fornecedor.toLowerCase().includes(searchLower) ||
+      (log.numeroDocumento && log.numeroDocumento.toLowerCase().includes(searchLower)) ||
+      (log.usuarioEmail && log.usuarioEmail.toLowerCase().includes(searchLower)) ||
+      (log.usuarioNome && log.usuarioNome.toLowerCase().includes(searchLower));
     
     const matchesModel = !historyModelFilter || log.modeloIa === historyModelFilter;
+    const matchesUser = !historyUserFilter || log.usuarioEmail === historyUserFilter;
+    const matchesOrigin = !historyOriginFilter || log.origem === historyOriginFilter;
     
     let matchesDate = true;
     if (historyDateFilter) {
@@ -156,7 +180,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       matchesAiStatus = aiStatus === historyAiStatusFilter;
     }
     
-    return matchesSearch && matchesModel && matchesDate && matchesFileStatus && matchesAiStatus;
+    return matchesSearch && matchesModel && matchesUser && matchesOrigin && matchesDate && matchesFileStatus && matchesAiStatus;
   });
 
   const totalRecords = filteredUsageLogs.length;
@@ -190,6 +214,25 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       showToast('Falha ao carregar logs do servidor.', 'error');
     } finally {
       setLoadingApiLogs(false);
+    }
+  };
+
+  const handleClearLogs = () => {
+    setShowClearLogsModal(true);
+  };
+
+  const confirmClearLogsAction = async () => {
+    setShowClearLogsModal(false);
+    setClearingLogs(true);
+    try {
+      await clearApiLogs();
+      setApiLogs('');
+      showToast('Logs de execução limpos com sucesso.', 'success');
+    } catch (error) {
+      console.error('Erro ao limpar logs da API:', error);
+      showToast('Falha ao limpar logs do servidor.', 'error');
+    } finally {
+      setClearingLogs(false);
     }
   };
 
@@ -392,6 +435,28 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleDownloadSelectedNoteRateio = () => {
+    if (!selectedNote) return;
+    const excelFile = selectedNote.files?.excel || `${selectedNote.id}/${selectedNote.id}.xlsx`;
+    const downloadUrl = getFileUrl(excelFile);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${selectedNote.id}_rateio.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportPdfClick = () => {
+    handleSelectNote(null);
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
+      }
+    }, 50);
+  };
+
   const handleUploadFile = async (file: File) => {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.pdf')) {
@@ -551,7 +616,11 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     setLoading(true);
     try {
       await updateNote(selectedNote.id, copy);
-      showToast('Dados contábeis e planilha de rateio salvos.', 'success');
+      if (statusOverride === 'validado') {
+        showToast('O processo foi criado no Zeev com sucesso.', 'success');
+      } else {
+        showToast('Dados contábeis e planilha de rateio salvos.', 'success');
+      }
       
       const refreshedNotes = await fetchNotes();
       setNotes(refreshedNotes);
@@ -560,9 +629,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         setSelectedNote(updated);
         setFormData(JSON.parse(JSON.stringify(updated.data)));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar dados contábeis:', error);
-      showToast('Erro ao salvar os dados contábeis.', 'error');
+      const backendError = error.response?.data?.error;
+      const defaultError = statusOverride === 'validado'
+        ? 'Erro ao criar o processo no Zeev.'
+        : 'Erro ao salvar os dados contábeis.';
+      const msg = backendError || defaultError;
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -651,13 +725,25 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     }
   };
 
+  const handleExitDashboard = async (target: string) => {
+    if (target === 'logout') {
+      handleLogoutWithToast();
+      return;
+    }
+    setIsExiting(true);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    navigate(target);
+  };
+
   const exportToExcel = () => {
     try {
-      const headers = ['ID', 'Data/Hora', 'Arquivo', 'Modelo IA', 'Fornecedor', 'CNPJ Fornecedor', 'Status Fatura', 'Numero Documento', 'Valor Fatura', 'Tokens Entrada', 'Tokens Saida', 'Custo USD', 'Tempo Ms', 'Status IA', 'Zeev ID'];
+      const headers = ['ID', 'Data/Hora', 'Usuário / Responsável', 'Origem', 'Arquivo', 'Modelo IA', 'Fornecedor', 'CNPJ Fornecedor', 'Status Fatura', 'Numero Documento', 'Valor Fatura', 'Tokens Entrada', 'Tokens Saida', 'Custo USD', 'Tempo Ms', 'Status IA', 'Zeev ID'];
       
       const rows = filteredUsageLogs.map(log => [
         log.id,
         new Date(log.dataHora).toLocaleString('pt-BR'),
+        log.usuarioEmail || log.usuarioNome || 'SISTEMA',
+        log.origem || 'E-mail Sync',
         log.arquivo,
         log.modeloIa,
         log.fornecedor,
@@ -686,12 +772,12 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `historico_processamento_${new Date().toISOString().slice(0,10)}.csv`);
+      link.setAttribute('download', `relatorio_auditoria_fiscal_${new Date().toISOString().slice(0,10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      showToast('Planilha exportada com sucesso.', 'success');
+      showToast('Relatório de auditoria em CSV exportado com sucesso.', 'success');
     } catch (err) {
       console.error('Erro ao exportar planilha:', err);
       showToast('Falha ao exportar planilha.', 'error');
@@ -702,7 +788,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     try {
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
-        showToast('Falha ao abrir janela de impressao. Verifique o bloqueador de pop-ups.', 'error');
+        showToast('Falha ao abrir janela de impressão. Verifique o bloqueador de pop-ups.', 'error');
         return;
       }
 
@@ -713,14 +799,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         return '<tr>' +
           '<td>#' + log.id + '</td>' +
           '<td>' + new Date(log.dataHora).toLocaleString('pt-BR') + '</td>' +
+          '<td>' + (log.usuarioEmail || log.usuarioNome || 'SISTEMA') + '</td>' +
+          '<td>' + (log.origem || 'E-mail Sync') + '</td>' +
           '<td>' + log.arquivo + '</td>' +
-          '<td>' + log.modeloIa + '</td>' +
           '<td>' + (log.fornecedor || 'N/D') + '</td>' +
           '<td>' + (log.statusArquivo || 'Pendente') + '</td>' +
           '<td>' + (log.numeroDocumento || 'N/D') + '</td>' +
           '<td style="text-align: right;">' + valStr + '</td>' +
           '<td style="text-align: center;">' + (log.status || 'Sucesso') + '</td>' +
-          '<td>' + (log.zeevId || '') + '</td>' +
           '</tr>';
       }).join('');
 
@@ -788,12 +874,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogoutAction = () => {
+  const confirmLogoutAction = async () => {
     setShowLogoutModal(false);
     showToast('Obrigado por utilizar o Fiscal Intelligence (SFI). Até logo!', 'success');
-    setTimeout(() => {
-      onLogout();
-    }, 1500);
+    // Aguarda 1.1s mostrando o toast, depois inicia o fade-out por 400ms (total 1.5s)
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    setIsExiting(true);
+    await new Promise(resolve => setTimeout(resolve, 400));
+    onLogout();
   };
 
   // Computação e Paginação da Lista de Prazos combinando reais e mocks
@@ -870,20 +958,33 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const paginatedDeadlines = filteredDeadlines.slice(deadlinesStartIndex, deadlinesStartIndex + deadlinesRecordsPerPage);
 
   return (
-    <div className="layout">
+    <div className={`layout fade-in ${isExiting ? 'fade-out' : ''}`}>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".pdf"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleUploadFile(e.target.files[0]);
+          }
+        }}
+      />
       <Header 
         onSync={refreshNotesList} 
         isApiOnline={isApiOnline} 
         isSyncing={isSyncing} 
         activeTab={activeTab} 
         onChangeTab={setActiveTab} 
-        onLogout={handleLogoutWithToast}
+        onExit={handleExitDashboard}
         user={user}
+        onDownloadRateio={() => setIsRateioPreviewOpen(true)}
+        hasSelectedNote={!!selectedNote}
       />
 
       <div className="content-area">
         {activeTab === 'notes' ? (
-          <>
+          <div className="fade-in" key="notes" style={{ display: 'flex', flex: 1, overflow: 'hidden', width: '100%' }}>
             <Sidebar 
               notes={notes} 
               selectedNoteId={selectedNote?.id} 
@@ -894,7 +995,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
               userRole={user.role}
-              onImportClick={() => handleSelectNote(null)}
+              onImportClick={handleImportPdfClick}
               style={{ '--sidebar-width-dynamic': `${sidebarWidth}px` } as React.CSSProperties}
             />
 
@@ -935,17 +1036,6 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 </>
               ) : (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', boxSizing: 'border-box' }}>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    style={{ display: 'none' }} 
-                    accept=".pdf"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleUploadFile(e.target.files[0]);
-                      }
-                    }}
-                  />
                   
                   {isUploading ? (
                     <div style={{ 
@@ -963,8 +1053,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                     }}>
                       <Loader2 className="animate-spin" size={48} color="#2563eb" />
                       <div style={{ textAlign: 'center' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>Processando OCR Inteligente</h3>
-                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Extraindo rateios contábeis via Google Gemini...</p>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>Processando OCR</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Extraindo rateios via IA...</p>
                       </div>
                     </div>
                   ) : (
@@ -1002,9 +1092,9 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : activeTab === 'history' ? (
-          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+          <div className="fade-in" key="history" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1059,10 +1149,79 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 </div>
               </div>
 
+              {/* Painel de Indicadores Executivos e Auditoria */}
+              {(() => {
+                const totalCostUsd = filteredUsageLogs.reduce((acc, l) => acc + (l.custoUsd || 0), 0);
+                const totalCostBrl = totalCostUsd * 5.65;
+                const totalLatencyMs = filteredUsageLogs.reduce((acc, l) => acc + (parseInt(String(l.tempoProcessamentoMs)) || 0), 0);
+                const avgLatencySec = filteredUsageLogs.length > 0 ? (totalLatencyMs / filteredUsageLogs.length / 1000).toFixed(2) : '0.00';
+
+                const userCounts: Record<string, number> = {};
+                filteredUsageLogs.forEach(l => {
+                  const key = l.usuarioEmail || l.usuarioNome || 'SISTEMA (E-mail)';
+                  userCounts[key] = (userCounts[key] || 0) + 1;
+                });
+                let topUser = 'Nenhum';
+                let topUserCount = 0;
+                Object.entries(userCounts).forEach(([u, count]) => {
+                  if (count > topUserCount) {
+                    topUserCount = count;
+                    topUser = u;
+                  }
+                });
+
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                    <div className="section-card" style={{ padding: '14px 18px', background: 'white', borderLeft: '4px solid #2563eb', margin: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Faturas no Filtro</span>
+                        <FileText size={16} color="#2563eb" />
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#111827', marginTop: '4px' }}>
+                        {filteredUsageLogs.length} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280' }}>registros</span>
+                      </div>
+                    </div>
+
+                    <div className="section-card" style={{ padding: '14px 18px', background: 'white', borderLeft: '4px solid #10b981', margin: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Usuário Mais Ativo</span>
+                        <UserCheck size={16} color="#10b981" />
+                      </div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={topUser}>
+                        {topUser}
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>{topUserCount} ações registradas</span>
+                    </div>
+
+                    <div className="section-card" style={{ padding: '14px 18px', background: 'white', borderLeft: '4px solid #8b5cf6', margin: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Custo IA (Gemini)</span>
+                        <DollarSign size={16} color="#8b5cf6" />
+                      </div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', marginTop: '4px' }}>
+                        ${totalCostUsd.toFixed(4)} USD
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#6d28d9', fontWeight: 600 }}>~ R$ {totalCostBrl.toFixed(2)} BRL</span>
+                    </div>
+
+                    <div className="section-card" style={{ padding: '14px 18px', background: 'white', borderLeft: '4px solid #f59e0b', margin: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Tempo Média IA</span>
+                        <Clock size={16} color="#f59e0b" />
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#111827', marginTop: '4px' }}>
+                        {avgLatencySec} s
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 600 }}>Latência Média / Fatura</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Filtros de Busca */}
               <div style={{ 
                 display: 'flex', 
-                gap: '16px', 
+                gap: '12px', 
                 marginBottom: '20px', 
                 background: 'white', 
                 padding: '16px', 
@@ -1071,14 +1230,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 alignItems: 'center',
                 flexWrap: 'wrap'
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 250px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 220px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Pesquisa Rápida</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
                       value={historySearchTerm}
                       onChange={(e) => setHistorySearchTerm(e.target.value)}
-                      placeholder="Filtrar por nome do arquivo ou fornecedor..."
+                      placeholder="Filtrar por arquivo, fornecedor, número ou usuário..."
                       style={{
                         width: '100%',
                         padding: '8px 30px 8px 12px',
@@ -1119,7 +1278,53 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '180px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '170px' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Usuário / Responsável</label>
+                  <select
+                    value={historyUserFilter}
+                    onChange={(e) => setHistoryUserFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Todos os usuários</option>
+                    {availableUsers.map(usr => (
+                      <option key={usr} value={usr}>{usr}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '150px' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Origem</label>
+                  <select
+                    value={historyOriginFilter}
+                    onChange={(e) => setHistoryOriginFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#1f2937',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Todas as origens</option>
+                    {availableOrigins.map(orig => (
+                      <option key={orig} value={orig}>{orig}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '150px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Modelo de IA</label>
                   <select
                     value={historyModelFilter}
@@ -1142,7 +1347,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '180px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '150px' }}>
                   <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Data de Execução</label>
                   <input
                     type="date"
@@ -1160,8 +1365,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '160px' }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status do Arquivo</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '140px' }}>
+                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status Fatura</label>
                   <select
                     value={historyFileStatusFilter}
                     onChange={(e) => setHistoryFileStatusFilter(e.target.value)}
@@ -1184,29 +1389,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '160px' }}>
-                  <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status IA</label>
-                  <select
-                    value={historyAiStatusFilter}
-                    onChange={(e) => setHistoryAiStatusFilter(e.target.value)}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: '0.8rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      outline: 'none',
-                      backgroundColor: '#ffffff',
-                      color: '#1f2937',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="">Todos os status</option>
-                    <option value="Sucesso">Sucesso</option>
-                    <option value="Falha">Falha</option>
-                  </select>
-                </div>
-
-                {(historySearchTerm || historyModelFilter || historyDateFilter || historyFileStatusFilter || historyAiStatusFilter) && (
+                {(historySearchTerm || historyModelFilter || historyDateFilter || historyFileStatusFilter || historyAiStatusFilter || historyUserFilter || historyOriginFilter) && (
                   <button
                     onClick={() => {
                       setHistorySearchTerm('');
@@ -1214,6 +1397,8 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                       setHistoryDateFilter('');
                       setHistoryFileStatusFilter('');
                       setHistoryAiStatusFilter('');
+                      setHistoryUserFilter('');
+                      setHistoryOriginFilter('');
                     }}
                     style={{
                       padding: '8px 12px',
@@ -1232,26 +1417,39 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                 )}
               </div>
 
-              {/* Tabela com Scroll Customizado */}
-              <div className="custom-scrollbar" style={{ overflowX: 'auto', width: '100%', paddingBottom: '6px' }}>
-                <table style={{ width: '100%', minWidth: '1880px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem', tableLayout: 'fixed' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid #f3f4f6', background: '#f9fafb' }}>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '60px' }}>ID</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '150px' }}>Data/Hora</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '200px' }}>Arquivo</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '120px' }}>Modelo</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '250px' }}>Fornecedor</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '140px' }}>CNPJ</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '130px' }}>Status do Arquivo</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '130px' }}>Doc. Fiscal</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'right', width: '120px' }}>Vlr. Fatura</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tokens Ent.</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tokens Saí.</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}>Custo (USD)</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tempo (ms)</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}>Status IA</th>
-                      <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '120px' }}>ID Zeev</th>
+              {/* Tabela com Scroll Duplo (Horizontal Visível + Cabeçalho Fixo) */}
+              <div 
+                className="custom-scrollbar" 
+                style={{ 
+                  overflow: 'auto', 
+                  maxHeight: 'calc(100vh - 270px)', 
+                  width: '100%', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}
+              >
+                <table style={{ width: '100%', minWidth: '2150px', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left', fontSize: '0.8rem', tableLayout: 'fixed' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    <tr style={{ background: '#f9fafb' }}>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '60px' }}>ID</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '150px' }}>Data/Hora</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '180px' }}>Usuário Responsável</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '130px' }}>Origem</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '200px' }}>Arquivo</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '120px' }}>Modelo</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '250px' }}>Fornecedor</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '140px' }}>CNPJ</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '130px' }}>Status do Arquivo</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '130px' }}>Doc. Fiscal</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'right', width: '120px' }}>Vlr. Fatura</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tokens Ent.</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tokens Saí.</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}>Custo (USD)</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '100px' }}>Tempo (ms)</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}>Status IA</th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '120px' }}>ID Zeev</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1277,7 +1475,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                         </td>
                       </tr>
                     ) : (
-                      paginatedUsageLogs.map((log) => (
+                      paginatedUsageLogs.map((log, index) => (
                         <tr 
                           key={log.id} 
                           className="history-row"
@@ -1292,13 +1490,44 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                               }
                             }
                           }}
-                          style={{ cursor: log.statusArquivo !== 'Excluído' ? 'pointer' : 'default' }}
+                          style={{ 
+                            cursor: log.statusArquivo !== 'Excluído' ? 'pointer' : 'default',
+                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                            borderBottom: '1px solid #f1f5f9',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f1f5f9';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                          }}
                         >
                           <td style={{ padding: '12px 16px', color: '#6b7280', fontWeight: 'bold' }}>
                             #{log.id}
                           </td>
                           <td style={{ padding: '12px 16px', color: '#111827' }}>
                             {new Date(log.dataHora).toLocaleString('pt-BR')}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#1f2937', fontWeight: 500 }} title={log.usuarioEmail || log.usuarioNome}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <UserCheck size={13} color="#2563eb" style={{ flexShrink: 0 }} />
+                              <span style={{ fontSize: '0.76rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {log.usuarioEmail || log.usuarioNome || 'SISTEMA'}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: 600, 
+                              backgroundColor: log.origem === 'Upload Manual' ? '#eff6ff' : '#f0fdf4', 
+                              color: log.origem === 'Upload Manual' ? '#1d4ed8' : '#15803d' 
+                            }}>
+                              {log.origem || 'E-mail Sync'}
+                            </span>
                           </td>
                            <td 
                             className={log.statusArquivo !== 'Excluído' ? 'history-file-link' : ''}
@@ -1521,7 +1750,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
             </div>
           </div>
         ) : activeTab === 'deadlines' ? (
-          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
+          <div className="fade-in" key="deadlines" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <button
@@ -1897,7 +2126,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
             </div>
           </div>
         ) : (
-          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+          <div className="fade-in" key="logs" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1933,6 +2162,32 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   </h2>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    className="btn btn-outline"
+                    onClick={handleClearLogs}
+                    disabled={loadingApiLogs || clearingLogs}
+                    style={{ 
+                      padding: '6px 12px',
+                      opacity: (loadingApiLogs || clearingLogs) ? 0.7 : 1,
+                      cursor: (loadingApiLogs || clearingLogs) ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderColor: '#ef4444',
+                      color: '#ef4444'
+                    }}
+                    onMouseOver={(e) => {
+                      if (!loadingApiLogs && !clearingLogs) {
+                        e.currentTarget.style.backgroundColor = '#fef2f2';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    {clearingLogs ? 'Limpando...' : 'Limpar Logs'}
+                  </button>
                   <button
                     className="btn btn-outline"
                     onClick={loadApiLogs}
@@ -2153,6 +2408,102 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação de Limpeza de Logs */}
+      {showClearLogsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          animation: 'fadeIn 0.2s ease-out'
+        }} onClick={() => setShowClearLogsModal(false)}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '400px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            border: '1px solid #e2e8f0',
+            animation: 'slideUp 0.2s ease-out'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              color: '#0f172a'
+            }}>
+              Confirmar Limpeza de Logs
+            </h3>
+            <p style={{
+              margin: '0 0 24px 0',
+              fontSize: '0.875rem',
+              color: '#475569',
+              lineHeight: '1.5'
+            }}>
+              Deseja realmente limpar todos os logs de execução do servidor? Esta ação não pode ser desfeita.
+            </p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+                onClick={() => setShowClearLogsModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                onClick={confirmClearLogsAction}
+              >
+                Confirmar Limpeza
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Pré-visualização do Rateio Excel */}
+      <RateioPreviewModal 
+        isOpen={isRateioPreviewOpen} 
+        onClose={() => setIsRateioPreviewOpen(false)} 
+        selectedNote={selectedNote} 
+        onDownload={handleDownloadSelectedNoteRateio} 
+      />
     </div>
   );
 };

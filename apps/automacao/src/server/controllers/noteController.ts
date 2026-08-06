@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService.js';
-import { getLogsContent } from '../config/logger.js';
+import { ZeevService } from '../services/zeevService.js';
+import { getLogsContent, clearLogsContent } from '../config/logger.js';
 import fs from 'fs';
 import path from 'path';
 import { FILES_DIR } from '../config/paths.js';
@@ -22,13 +23,27 @@ export class NoteController {
     const newData = req.body;
 
     try {
+      // Se o status de transição for 'validado', executa a integração/simulação primeiro
+      if (newData.status === 'validado') {
+        console.log(`[API] Executando simulação de integração com o Zeev para fatura ${id} antes de validar.`);
+        await ZeevService.generateDryRunPayload(id as string, newData);
+      }
+
+      // Se passou pela simulação (ou se não for 'validado'), persiste as atualizações em disco
       const result = await NoteService.updateNote(id as string, newData);
+
       res.json({ ...result, message: 'Nota atualizada com sucesso' });
     } catch (error: any) {
       if (error.message === 'Nota não encontrada') {
         return res.status(404).json({ error: error.message });
       }
       console.error('[Error] Falha ao salvar nota:', error);
+
+      // Se for um erro vindo da integração com o Zeev, repassa o erro detalhado
+      if (error.message && error.message.startsWith('[Zeev]')) {
+        return res.status(400).json({ error: error.message });
+      }
+
       res.status(500).json({ error: 'Erro ao salvar arquivo' });
     }
   }
@@ -120,6 +135,16 @@ export class NoteController {
     }
   }
 
+  public static clearApiLogs(req: Request, res: Response) {
+    try {
+      clearLogsContent();
+      res.json({ success: true, message: 'Logs limpos com sucesso.' });
+    } catch (error) {
+      console.error('[Error] Falha ao limpar logs do sistema:', error);
+      res.status(500).json({ error: 'Erro ao limpar logs da API' });
+    }
+  }
+
   public static async uploadPdf(req: Request, res: Response) {
     try {
       const fileNameHeader = req.headers['x-file-name'];
@@ -155,7 +180,8 @@ export class NoteController {
 
           console.log(`[API] Upload temporário salvo em: ${tempPath}`);
 
-          const result = await NoteService.importManualNote(tempPath);
+          const userObj = (req as any).user ? { email: (req as any).user.email, name: (req as any).user.name } : undefined;
+          const result = await NoteService.importManualNote(tempPath, userObj);
           
           if (fs.existsSync(tempPath)) {
             fs.unlinkSync(tempPath);

@@ -17,7 +17,7 @@ interface ExtractedData {
  * Função principal de extração utilizando Inteligência Artificial (Google Gemini).
  * Agora com alta precisão humana para qualquer layout de documento.
  */
-async function extractDataFromPDF(pdfPath: string): Promise<ExtractedData> {
+async function extractDataFromPDF(pdfPath: string, userInfo?: { email?: string; name?: string }): Promise<ExtractedData> {
   console.log(`[IA] Processando PDF: ${path.basename(pdfPath)}`);
 
   try {
@@ -25,7 +25,7 @@ async function extractDataFromPDF(pdfPath: string): Promise<ExtractedData> {
     const baseName = path.basename(pdfPath, ".pdf");
     
     // Extração Inteligente via IA - Passando o nome do arquivo para o log de consumo
-    const parsedContentRaw = await extractWithAI(dataBuffer, `${baseName}.pdf`);
+    const parsedContentRaw = await extractWithAI(dataBuffer, `${baseName}.pdf`, userInfo);
 
     // Enriquecimento de dados contábeis via base de referência
     const parsedContent = await enrichData(parsedContentRaw);

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Trash2, Archive, Upload } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Trash2, Archive, Upload, Mail, CheckCircle2, AlertCircle, Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Note } from '../types';
 
 interface SidebarProps {
@@ -41,7 +41,106 @@ const formatDate = (isoStr?: string): string => {
   }
 };
 
-export const Sidebar = ({ 
+const renderStatusBadge = (status?: string) => {
+  const st = (status || 'pendente').toLowerCase();
+  if (st === 'validado') {
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '0.66rem',
+        fontWeight: 700,
+        color: '#047857',
+        backgroundColor: '#ecfdf5',
+        border: '1px solid #a7f3d0',
+        padding: '2px 8px',
+        borderRadius: '12px'
+      }}>
+        <CheckCircle2 size={11} color="#059669" />
+        Validado
+      </span>
+    );
+  }
+  if (st === 'erro' || st === 'error') {
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '0.66rem',
+        fontWeight: 700,
+        color: '#b91c1c',
+        backgroundColor: '#fef2f2',
+        border: '1px solid #fecaca',
+        padding: '2px 8px',
+        borderRadius: '12px'
+      }}>
+        <AlertCircle size={11} color="#dc2626" />
+        Erro
+      </span>
+    );
+  }
+  if (st === 'arquivado') {
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '0.66rem',
+        fontWeight: 600,
+        color: '#475569',
+        backgroundColor: '#f1f5f9',
+        border: '1px solid #cbd5e1',
+        padding: '2px 8px',
+        borderRadius: '12px'
+      }}>
+        <Archive size={11} color="#64748b" />
+        Arquivado
+      </span>
+    );
+  }
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: '0.66rem',
+      fontWeight: 700,
+      color: '#b45309',
+      backgroundColor: '#fffbeb',
+      border: '1px solid #fde68a',
+      padding: '2px 8px',
+      borderRadius: '12px'
+    }}>
+      <Clock size={11} color="#d97706" />
+      Pendente
+    </span>
+  );
+};
+
+const renderSourceBadge = (fileName?: string) => {
+  const isManual = fileName?.startsWith('manual_');
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '3px',
+      fontSize: '0.64rem',
+      fontWeight: 500,
+      color: '#475569',
+      backgroundColor: '#f8fafc',
+      border: '1px solid #e2e8f0',
+      padding: '1px 5px',
+      borderRadius: '4px'
+    }}>
+      {isManual ? <Upload size={10} color="#64748b" /> : <Mail size={10} color="#64748b" />}
+      {isManual ? 'Manual' : 'E-mail'}
+    </span>
+  );
+};
+
+export const Sidebar: React.FC<SidebarProps> = ({ 
   notes, 
   selectedNoteId, 
   onSelectNote, 
@@ -53,17 +152,34 @@ export const Sidebar = ({
   userRole,
   onImportClick,
   style
-}: SidebarProps) => {
+}) => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [noteIdDeleting, setNoteIdDeleting] = useState<string | null>(null);
   const [noteIdArchiving, setNoteIdArchiving] = useState<string | null>(null);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  // Gerenciamento síncrono de reset de página quando a busca ou ordenação mudam
+  // Gerenciamento síncrono de reset de página quando a busca, ordenação ou aba mudam
   const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
   const [prevSortBy, setPrevSortBy] = useState(sortBy);
+  const [prevShowArchived, setPrevShowArchived] = useState(showArchived);
+
+  // Mapeia o ID permanente sequencial de cada nota em ordem cronológica de criação (1, 2, 3...)
+  const chronologicalIdMap = React.useMemo(() => {
+    const sorted = [...notes].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.id.localeCompare(b.id, undefined, { numeric: true });
+    });
+
+    const map = new Map<string, number>();
+    sorted.forEach((note, index) => {
+      map.set(note.id, index + 1);
+    });
+    return map;
+  }, [notes]);
 
   if (searchTerm !== prevSearchTerm) {
     setPrevSearchTerm(searchTerm);
@@ -71,6 +187,10 @@ export const Sidebar = ({
   }
   if (sortBy !== prevSortBy) {
     setPrevSortBy(sortBy);
+    setCurrentPage(1);
+  }
+  if (showArchived !== prevShowArchived) {
+    setPrevShowArchived(showArchived);
     setCurrentPage(1);
   }
   
@@ -115,9 +235,8 @@ export const Sidebar = ({
     );
   });
 
-  // Função utilitária para converter data brasileira (DD/MM/AAAA) para milissegundos
   const parseDate = (dateStr?: string): number => {
-    if (!dateStr) return Infinity; // Notas sem vencimento vão para o final
+    if (!dateStr) return Infinity;
     const parts = dateStr.split('/');
     if (parts.length === 3) {
       const day = parseInt(parts[0], 10);
@@ -130,7 +249,6 @@ export const Sidebar = ({
     return isNaN(d.getTime()) ? Infinity : d.getTime();
   };
 
-  // Ordena a lista com base no critério selecionado
   const sortedNotes = [...filteredNotes].sort((a, b) => {
     if (sortBy === 'recent') {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -161,7 +279,6 @@ export const Sidebar = ({
     return 0;
   });
 
-  // Cálculos de paginação
   const totalItems = sortedNotes.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -171,37 +288,45 @@ export const Sidebar = ({
 
   return (
     <aside className="sidebar" style={style}>
-      <div className="sidebar-header">
+      <div className="sidebar-header" style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
         <button 
           onClick={onImportClick}
           className="btn"
           style={{ 
             width: '100%', 
-            marginBottom: '0.75rem',
-            padding: '8px 12px',
+            marginBottom: '0.85rem',
+            padding: '9px 14px',
             fontSize: '0.78rem',
             fontWeight: 700,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            background: 'linear-gradient(135deg, #2FC808 0%, #26a306 100%)',
             color: 'white',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: '8px',
             cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)',
-            transition: 'all 0.2s',
+            boxShadow: '0 2px 5px rgba(47, 200, 8, 0.3)',
+            transition: 'all 0.2s ease',
             outline: 'none'
           }}
-          onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+          onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.08)'}
           onMouseOut={(e) => e.currentTarget.style.filter = 'none'}
           title="Importar fatura PDF manualmente"
         >
-          <Upload size={13} />
+          <Upload size={14} />
           Importar Fatura PDF
         </button>
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
+
+        {/* Abas Pílulas de Navegação */}
+        <div style={{
+          display: 'flex',
+          backgroundColor: '#f1f5f9',
+          borderRadius: '8px',
+          padding: '3px',
+          marginBottom: '0.85rem'
+        }}>
           <button 
             onClick={() => {
               setShowArchived(false);
@@ -209,17 +334,19 @@ export const Sidebar = ({
             }} 
             style={{ 
               flex: 1, 
-              padding: '8px', 
-              background: !showArchived ? '#f3f4f6' : 'transparent',
+              padding: '6px 10px', 
+              borderRadius: '6px',
               border: 'none',
+              fontSize: '0.73rem',
               fontWeight: !showArchived ? 700 : 500,
-              color: !showArchived ? '#2563eb' : '#6b7280',
-              borderBottom: !showArchived ? '2px solid #2563eb' : 'none',
+              color: !showArchived ? '#1e293b' : '#64748b',
+              backgroundColor: !showArchived ? '#ffffff' : 'transparent',
+              boxShadow: !showArchived ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
               cursor: 'pointer',
-              outline: 'none'
+              transition: 'all 0.15s ease'
             }}
           >
-            Ativas
+            Faturas Ativas
           </button>
           <button 
             onClick={() => {
@@ -228,25 +355,38 @@ export const Sidebar = ({
             }} 
             style={{ 
               flex: 1, 
-              padding: '8px', 
-              background: showArchived ? '#f3f4f6' : 'transparent',
+              padding: '6px 10px', 
+              borderRadius: '6px',
               border: 'none',
+              fontSize: '0.73rem',
               fontWeight: showArchived ? 700 : 500,
-              color: showArchived ? '#2563eb' : '#6b7280',
-              borderBottom: showArchived ? '2px solid #2563eb' : 'none',
+              color: showArchived ? '#1e293b' : '#64748b',
+              backgroundColor: showArchived ? '#ffffff' : 'transparent',
+              boxShadow: showArchived ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
               cursor: 'pointer',
-              outline: 'none'
+              transition: 'all 0.15s ease'
             }}
           >
             Arquivadas
           </button>
         </div>
+
+        {/* Campo de Pesquisa */}
         <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: 12, color: '#9ca3af' }} />
+          <Search size={14} style={{ position: 'absolute', left: 10, top: 11, color: '#94a3b8' }} />
           <input 
             className="search-box" 
-            placeholder="Pesquisar arquivos..." 
-            style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem' }}
+            placeholder="Pesquisar por fornecedor, nota ou valor..." 
+            style={{ 
+              width: '100%',
+              paddingLeft: '2.25rem', 
+              paddingRight: '2.25rem',
+              paddingTop: '0.55rem',
+              paddingBottom: '0.55rem',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.76rem'
+            }}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -261,14 +401,10 @@ export const Sidebar = ({
                 transform: 'translateY(-50%)',
                 background: 'none',
                 border: 'none',
-                color: '#9ca3af',
+                color: '#94a3b8',
                 fontSize: '1rem',
                 cursor: 'pointer',
-                padding: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                outline: 'none'
+                padding: '2px'
               }}
               title="Limpar busca"
             >
@@ -276,22 +412,23 @@ export const Sidebar = ({
             </button>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
-          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>Ordenar:</span>
+
+        {/* Ordenação */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Ordem:</span>
           <select 
             value={sortBy} 
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="sort-select"
             style={{ 
               flex: 1, 
               minWidth: 0,
-              width: '100%',
-              padding: '0.25rem 0.5rem', 
-              fontSize: '0.75rem', 
-              borderRadius: '0.375rem', 
-              border: '1px solid #d1d5db', 
+              padding: '0.35rem 0.5rem', 
+              fontSize: '0.73rem', 
+              borderRadius: '6px', 
+              border: '1px solid #cbd5e1', 
               backgroundColor: '#fff',
-              color: '#374151',
+              color: '#334155',
+              fontWeight: 500,
               outline: 'none',
               cursor: 'pointer'
             }}
@@ -305,43 +442,77 @@ export const Sidebar = ({
           </select>
         </div>
 
-        {/* Contador de Documentos */}
+        {/* Resumo do Contador */}
         <div style={{ 
           marginTop: '0.75rem',
-          padding: '0.375rem 0.5rem', 
-          fontSize: '0.7rem', 
-          color: '#4b5563', 
-          backgroundColor: '#f3f4f6',
-          borderRadius: '0.25rem',
+          padding: '0.4rem 0.6rem', 
+          fontSize: '0.68rem', 
+          color: '#475569', 
+          backgroundColor: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '6px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontWeight: 500
+          fontWeight: 600
         }}>
-          <span>Total: {notes.filter(n => showArchived ? n.data.status === 'arquivado' : n.data.status !== 'arquivado').length}</span>
-          <span>
+          <span>Total: {notes.filter(n => showArchived ? n.data.status === 'arquivado' : n.data.status !== 'arquivado').length} faturas</span>
+          <span style={{ color: '#0284c7' }}>
             {totalItems === 0 
-              ? "Nenhum encontrado" 
-              : `Filtrados: ${indexOfFirstItem + 1}-${Math.min(indexOfLastItem, totalItems)} de ${totalItems}`
+              ? "Sem resultados" 
+              : `${indexOfFirstItem + 1}-${Math.min(indexOfLastItem, totalItems)} de ${totalItems}`
             }
           </span>
         </div>
       </div>
 
-      <div className="note-list">
+      {/* Lista de Cards Compactos de Faturas */}
+      <div className="note-list" style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', flex: 1 }}>
         {currentNotes.map((note, idx) => {
-          const absoluteIndex = indexOfFirstItem + idx + 1;
+          const displaySeqId = chronologicalIdMap.get(note.id) || (indexOfFirstItem + idx + 1);
+          const isSelected = selectedNoteId === note.id;
           const isConfirmingDelete = noteIdDeleting === note.id;
           const isConfirmingArchive = noteIdArchiving === note.id;
+          const supplierName = note.data.supplier?.name || 'Fornecedor não identificado';
+          const value = note.data.financial?.originalValue || note.data.valorTotal;
+          const docType = note.data.documentType || (note.data.documentIdentifiers as any)?.documentType || 'Fatura';
+          const status = note.data.status || 'pendente';
+
+          // Define a cor da borda de acento lateral com base no estado
+          let accentColor = '#3b82f6';
+          if (status === 'validado') accentColor = '#10b981';
+          else if (status === 'erro' || status === 'error') accentColor = '#ef4444';
+          else if (status === 'pendente') accentColor = '#f59e0b';
+          if (isSelected) accentColor = '#0284c7';
 
           return (
             <div 
               key={note.id} 
-              className={`note-item ${selectedNoteId === note.id ? 'active' : ''}`}
               onClick={() => !isConfirmingDelete && !isConfirmingArchive && onSelectNote(note)}
+              style={{
+                backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
+                border: `1px solid ${isSelected ? '#bae6fd' : '#e2e8f0'}`,
+                borderLeft: `3px solid ${accentColor}`,
+                borderRadius: '8px',
+                padding: '7px 9px',
+                cursor: 'pointer',
+                boxShadow: isSelected ? '0 2px 6px rgba(2, 132, 199, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'all 0.15s ease',
+                position: 'relative'
+              }}
+              onMouseOver={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                }
+              }}
             >
               {isConfirmingDelete ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
                   <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 600 }}>Excluir esta fatura permanentemente?</span>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
@@ -351,7 +522,7 @@ export const Sidebar = ({
                       }}
                       style={{
                         flex: 1,
-                        padding: '4px 8px',
+                        padding: '3px 6px',
                         fontSize: '0.65rem',
                         background: '#ef4444',
                         color: 'white',
@@ -367,10 +538,10 @@ export const Sidebar = ({
                       onClick={() => setNoteIdDeleting(null)}
                       style={{
                         flex: 1,
-                        padding: '4px 8px',
+                        padding: '3px 6px',
                         fontSize: '0.65rem',
-                        background: '#e5e7eb',
-                        color: '#374151',
+                        background: '#e2e8f0',
+                        color: '#334155',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
@@ -382,14 +553,14 @@ export const Sidebar = ({
                   </div>
                 </div>
               ) : isConfirmingArchive ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px 0' }} onClick={(e) => e.stopPropagation()}>
-                  <span style={{ fontSize: '0.7rem', color: note.data.status === 'arquivado' ? '#059669' : '#1e40af', fontWeight: 600 }}>
-                    {note.data.status === 'arquivado' ? 'Desarquivar esta fatura?' : 'Arquivar esta fatura?'}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                  <span style={{ fontSize: '0.7rem', color: status === 'arquivado' ? '#059669' : '#1d4ed8', fontWeight: 600 }}>
+                    {status === 'arquivado' ? 'Desarquivar esta fatura?' : 'Arquivar esta fatura?'}
                   </span>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       onClick={async () => {
-                        if (note.data.status === 'arquivado') {
+                        if (status === 'arquivado') {
                           await onUnarchiveNote(note.id);
                         } else {
                           await onArchiveNote(note.id);
@@ -398,9 +569,9 @@ export const Sidebar = ({
                       }}
                       style={{
                         flex: 1,
-                        padding: '4px 8px',
+                        padding: '3px 6px',
                         fontSize: '0.65rem',
-                        background: note.data.status === 'arquivado' ? '#10b981' : '#3b82f6',
+                        background: status === 'arquivado' ? '#10b981' : '#3b82f6',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -408,16 +579,16 @@ export const Sidebar = ({
                         fontWeight: 600
                       }}
                     >
-                      {note.data.status === 'arquivado' ? 'Desarquivar' : 'Arquivar'}
+                      {status === 'arquivado' ? 'Desarquivar' : 'Arquivar'}
                     </button>
                     <button
                       onClick={() => setNoteIdArchiving(null)}
                       style={{
                         flex: 1,
-                        padding: '4px 8px',
+                        padding: '3px 6px',
                         fontSize: '0.65rem',
-                        background: '#e5e7eb',
-                        color: '#374151',
+                        background: '#e2e8f0',
+                        color: '#334155',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
@@ -430,28 +601,43 @@ export const Sidebar = ({
                 </div>
               ) : (
                 <>
-                  {/* Nome do Fornecedor em Destaque + Lixeira */}
+                  {/* Linha 1: Índice + Fornecedor + Botões de Ação */}
                   <div style={{ 
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    gap: '8px',
+                    alignItems: 'center',
+                    gap: '6px',
                     marginBottom: '3px'
                   }}>
                     <div style={{ 
-                       fontSize: '0.75rem', 
-                       fontWeight: 700,
-                       color: selectedNoteId === note.id ? '#1e40af' : '#111827', 
-                       whiteSpace: 'nowrap',
-                       overflow: 'hidden',
-                       textOverflow: 'ellipsis',
-                       flex: 1
-                    }} title={note.data.supplier?.name || 'Fornecedor não identificado'}>
-                      {absoluteIndex} - {note.data.supplier?.name || 'Fornecedor Não Identificado'}
+                      fontSize: '0.75rem', 
+                      fontWeight: 700,
+                      color: isSelected ? '#0369a1' : '#0f172a', 
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }} title={supplierName}>
+                      <span style={{ 
+                        fontSize: '0.6rem', 
+                        fontWeight: 800, 
+                        color: '#64748b',
+                        backgroundColor: '#f1f5f9',
+                        padding: '1px 4px',
+                        borderRadius: '3px'
+                      }}>
+                        #{displaySeqId}
+                      </span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {supplierName}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                       <button
-                        className="archive-btn-container"
                         onClick={(e) => {
                           e.stopPropagation();
                           setNoteIdArchiving(note.id);
@@ -459,20 +645,26 @@ export const Sidebar = ({
                         style={{
                           background: 'none',
                           border: 'none',
-                          padding: 0,
+                          padding: '1px',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          outline: 'none'
+                          color: status === 'arquivado' ? "#10b981" : "#94a3b8",
+                          transition: 'color 0.15s ease'
                         }}
-                        data-tooltip={note.data.status === 'arquivado' ? "Desarquivar fatura" : "Arquivar fatura"}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.color = status === 'arquivado' ? '#059669' : '#2563eb';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.color = status === 'arquivado' ? '#10b981' : '#94a3b8';
+                        }}
+                        title={status === 'arquivado' ? "Desarquivar fatura" : "Arquivar fatura"}
                       >
-                        <Archive size={13} color={note.data.status === 'arquivado' ? "#10b981" : "#2563eb"} />
+                        <Archive size={12} />
                       </button>
                       {userRole === 'ADMIN' && (
                         <button
-                          className="delete-btn-container"
                           onClick={(e) => {
                             e.stopPropagation();
                             setNoteIdDeleting(note.id);
@@ -480,57 +672,81 @@ export const Sidebar = ({
                           style={{
                             background: 'none',
                             border: 'none',
-                            padding: 0,
+                            padding: '1px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            outline: 'none'
+                            color: "#94a3b8"
                           }}
-                          data-tooltip="Excluir fatura"
+                          onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
+                          onMouseOut={(e) => e.currentTarget.style.color = '#94a3b8'}
+                          title="Excluir fatura"
                         >
-                          <Trash2 size={13} color="#ef4444" />
+                          <Trash2 size={12} />
                         </button>
                       )}
                     </div>
                   </div>
-                  
-                  {/* Nome do Arquivo como tag secundária */}
+
+                  {/* Linha 2: Tags de Origem (E-mail / Upload) e Tipo de Documento */}
                   <div style={{ 
-                    fontSize: '0.65rem', 
-                    color: selectedNoteId === note.id ? '#2563eb' : '#6b7280', 
-                    background: selectedNoteId === note.id ? '#eff6ff' : '#f9fafb', 
-                    padding: '2px 6px', 
-                    borderRadius: '4px', 
-                    display: 'inline-block',
-                    maxWidth: '100%',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    marginBottom: '6px',
-                    border: `1px solid ${selectedNoteId === note.id ? '#bfdbfe' : '#e5e7eb'}`
-                  }} title={note.id}>
-                    {note.id}
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '5px', 
+                    marginBottom: '4px',
+                    flexWrap: 'wrap'
+                  }}>
+                    {renderSourceBadge(note.fileName)}
+                    <span style={{ 
+                      fontSize: '0.64rem', 
+                      fontWeight: 500,
+                      color: isSelected ? '#0284c7' : '#475569', 
+                      backgroundColor: isSelected ? '#e0f2fe' : '#f8fafc',
+                      border: `1px solid ${isSelected ? '#bae6fd' : '#e2e8f0'}`,
+                      padding: '1px 5px', 
+                      borderRadius: '4px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '170px'
+                    }} title={`Tipo de Documento: ${docType}`}>
+                      {docType}
+                    </span>
                   </div>
 
+                  {/* Linha 3: Data de Importação */}
                   {note.createdAt && (
                     <div style={{ 
-                      fontSize: '0.65rem', 
-                      color: '#6b7280', 
-                      marginBottom: '6px'
+                      fontSize: '0.63rem', 
+                      color: '#64748b', 
+                      marginBottom: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: 500
                     }}>
-                      <span style={{ fontWeight: 500 }}>Importado em:</span> {formatDate(note.createdAt)}
+                      <Calendar size={10} color="#94a3b8" />
+                      <span>{formatDate(note.createdAt)}</span>
                     </div>
                   )}
 
-                  <div className="note-item-meta">
-                    <span>
-                      <span className={`status-dot status-${note.data.status || 'pendente'}`} />
-                      {note.data.status || 'pendente'}
-                    </span>
-                    <span style={{ fontWeight: 600 }}>
-                      R$ {formatValue(note.data.financial?.originalValue || note.data.valorTotal)}
-                    </span>
+                  {/* Linha 3 (Rodapé do Card): Badge de Status + Valor Financeiro em Destaque */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: '4px',
+                    borderTop: '1px solid #f1f5f9'
+                  }}>
+                    {renderStatusBadge(status)}
+                    <div style={{ 
+                      fontSize: '0.78rem', 
+                      fontWeight: 700, 
+                      color: '#334155'
+                    }}>
+                      R$ {formatValue(value)}
+                    </div>
                   </div>
                 </>
               )}
@@ -540,55 +756,107 @@ export const Sidebar = ({
       </div>
 
       {/* Navegação de Paginação */}
-      {totalPages > 1 && (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          padding: '0.75rem 1rem', 
-          borderTop: '1px solid #e5e7eb',
-          backgroundColor: '#f9fafb',
-          flexShrink: 0
-        }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        padding: '0.75rem 0.85rem', 
+        borderTop: '1px solid #e2e8f0',
+        backgroundColor: '#ffffff',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+        width: '100%',
+        gap: '8px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ 
+            fontSize: '0.72rem', 
+            color: '#475569', 
+            fontWeight: 600,
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            padding: '2px 10px',
+            borderRadius: '12px'
+          }}>
+            Página {currentPageSafe} de {totalPages}
+          </div>
+
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            style={{
+              padding: '2px 6px',
+              fontSize: '0.7rem',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              cursor: 'pointer',
+              fontWeight: 600,
+              outline: 'none'
+            }}
+            title="Quantidade de faturas por página"
+          >
+            <option value={5}>5 / pág</option>
+            <option value={10}>10 / pág</option>
+            <option value={20}>20 / pág</option>
+            <option value={50}>50 / pág</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', width: '100%', gap: '8px' }}>
           <button 
-            disabled={currentPageSafe === 1}
+            disabled={currentPageSafe <= 1}
             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
             style={{
-              padding: '0.25rem 0.5rem',
-              fontSize: '0.7rem',
-              borderRadius: '0.375rem',
-              border: '1px solid #d1d5db',
-              backgroundColor: currentPageSafe === 1 ? '#f3f4f6' : '#fff',
-              color: currentPageSafe === 1 ? '#9ca3af' : '#374151',
-              cursor: currentPageSafe === 1 ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              transition: 'background-color 0.2s'
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0.42rem 0.5rem',
+              fontSize: '0.74rem',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: currentPageSafe <= 1 ? '#f8fafc' : '#ffffff',
+              color: currentPageSafe <= 1 ? '#94a3b8' : '#334155',
+              cursor: currentPageSafe <= 1 ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+              transition: 'all 0.15s ease'
             }}
           >
+            <ChevronLeft size={14} />
             Anterior
           </button>
-          <span style={{ fontSize: '0.7rem', color: '#4b5563', fontWeight: 500 }}>
-            Pág. {currentPageSafe} de {totalPages}
-          </span>
+
           <button 
-            disabled={currentPageSafe === totalPages}
+            disabled={currentPageSafe >= totalPages}
             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
             style={{
-              padding: '0.25rem 0.5rem',
-              fontSize: '0.7rem',
-              borderRadius: '0.375rem',
-              border: '1px solid #d1d5db',
-              backgroundColor: currentPageSafe === totalPages ? '#f3f4f6' : '#fff',
-              color: currentPageSafe === totalPages ? '#9ca3af' : '#374151',
-              cursor: currentPageSafe === totalPages ? 'not-allowed' : 'pointer',
-              fontWeight: 500,
-              transition: 'background-color 0.2s'
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '0.42rem 0.5rem',
+              fontSize: '0.74rem',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: currentPageSafe >= totalPages ? '#f8fafc' : '#ffffff',
+              color: currentPageSafe >= totalPages ? '#94a3b8' : '#334155',
+              cursor: currentPageSafe >= totalPages ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+              transition: 'all 0.15s ease'
             }}
           >
             Próximo
+            <ChevronRight size={14} />
           </button>
         </div>
-      )}
+      </div>
     </aside>
   );
 };

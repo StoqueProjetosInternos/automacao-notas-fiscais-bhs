@@ -8,6 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 export const Home = () => {
   const navigate = useNavigate();
   const [metrics, setMetrics] = useState({ totalProcessed: 0, avgTimeMs: 2.5, successRate: 100 });
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     const loadMetrics = async () => {
@@ -21,8 +22,14 @@ export const Home = () => {
     loadMetrics();
   }, []);
 
+  const handleNavigateToLogin = async () => {
+    setIsExiting(true);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    navigate('/login');
+  };
+
   return (
-    <div className="home-layout">
+    <div className={`home-layout fade-in ${isExiting ? 'fade-out' : ''}`}>
       {/* Navbar */}
       <nav className="home-navbar">
         <div className="home-logo">
@@ -35,7 +42,7 @@ export const Home = () => {
         </div>
         <button 
           className="btn-primary-gradient" 
-          onClick={() => navigate('/login')}
+          onClick={handleNavigateToLogin}
         >
           Acessar Plataforma
           <ArrowRight size={14} style={{ marginLeft: '4px' }} />
@@ -48,12 +55,12 @@ export const Home = () => {
           Automação Fiscal e Rateio Financeiro de <span className="text-gradient">Faturas com IA</span>
         </h1>
         <p className="home-subtitle">
-          A plataforma da Stoque que realiza OCR inteligente via Google Gemini, enriquecimento contábil imediato e conciliação ágil de despesas corporativas em segundos.
+          A plataforma da Stoque que realiza OCR inteligente via <strong>inteligência artificial</strong>, enriquecimento contábil imediato e conciliação ágil de despesas corporativas em segundos.
         </p>
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '4rem' }}>
           <button 
             className="btn-primary-gradient big-btn" 
-            onClick={() => navigate('/login')}
+            onClick={handleNavigateToLogin}
           >
             Acessar Meu Painel
           </button>
@@ -81,7 +88,7 @@ export const Home = () => {
         <h2 className="section-title">Tecnologias Integradas na Plataforma</h2>
         <div className="features-grid">
           <div className="feature-card">
-            <Zap className="feature-icon" color="#2563eb" />
+            <Zap className="feature-icon" color="#2FC808" />
             <h3>Extração OCR Inteligente</h3>
             <p>Leitura de arquivos faturas e boletos em lote estruturado pelo modelo Google Gemini-2.5-Flash.</p>
           </div>

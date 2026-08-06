@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { FILES_DIR } from '../config/paths.js';
 import { generateRateioExcel } from '../../features/excel/generateRateioExcel.js';
-import { enrichData } from '../../features/pdf/dataEnrichment.js';
+import { enrichData, getCrDescription, getNaturezaDescription } from '../../features/pdf/dataEnrichment.js';
 import { GraphEmailPdfProcessor } from '../../features/email/searchDataFromEmail.js';
 import { extractDataFromPDF } from '../../features/pdf/extractDataFromPDF.js';
 
@@ -64,7 +64,11 @@ export class NoteService {
         const newContract = newData.accountingFields.contract;
 
         if (oldCr !== newCr) {
-          newData.accountingFields.crDescription = newCr && newCr !== 'N/A' ? `Centro de Custo ${newCr}` : 'N/A';
+          newData.accountingFields.crDescription = getCrDescription(newCr);
+        }
+
+        if (oldNatureza !== newNatureza) {
+          newData.accountingFields.naturezaDescription = getNaturezaDescription(newNatureza);
         }
 
         if (newData.apportionment && Array.isArray(newData.apportionment)) {
@@ -73,10 +77,11 @@ export class NoteService {
             
             if (oldCr && updatedItem.cr === oldCr) {
               updatedItem.cr = newCr;
-              updatedItem.crDescription = newCr && newCr !== 'N/A' ? `Centro de Custo ${newCr}` : 'N/A';
+              updatedItem.crDescription = getCrDescription(newCr);
             }
             if (oldNatureza && updatedItem.naturezaCode === oldNatureza) {
               updatedItem.naturezaCode = newNatureza;
+              updatedItem.naturezaDescription = getNaturezaDescription(newNatureza);
             }
             if (oldContract && updatedItem.contract === oldContract) {
               updatedItem.contract = newContract;
@@ -254,6 +259,11 @@ export class NoteService {
             }
           }
 
+          const isManual = cols[1]?.startsWith('manual_');
+          const defaultUserEmail = isManual ? 'Upload Manual' : 'SISTEMA (E-mail)';
+          const defaultUserName = isManual ? 'Upload Manual' : 'Integração E-mail';
+          const defaultOrigem = isManual ? 'Upload Manual' : 'E-mail Sync';
+
           logs.push({
             id: i,
             noteId: matchingNote ? matchingNote.id : undefined,
@@ -270,7 +280,10 @@ export class NoteService {
             numeroDocumento: cols[10] || '',
             valorFatura: cols[11] ? parseFloat(cols[11]) : undefined,
             status: cols[12] || 'Sucesso',
-            statusArquivo: fileStatus
+            statusArquivo: fileStatus,
+            usuarioEmail: cols[13] || defaultUserEmail,
+            usuarioNome: cols[14] || defaultUserName,
+            origem: cols[15] || defaultOrigem
           });
         }
       }
@@ -418,10 +431,10 @@ export class NoteService {
     return { success: true, message: `Alertas de vencimento enviados com sucesso para ${smtpTo}.` };
   }
 
-  public static async importManualNote(tempPdfPath: string) {
+  public static async importManualNote(tempPdfPath: string, userInfo?: { email?: string; name?: string }) {
     try {
       // 1. Extração via IA Gemini
-      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath);
+      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath, userInfo);
       
       // 2. Geração da planilha Excel de rateio correspondente
       await generateRateioExcel(parsedContent, outputDir);

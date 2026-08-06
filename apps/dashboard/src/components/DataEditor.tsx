@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { FileText, Save, Check, AlertCircle, RefreshCcw, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Save, Check, AlertCircle, RefreshCcw, Trash2, Copy, CheckCircle2 } from 'lucide-react';
 import type { Note, NoteData } from '../types';
+import crList from '../assets/cr.json';
+import naturezasList from '../assets/naturezas.json';
 
 interface DataEditorProps {
   formData: NoteData | null;
@@ -112,6 +114,54 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
   const [searchTerm, setSearchTerm] = useState('');
   const [rowToDelete, setRowToDelete] = useState<number | null>(null);
   const [skipConfirm, setSkipConfirm] = useState(() => localStorage.getItem('skip_apportionment_delete_confirm') === 'true');
+  const [showIaDisclaimer, setShowIaDisclaimer] = useState(true);
+
+  const [copiedBarcode, setCopiedBarcode] = useState(false);
+
+  const handleCopyBarcode = (code: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedBarcode(true);
+    setTimeout(() => setCopiedBarcode(false), 2500);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        onSave();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        onSave('validado');
+      }
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onSave, isModalOpen]);
+
+  // Validação Automática de Saldo de Rateio
+  const invoiceTotalValue = parseBrazilianNumber(
+    formData?.financial?.originalValue || 
+    formData?.financial?.chargedValue || 
+    (formData?.financial as any)?.totalValue || 
+    (formData as any)?.valorTotal || 0
+  );
+
+  const apportionmentTotalValue = formData?.apportionment && Array.isArray(formData.apportionment)
+    ? formData.apportionment.reduce((acc: number, item: any) => {
+        const v = parseBrazilianNumber(item.value || item.unitValue || 0);
+        return acc + v;
+      }, 0)
+    : 0;
+
+  const hasApportionment = Boolean(formData?.apportionment && Array.isArray(formData.apportionment) && formData.apportionment.length > 0);
+  const balanceDiff = invoiceTotalValue - apportionmentTotalValue;
+  const isApportionmentBalanced = Math.abs(balanceDiff) < 0.05;
 
   const steps = [
     { key: 'capture', label: 'Captura', desc: selectedNote?.fileName.startsWith('manual_') ? 'Upload' : 'E-mail' },
@@ -203,9 +253,37 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         }
       }
 
+      const isBarcodeField = key === 'barcode' || key === 'linhaDigitavel' || key === 'codigoBarras';
+
       return (
         <div key={currentPath.join('.')} className="field-group">
-          <label className="field-label">{getLabel(key)}</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <label className="field-label" style={{ marginBottom: 0 }}>{getLabel(key)}</label>
+            {isBarcodeField && displayValue && (
+              <button
+                type="button"
+                onClick={() => handleCopyBarcode(displayValue)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.68rem',
+                  padding: '2px 7px',
+                  borderRadius: '4px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: copiedBarcode ? '#ecfdf5' : '#ffffff',
+                  color: copiedBarcode ? '#047857' : '#334155',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  transition: 'all 0.15s ease'
+                }}
+                title="Copiar código de barras / linha digitável"
+              >
+                {copiedBarcode ? <Check size={11} color="#059669" /> : <Copy size={11} />}
+                {copiedBarcode ? 'Copiado!' : 'Copiar'}
+              </button>
+            )}
+          </div>
           <input 
             className="field-input"
             type="text" 
@@ -277,66 +355,147 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
       <div className="editor-content">
         {formData ? (
           <>
+            {/* Datalists de Autocomplete para CR e Natureza */}
+            <datalist id="cr-auto-options">
+              {crList.map((item) => (
+                <option key={item.codCencus} value={String(item.codCencus)}>
+                  {`${item.codCencus} - ${item.descricao}`}
+                </option>
+              ))}
+            </datalist>
+
+            <datalist id="nat-auto-options">
+              {naturezasList.map((item) => (
+                <option key={item.codNat} value={String(item.codNat)}>
+                  {`${item.codNat} - ${item.descricao}`}
+                </option>
+              ))}
+            </datalist>
+
             {/* Seção Especial de Classificação Contábil no Topo */}
-            <div className="section-card" style={{ borderLeft: '4px solid #10b981', background: '#f9fafb' }}>
-              <span className="section-title" style={{ color: '#0f766e', fontWeight: 700, display: 'block', marginBottom: '1rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="section-card" style={{ borderLeft: '4px solid #10b981', background: '#f9fafb', padding: '1rem' }}>
+              <span className="section-title" style={{ color: '#0f766e', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {/* <Calculator size={15} color="#0f766e" /> */}
                 Classificação Contábil (Rateio)
               </span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
                 <div className="field-group" style={{ marginBottom: 0 }}>
                   <label className="field-label">Código CR</label>
                   <input 
                     className="field-input"
                     type="text" 
+                    list="cr-auto-options"
+                    placeholder="Digite código ou busque descrição..."
                     value={(formData.accountingFields as any)?.cr || ''} 
-                    onChange={(e) => onInputChange(['accountingFields', 'cr'], e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onInputChange(['accountingFields', 'cr'], val);
+                      const match = crList.find(c => String(c.codCencus) === val || c.descricao.toLowerCase().includes(val.toLowerCase()));
+                      if (match) {
+                        onInputChange(['accountingFields', 'crDescription'], match.descricao);
+                      }
+                    }}
                   />
                   {(formData.accountingFields as any)?.crDescription && (
-                    <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).crDescription}>
                       {(formData.accountingFields as any).crDescription}
                     </span>
                   )}
                 </div>
+
                 <div className="field-group" style={{ marginBottom: 0 }}>
                   <label className="field-label">Código de Natureza</label>
                   <input 
                     className="field-input"
                     type="text" 
+                    list="nat-auto-options"
+                    placeholder="Digite código ou busque descrição..."
                     value={(formData.accountingFields as any)?.naturezaCode || ''} 
-                    onChange={(e) => onInputChange(['accountingFields', 'naturezaCode'], e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onInputChange(['accountingFields', 'naturezaCode'], val);
+                      const match = naturezasList.find(n => String(n.codNat) === val || n.descricao.toLowerCase().includes(val.toLowerCase()));
+                      if (match) {
+                        onInputChange(['accountingFields', 'naturezaDescription'], match.descricao);
+                      }
+                    }}
                   />
                   {(formData.accountingFields as any)?.naturezaDescription && (
-                    <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).naturezaDescription}>
                       {(formData.accountingFields as any).naturezaDescription}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="field-group" style={{ marginTop: '12px', marginBottom: 0 }}>
+
+              <div className="field-group" style={{ marginBottom: 0 }}>
                 <label className="field-label">Contrato</label>
                 <input 
                   className="field-input"
                   type="text" 
-                  value={(formData.accountingFields as any)?.contract || ''} 
+                  value={(formData.accountingFields as any)?.contract === '-' ? '0' : ((formData.accountingFields as any)?.contract || '')} 
                   onChange={(e) => onInputChange(['accountingFields', 'contract'], e.target.value)}
                 />
               </div>
+
+              {/* Card de Validação Automática de Saldo do Rateio */}
+              {hasApportionment && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  backgroundColor: isApportionmentBalanced ? '#ecfdf5' : '#fef2f2',
+                  border: `1px solid ${isApportionmentBalanced ? '#a7f3d0' : '#fecaca'}`,
+                  borderRadius: '8px',
+                  marginTop: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isApportionmentBalanced ? '#047857' : '#b91c1c', fontWeight: 600 }}>
+                    {isApportionmentBalanced ? <CheckCircle2 size={15} color="#059669" /> : <AlertCircle size={15} color="#dc2626" />}
+                    <span>
+                      {isApportionmentBalanced 
+                        ? `Rateio: R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (100% alocado)` 
+                        : `Atenção: Total dos Itens (R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) ≠ Total Fatura (R$ ${invoiceTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                      }
+                    </span>
+                  </div>
+                  {!isApportionmentBalanced && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                      Diferença: R$ {Math.abs(balanceDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Seção de Rateio Detalhado por Equipamento */}
             {formData.apportionment && Array.isArray(formData.apportionment) && formData.apportionment.length > 0 && (
-              <div className="section-card" style={{ borderLeft: '4px solid #3b82f6', background: '#f8fafc' }}>
+              <div className="section-card" style={{ borderLeft: '4px solid #2563eb', background: '#f8fafc' }}>
                 <span className="section-title" style={{ color: '#1e3a8a', fontWeight: 700, display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Itens Faturados e Rateio
                 </span>
-                <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '0 0 1rem 0' }}>
+                <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '0 0 0.75rem 0' }}>
                   Esta fatura contém {formData.apportionment.length} itens detalhados com informações de séries e classificação.
                 </p>
                 <button 
                   type="button"
-                  className="btn btn-primary"
                   onClick={() => setIsModalOpen(true)}
-                  style={{ width: '100%', fontSize: '0.75rem', padding: '8px 12px' }}
+                  style={{ 
+                    width: '100%', 
+                    fontSize: '0.75rem', 
+                    padding: '8px 12px',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
+                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
                 >
                   Visualizar e Editar Tabela de Rateio
                 </button>
@@ -344,6 +503,51 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             )}
 
             {renderRecursiveFields(formData)}
+
+            {/* Card de Trilha de Auditoria & Ciclo de Vida da Fatura */}
+            <div className="section-card" style={{ borderLeft: '4px solid #6366f1', background: '#f8fafc', padding: '1rem', marginTop: '1.25rem' }}>
+              <span className="section-title" style={{ color: '#4338ca', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileText size={15} color="#4338ca" />
+                Trilha de Auditoria & Ciclo de Vida
+              </span>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', color: '#334155' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>📥 Origem de Entrada:</span>
+                  <span style={{ fontWeight: 700, color: selectedNote?.fileName.startsWith('manual_') ? '#2563eb' : '#059669' }}>
+                    {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual via Dashboard' : 'Sincronização Automática via E-mail (Graph API)'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>🕒 Data de Recepção:</span>
+                  <span style={{ fontWeight: 600 }}>
+                    {selectedNote?.createdAt ? new Date(selectedNote.createdAt).toLocaleString('pt-BR') : 'Data registrada'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>🤖 Motor de IA & OCR:</span>
+                  <span style={{ fontWeight: 600, color: '#6d28d9' }}>
+                    Google Gemini 2.5 Flash (Leitura OCR + Enriquecimento Contábil)
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>📌 Status Atual da Curadoria:</span>
+                  <span style={{ 
+                    padding: '2px 8px', 
+                    borderRadius: '4px', 
+                    fontWeight: 700, 
+                    fontSize: '0.7rem',
+                    backgroundColor: formData?.status === 'validado' ? '#d1fae5' : '#fef3c7',
+                    color: formData?.status === 'validado' ? '#047857' : '#b45309'
+                  }}>
+                    {formData?.status === 'validado' ? '✅ Aprovada / Validada para Zeev' : '⏳ Pendente de Validação'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: '6rem' }}>
@@ -363,17 +567,17 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             alignItems: 'center', 
             gap: '6px', 
             marginRight: 'auto',
-            backgroundColor: userRole !== 'ADMIN' ? '#d1d5db' : '#10b981',
+            backgroundColor: userRole !== 'ADMIN' ? '#e5e7eb' : '#2563eb',
             color: userRole !== 'ADMIN' ? '#9ca3af' : 'white',
             border: 'none',
             transition: 'background-color 0.2s',
             cursor: userRole !== 'ADMIN' ? 'not-allowed' : 'pointer'
           }}
           onMouseOver={(e) => {
-            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#059669';
+            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#1d4ed8';
           }}
           onMouseOut={(e) => {
-            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#10b981';
+            if (userRole === 'ADMIN') e.currentTarget.style.backgroundColor = '#2563eb';
           }}
           title={userRole !== 'ADMIN' ? 'Apenas administradores podem reprocessar OCR' : 'Reprocessar OCR Google Gemini'}
         >
@@ -388,15 +592,77 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           <Save size={14} />
           Salvar
         </button>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => onSave('validado')}
-          disabled={loading || !selectedNote || formData?.status === 'validado'}
-        >
-          <Check size={14} />
-          {formData?.status === 'validado' ? 'Validado' : 'Aprovar'}
-        </button>
+        {formData?.status === 'validado' ? (
+          <button 
+            className="btn btn-outline" 
+            style={{
+              borderColor: '#f97316',
+              color: '#f97316',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onClick={() => onSave('pendente')}
+            disabled={loading || !selectedNote}
+            title="Mudar o status da fatura de volta para Pendente para revisão"
+          >
+            <RefreshCcw size={14} />
+            Reabrir Fatura
+          </button>
+        ) : (
+          <button 
+            className="btn btn-primary" 
+            onClick={() => onSave('validado')}
+            disabled={loading || !selectedNote}
+          >
+            <Check size={14} />
+            Aprovar
+          </button>
+        )}
       </div>
+
+      {showIaDisclaimer && (
+        <div style={{
+          padding: '0.75rem 1.25rem',
+          fontSize: '0.7rem',
+          color: '#6b7280',
+          backgroundColor: '#f9fafb',
+          borderTop: '1px solid #e5e7eb',
+          lineHeight: '1.4',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          position: 'relative'
+        }}>
+          <AlertCircle size={14} style={{ flexShrink: 0, color: '#9ca3af' }} />
+          <span style={{ paddingRight: '20px' }}>
+            Aviso: O processamento de dados e rateios é realizado por inteligência artificial. É indispensável revisar e validar os campos antes de aprovar a fatura.
+          </span>
+          <button 
+            type="button" 
+            onClick={() => setShowIaDisclaimer(false)} 
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: '#9ca3af',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              outline: 'none'
+            }}
+            title="Minimizar aviso"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Modal de Edição Detalhada de Rateio */}
       {isModalOpen && formData && formData.apportionment && (
@@ -419,7 +685,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               </button>
             </div>
             
-            <div className="modal-search-bar" style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: '#f9fafb', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div className="modal-search-bar" style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', background: '#f9fafb', display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <input
                   type="text"
@@ -455,6 +721,27 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                   </button>
                 )}
               </div>
+
+              {hasApportionment && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  backgroundColor: isApportionmentBalanced ? '#ecfdf5' : '#fef2f2',
+                  border: `1px solid ${isApportionmentBalanced ? '#a7f3d0' : '#fecaca'}`,
+                  borderRadius: '6px',
+                  fontSize: '0.73rem',
+                  fontWeight: 600,
+                  color: isApportionmentBalanced ? '#047857' : '#b91c1c',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {isApportionmentBalanced ? <CheckCircle2 size={14} color="#059669" /> : <AlertCircle size={14} color="#dc2626" />}
+                  <span>
+                    {isApportionmentBalanced ? 'Rateio 100% Ok' : `Dif: R$ ${Math.abs(balanceDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="modal-body" style={{ overflowY: 'auto', padding: '1.5rem', flex: 1 }}>
@@ -505,6 +792,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                         <td style={{ padding: '4px' }}>
                           <input
                             type="text"
+                            list="cr-auto-options"
                             className="field-input"
                             value={item.cr || ''}
                             placeholder={formData.accountingFields?.cr || ''}
@@ -515,6 +803,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                         <td style={{ padding: '4px' }}>
                           <input
                             type="text"
+                            list="nat-auto-options"
                             className="field-input"
                             value={item.naturezaCode || ''}
                             placeholder={formData.accountingFields?.naturezaCode || ''}
@@ -527,7 +816,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                             type="text"
                             className="field-input"
                             value={item.contract || ''}
-                            placeholder={(formData.accountingFields?.contract && formData.accountingFields?.contract !== '-') ? formData.accountingFields?.contract : ''}
+                            placeholder={(formData.accountingFields?.contract && formData.accountingFields?.contract !== '-') ? formData.accountingFields?.contract : '0'}
                             onChange={(e) => onInputChange(['apportionment', originalIndex.toString(), 'contract'], e.target.value)}
                             style={{ padding: '6px', fontSize: '0.75rem' }}
                           />

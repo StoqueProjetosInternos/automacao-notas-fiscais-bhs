@@ -12,6 +12,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,8 +28,10 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
     try {
       const response = await loginUser(email, password);
       setAuthSuccess(true);
-      // Aguarda 1.2 segundos para suavizar a transição para o usuário
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Aguarda 800ms mostrando sucesso, depois inicia fade-out por 400ms (total 1.2s)
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsExiting(true);
+      await new Promise(resolve => setTimeout(resolve, 400));
       onLoginSuccess(response.user);
       navigate('/dashboard');
     } catch (err: any) {
@@ -40,14 +43,17 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: '100vh',
-      width: '100vw',
-      backgroundColor: '#f9fafb',
-      fontFamily: 'Inter, sans-serif',
-      boxSizing: 'border-box'
-    }}>
+    <div 
+      className={isExiting ? 'fade-out' : 'fade-in'}
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        width: '100vw',
+        backgroundColor: '#f9fafb',
+        fontFamily: 'Inter, sans-serif',
+        boxSizing: 'border-box'
+      }}
+    >
       {/* Coluna Esquerda: Banner Institucional Stoque (Cores do SFI) */}
       <div style={{
         flex: 1,
@@ -106,7 +112,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                 width: '40px',
                 height: '40px',
                 border: '3px solid #f3f4f6',
-                borderTop: '3px solid #2563eb',
+                borderTop: '3px solid #2FC808',
                 borderRadius: '50%',
                 margin: '0 auto 1.5rem',
                 animation: 'spin 1s linear infinite'
@@ -245,19 +251,19 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     color: 'white',
-                    backgroundColor: loading ? 'rgba(37, 99, 235, 0.6)' : '#2563eb',
+                    backgroundColor: loading ? 'rgba(47, 200, 8, 0.6)' : '#2FC808',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: loading ? 'not-allowed' : 'pointer',
                     marginTop: '0.5rem',
                     transition: 'background-color 0.2s, transform 0.1s ease',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)'
+                    boxShadow: '0 4px 12px rgba(47, 200, 8, 0.2)'
                   }}
                   onMouseOver={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#1d4ed8';
+                    if (!loading) e.currentTarget.style.backgroundColor = '#26a306';
                   }}
                   onMouseOut={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#2563eb';
+                    if (!loading) e.currentTarget.style.backgroundColor = '#2FC808';
                   }}
                   onMouseDown={(e) => {
                     if (!loading) e.currentTarget.style.transform = 'scale(0.98)';

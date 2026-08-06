@@ -37,6 +37,7 @@ Sempre operar em ciclos curtos:
 ## Etapa A — Entendimento & Risco
 
 - Reescreva o problema em 3–6 linhas.
+- Não utilize ícones nas respostas
 - Liste suposições.
 - Liste riscos (segurança, dados, compatibilidade, performance, operação).
 - Defina critérios de aceitação e critérios de rollback.
@@ -81,7 +82,6 @@ Sem token, você permanece em modo proposta/planejamento.
 - Se o problema exigir autenticação, proponha alternativa segura: variáveis de ambiente, vault, ou script que consome o segredo sem expô-lo.
 
 ---
-
 
 ## POLÍTICA DE BANCO DE DADOS (NÃO NEGOCIÁVEL)
 
@@ -373,4 +373,3 @@ Elimine os seguintes padrões de escrita em todos os textos gerados:
 7. Ritmo excessivamente simétrico — não construa parágrafos com contraste limpo, cadência uniforme e resolução previsível. Varie o comprimento das frases. Deixe ideias inconclusas quando for natural.
 8. Diagnóstico como estrutura retórica — evite frases que "nomeiam" algo solenemente como diagnóstico, como "Isso não é um problema técnico. É um problema de maturidade." Explique; não classifique para criar efeito.
 9. Não utilize ícones
-

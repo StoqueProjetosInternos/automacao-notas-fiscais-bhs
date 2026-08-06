@@ -58,7 +58,7 @@ interface AIResponse {
 /**
  * Função que utiliza o Gemini 2.5 Flash para extrair dados com precisão humana.
  */
-export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unknown"): Promise<BoletoData> {
+export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unknown", userInfo?: { email?: string; name?: string }): Promise<BoletoData> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -108,20 +108,9 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
        - Preencha o array "apportionment" onde cada objeto tem: "description" (descrição do item/equipamento e eventuais números de série/patrimônio associados), "quantity" (quantidade do item), "unitValue" (valor unitário) e "value" (valor total do item).
 
     Validação de Regras do Processo de Pagamento Zeev:
-    Avalie o documento com base nas seguintes regras de negócio de prazos de recebimento e pagamento:
-    - Prazo Ideal de Envio: O documento deve ser enviado para pagamento com, no mínimo, 10 dias corridos de antecedência do vencimento (dueDate) em relação a hoje (${todayStr}) E no máximo 2 dias úteis após a data de emissão (issueDate) em relação a hoje (${todayStr}).
-    - Restrição de Fechamento: Notas fiscais emitidas após o dia 25 de qualquer mês estão sujeitas a recusa.
-    - Prazo Alternativo: Caso o prazo ideal não seja cumprido, a regra de pagamento sugerida deve ser "ALTERNATIVE", pois o financeiro terá até 10 dias corridos da data de hoje para pagar, independentemente do vencimento original.
-    - Parcelamento: Verifique se o documento menciona pagamento parcelado ou múltiplas parcelas.
-
-    Liberdade Criativa (additionalInfo):
-    - Além dos campos fixos, extraia QUALQUER outra informação que considerar útil para um gestor financeiro (ex: Chave PIX, Dados Bancários, Endereço do fornecedor, Alíquotas, Observações, Condições de Pagamento, etc).
-    - Coloque essas informações extras de forma estruturada dentro do objeto "additionalInfo".
-
-    Regras de Negócio:
-    - Formate todas as datas como DD/MM/AAAA.
-    - Formate valores numéricos com ponto decimal (ex: 1250.50).
-    - Se não encontrar um campo, retorne null.
+    - Se a data de emissão for após o dia 25 do mês corrente: Defina "isIssuedAfterDay25": true. Sugira a regra "ALTERNATIVE" (vencimento em 60 dias da emissão ou próximo dia 10 útil após os 60 dias).
+    - Se o vencimento for igual ou superior a 30 dias da data de emissão: Defina "isWithinIdealDeadline": true. Sugira "IDEAL".
+    - Se o vencimento for menor que 30 dias da emissão: Defina "isWithinIdealDeadline": false. Sugira "ALTERNATIVE" (vencimento ajustado para 30 dias da data de emissão).
     - IMPORTANTE: Retorne APENAS o JSON válido. Não inclua marcações extras de texto, explicações ou comentários de código.
 
     Retorne EXATAMENTE este formato JSON:
@@ -216,26 +205,25 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           if (fs.existsSync(logPath)) {
             const content = fs.readFileSync(logPath, "utf8");
             const lines = content.split("\n");
-            if (lines[0] && !lines[0].includes("cnpj_fornecedor")) {
+            if (lines[0] && !lines[0].includes("usuario_email")) {
               const migratedLines = lines.map((line, idx) => {
                 if (idx === 0) {
-                  return "data_hora,arquivo,modelo_ia,fornecedor,tokens_entrada,tokens_saida,custo_usd,tempo_processamento_ms,zeev_id,cnpj_fornecedor,numero_documento,valor_fatura,status";
+                  return "data_hora,arquivo,modelo_ia,fornecedor,tokens_entrada,tokens_saida,custo_usd,tempo_processamento_ms,zeev_id,cnpj_fornecedor,numero_documento,valor_fatura,status,usuario_email,usuario_nome,origem";
                 }
                 const trimmed = line.trim();
                 if (!trimmed) return "";
-                const parts = trimmed.split(",");
-                if (parts.length === 5) {
-                  return `${parts[0]},${parts[1]},gemini-2.5-flash,DESCONHECIDO,${parts[2]},${parts[3]},${parts[4]},N/A,,,,,`;
-                }
-                if (parts.length === 8) {
-                  return `${line.trim()},,,,,`;
+                const cols = trimmed.split(",");
+                if (cols.length < 16) {
+                  const defaultUser = cols[1]?.startsWith("manual_") ? "Upload Manual" : "SISTEMA (E-mail)";
+                  const defaultOrigem = cols[1]?.startsWith("manual_") ? "Upload Manual" : "E-mail Sync";
+                  return `${trimmed},${defaultUser},${defaultUser},${defaultOrigem}`;
                 }
                 return line;
               });
               fs.writeFileSync(logPath, migratedLines.filter(l => l.trim() !== "").join("\n") + "\n", "utf8");
             }
           } else {
-            fs.writeFileSync(logPath, "data_hora,arquivo,modelo_ia,fornecedor,tokens_entrada,tokens_saida,custo_usd,tempo_processamento_ms,zeev_id,cnpj_fornecedor,numero_documento,valor_fatura,status\n", "utf8");
+            fs.writeFileSync(logPath, "data_hora,arquivo,modelo_ia,fornecedor,tokens_entrada,tokens_saida,custo_usd,tempo_processamento_ms,zeev_id,cnpj_fornecedor,numero_documento,valor_fatura,status,usuario_email,usuario_nome,origem\n", "utf8");
           }
 
           const formattedDate = getFormattedDateTime();
@@ -245,7 +233,11 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           const docNum = aiData.document?.number || "";
           const fatValue = aiData.financial?.originalValue || 0;
 
-          const logLine = `${formattedDate},${fileName},gemini-2.5-flash,${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso\n`;
+          const userEmail = userInfo?.email || (fileName.startsWith("manual_") ? "Upload Manual" : "SISTEMA (E-mail)");
+          const userName = userInfo?.name || (fileName.startsWith("manual_") ? "Upload Manual" : "Microsoft Graph");
+          const origem = fileName.startsWith("manual_") ? "Upload Manual" : "E-mail Sync";
+
+          const logLine = `${formattedDate},${fileName},gemini-2.5-flash,${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso,${userEmail},${userName},${origem}\n`;
           fs.appendFileSync(logPath, logLine, "utf8");
         } catch (logError) {
           console.error("[AVISO] Falha ao gravar log de uso:", logError);

@@ -76,6 +76,9 @@ export interface UsageLog {
   status?: string;
   statusArquivo?: string;
   noteId?: string;
+  usuarioEmail?: string;
+  usuarioNome?: string;
+  origem?: string;
 }
 
 export const fetchUsageLog = async (): Promise<UsageLog[]> => {
@@ -132,6 +135,11 @@ export const sendDeadlineAlerts = async (items: any[]): Promise<{ success: boole
 export const fetchApiLogs = async (): Promise<string> => {
   const response = await apiClient.get<{ logs: string }>('/api/notes/logs');
   return response.data.logs;
+};
+
+export const clearApiLogs = async (): Promise<{ success: boolean, message: string }> => {
+  const response = await apiClient.post<{ success: boolean, message: string }>('/api/notes/logs/clear');
+  return response.data;
 };
 
 export const uploadManualPdf = async (file: File): Promise<any> => {

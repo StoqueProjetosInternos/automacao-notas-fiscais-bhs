@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon } from 'lucide-react';
+import { RefreshCcw, LogOut, ChevronDown, Home as HomeIcon, User, FileSpreadsheet } from 'lucide-react';
 
 interface HeaderProps {
   onSync: () => void;
@@ -8,18 +7,19 @@ interface HeaderProps {
   isSyncing: boolean;
   activeTab: 'notes' | 'history' | 'logs' | 'deadlines';
   onChangeTab: (tab: 'notes' | 'history' | 'logs' | 'deadlines') => void;
-  onLogout: () => void;
+  onExit: (target: string) => void;
   user: {
     name: string;
     email: string;
     role: string;
   };
+  onDownloadRateio?: () => void;
+  hasSelectedNote?: boolean;
 }
 
-export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onLogout, user }: HeaderProps) => {
+export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab, onExit, user, onDownloadRateio, hasSelectedNote }: HeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   // Fecha o dropdown ao clicar fora do elemento
   useEffect(() => {
@@ -34,15 +34,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
     };
   }, []);
 
-  // Calcula as iniciais baseadas no nome
-  const getInitials = (fullName?: string): string => {
-    if (!fullName) return 'S';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-    }
-    return parts[0].substring(0, 2).toUpperCase();
-  };
+
 
   return (
     <header className="header">
@@ -53,7 +45,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           width="120" 
           height="34"
           style={{ display: 'block', cursor: 'pointer' }}
-          onClick={() => navigate('/')}
+          onClick={() => onExit('/')}
           title="Ver página inicial"
         />
         <span style={{ 
@@ -77,10 +69,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             border: 'none',
             fontSize: '0.85rem',
             fontWeight: activeTab === 'notes' ? 700 : 500,
-            color: activeTab === 'notes' ? '#2563eb' : '#6b7280',
+            color: activeTab === 'notes' ? '#2FC808' : '#6b7280',
             cursor: 'pointer',
             padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'notes' ? '#2563eb' : 'transparent'}`,
+            borderBottom: `2px solid ${activeTab === 'notes' ? '#2FC808' : 'transparent'}`,
             transition: 'all 0.2s',
             outline: 'none'
           }}
@@ -88,23 +80,25 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
         >
           Faturas
         </button>
-        <button 
-          style={{
-            background: 'transparent',
-            border: 'none',
-            fontSize: '0.85rem',
-            fontWeight: activeTab === 'history' ? 700 : 500,
-            color: activeTab === 'history' ? '#2563eb' : '#6b7280',
-            cursor: 'pointer',
-            padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'history' ? '#2563eb' : 'transparent'}`,
-            transition: 'all 0.2s',
-            outline: 'none'
-          }}
-          onClick={() => onChangeTab('history')}
-        >
-          Histórico
-        </button>
+        {user.role === 'ADMIN' && (
+          <button 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: '0.85rem',
+              fontWeight: activeTab === 'history' ? 700 : 500,
+              color: activeTab === 'history' ? '#2FC808' : '#6b7280',
+              cursor: 'pointer',
+              padding: '6px 0',
+              borderBottom: `2px solid ${activeTab === 'history' ? '#2FC808' : 'transparent'}`,
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+            onClick={() => onChangeTab('history')}
+          >
+            Histórico
+          </button>
+        )}
         
         {user.role === 'ADMIN' && (
           <button 
@@ -113,10 +107,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
               border: 'none',
               fontSize: '0.85rem',
               fontWeight: activeTab === 'logs' ? 700 : 500,
-              color: activeTab === 'logs' ? '#2563eb' : '#6b7280',
+              color: activeTab === 'logs' ? '#2FC808' : '#6b7280',
               cursor: 'pointer',
               padding: '6px 0',
-              borderBottom: `2px solid ${activeTab === 'logs' ? '#2563eb' : 'transparent'}`,
+              borderBottom: `2px solid ${activeTab === 'logs' ? '#2FC808' : 'transparent'}`,
               transition: 'all 0.2s',
               outline: 'none'
             }}
@@ -132,10 +126,10 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             border: 'none',
             fontSize: '0.85rem',
             fontWeight: activeTab === 'deadlines' ? 700 : 500,
-            color: activeTab === 'deadlines' ? '#2563eb' : '#6b7280',
+            color: activeTab === 'deadlines' ? '#2FC808' : '#6b7280',
             cursor: 'pointer',
             padding: '6px 0',
-            borderBottom: `2px solid ${activeTab === 'deadlines' ? '#2563eb' : 'transparent'}`,
+            borderBottom: `2px solid ${activeTab === 'deadlines' ? '#2FC808' : 'transparent'}`,
             transition: 'all 0.2s',
             outline: 'none'
           }}
@@ -144,7 +138,29 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           Prazos
         </button>
       </nav>
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
+        {onDownloadRateio && (
+          <button 
+            className="btn btn-outline" 
+            style={{ 
+              padding: '6px 9px', 
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderColor: '#a7f3d0',
+              backgroundColor: '#ecfdf5',
+              borderRadius: '6px',
+              cursor: hasSelectedNote ? 'pointer' : 'not-allowed',
+              opacity: hasSelectedNote ? 1 : 0.4,
+              transition: 'all 0.15s ease'
+            }} 
+            onClick={onDownloadRateio}
+            disabled={!hasSelectedNote}
+            title={hasSelectedNote ? 'Baixar planilha Excel (.xlsx) de rateio da fatura selecionada' : 'Selecione uma fatura para baixar o rateio'}
+          >
+            <FileSpreadsheet size={16} color="#059669" />
+          </button>
+        )}
         <button 
           className="btn btn-outline" 
           style={{ 
@@ -195,8 +211,8 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             aria-expanded={isDropdownOpen}
           >
-            <div className={`profile-avatar ${user.role !== 'ADMIN' ? 'profile-avatar-user' : ''}`}>
-              {getInitials(user.name)}
+            <div className={`profile-avatar ${user.role !== 'ADMIN' ? 'profile-avatar-user' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={16} />
             </div>
             <ChevronDown size={14} style={{ color: '#4b5563', transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
@@ -229,7 +245,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
                 className="btn btn-outline" 
                 onClick={() => {
                   setIsDropdownOpen(false);
-                  navigate('/');
+                  onExit('/');
                 }}
                 style={{
                   display: 'flex',
@@ -250,7 +266,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
                 Página Inicial
               </button>
 
-              <button className="dropdown-logout-btn" onClick={onLogout}>
+              <button className="dropdown-logout-btn" onClick={() => onExit('logout')}>
                 <LogOut size={14} />
                 Sair da Conta
               </button>
