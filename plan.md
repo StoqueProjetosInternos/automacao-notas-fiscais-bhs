@@ -3187,3 +3187,32 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Status: Aplicado
 - Observações: Nenhuma.
 
+### CHG-0213 — Curadoria Avançada, Auditoria de Logs e Controle de Acesso ADMIN
+
+- Data/Hora: 2026-08-06 09:55
+- Contexto: Implementação de autocomplete contábil (CR/Natureza), verificação automática de saldo do rateio, cópia de código de barras, atalhos de teclado (Ctrl+S / Ctrl+Enter), rastreabilidade de usuário e origem no CSV de auditoria e restrição das abas Histórico e Logs apenas para o perfil ADMIN.
+- Objetivo: Garantir conformidade, rastreabilidade total de ações (quem/quando/o quê), produtividade na curadoria e controle de acesso por papel.
+- Escopo:
+  - `apps/dashboard/src/components/DataEditor.tsx`
+  - `apps/dashboard/src/pages/Dashboard/index.tsx`
+  - `apps/dashboard/src/components/Header.tsx`
+  - `apps/dashboard/src/services/api.ts`
+  - `apps/dashboard/src/assets/cr.json`
+  - `apps/dashboard/src/assets/naturezas.json`
+  - `apps/automacao/src/features/pdf/aiExtract.ts`
+  - `apps/automacao/src/features/pdf/extractDataFromPDF.ts`
+  - `apps/automacao/src/server/services/noteService.ts`
+  - `apps/automacao/src/server/controllers/noteController.ts`
+- Riscos:
+  - Compatibilidade com registros legados do CSV de uso. Mitigado por fallbacks automáticos para colunas ausentes.
+  - Bloqueio indevido de telas para o usuário ADMIN. Mitigado pela checagem estrita da propriedade `user.role === 'ADMIN'`.
+- Testes:
+  - Executado build da aplicação dashboard com zero erros TypeScript (`npm run build`).
+  - Executada verificação de compilação do servidor de automação com zero erros (`npx tsc --noEmit`).
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/components/Header.tsx apps/dashboard/src/services/api.ts apps/automacao/src/features/pdf/aiExtract.ts apps/automacao/src/features/pdf/extractDataFromPDF.ts apps/automacao/src/server/services/noteService.ts apps/automacao/src/server/controllers/noteController.ts`
+  2) Deletar os arquivos `apps/dashboard/src/assets/cr.json` e `apps/dashboard/src/assets/naturezas.json`
+- Status: Aplicado
+- Observações: Registro efetuado no plan.md sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
