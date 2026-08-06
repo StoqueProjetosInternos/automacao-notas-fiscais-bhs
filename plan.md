@@ -3237,8 +3237,20 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - `apps/dashboard/src/components/DataEditor.tsx`
   - `apps/dashboard/src/pages/Dashboard/index.tsx`
   - `GEMINI.MD`
-- Commit: `af9927f346f420e6d0fa1b8fcf32dbcaedb1209e`
 - Status: Aplicado
+
+### CHG-0045 — Padronização de Status Pendente e Centralização da Barra de Ações
+
+- Data/Hora: 2026-08-06 13:42
+- Contexto: Homogeneização visual e ajuste de alinhamento no Dashboard.
+- Objetivo: Unificar a cor e a etiqueta "Pendente de Validação" no topo da Curadoria, na Sidebar e no Histórico, e centralizar os botões da barra de ações.
+- Escopo:
+  - `apps/dashboard/src/components/DataEditor.tsx`
+  - `apps/dashboard/src/components/Sidebar.tsx`
+  - `apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `1b6aeb53cbbacabfa6ff0feebfb7b9264426543b`
+- Status: Aplicado
+
 
 
 
