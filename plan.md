@@ -3215,4 +3215,30 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Status: Aplicado
 - Observações: Registro efetuado no plan.md sob autorização explícita [APROVAR-CODIGO] do usuário.
 
+### CHG-0043 — Integração com Envio de Mensagens Zeev e Resolução de Dados Fiscais
+
+- Data/Hora: 2026-08-06 13:36
+- Contexto: Integração com a API de mensagens do Zeev e suporte a envio de ocorrências e notas fiscais.
+- Objetivo: Implementar o cliente Zeev para envio de mensagens via `postInstanceMessage` e resolver fallbacks de dados de fornecedor e contrato.
+- Escopo:
+  - `apps/automacao/src/infra/zeev/zeevClient.ts`
+  - `apps/automacao/src/server/services/zeevService.ts`
+- Commit: `c0c0a678b9f2e4603becd41d4940449f12335a09`
+- Status: Aplicado
+
+### CHG-0044 — Efeitos Visuais, Ordenação do Histórico, Minimização de Blocos e Ajustes de Layout no Dashboard
+
+- Data/Hora: 2026-08-06 13:36
+- Contexto: Melhorias visuais e funcionais na interface de curadoria e histórico do Dashboard.
+- Objetivo: Implementar efeito hover no menu de abas, ordenação clicável em todas as 17 colunas do Histórico, ajuste de largura dos painéis laterais, minimização individual de blocos e botão de alternância única "Expandir Todos" / "Esconder Todos".
+- Escopo:
+  - `apps/dashboard/src/App.css`
+  - `apps/dashboard/src/components/Header.tsx`
+  - `apps/dashboard/src/components/DataEditor.tsx`
+  - `apps/dashboard/src/pages/Dashboard/index.tsx`
+  - `GEMINI.MD`
+- Commit: `af9927f346f420e6d0fa1b8fcf32dbcaedb1209e`
+- Status: Aplicado
+
+
 
