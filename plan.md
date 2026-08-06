@@ -3248,8 +3248,21 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - `apps/dashboard/src/components/DataEditor.tsx`
   - `apps/dashboard/src/components/Sidebar.tsx`
   - `apps/dashboard/src/pages/Dashboard/index.tsx`
-- Commit: `1b6aeb53cbbacabfa6ff0feebfb7b9264426543b`
 - Status: Aplicado
+
+### CHG-0046 — Efeito Hover no Botão de Rateio e Simplificação de Rótulos de Status
+
+- Data/Hora: 2026-08-06 14:13
+- Contexto: Melhorias visuais no cabeçalho e limpeza de rótulos no Dashboard.
+- Objetivo: Adicionar animação hover ao botão de rateio do cabeçalho e simplificar rótulos de status.
+- Escopo:
+  - `apps/dashboard/src/components/Header.tsx`
+  - `apps/dashboard/src/components/DataEditor.tsx`
+  - `apps/dashboard/src/components/Sidebar.tsx`
+  - `apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `59b36ff69ff228807d9f7831f2bc8a649ef2cbf6`
+- Status: Aplicado
+
 
 
 
