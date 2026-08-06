@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Save, Check, AlertCircle, RefreshCcw, Trash2, Copy, CheckCircle2 } from 'lucide-react';
+import { FileText, Save, Check, AlertCircle, RefreshCcw, Trash2, Copy, CheckCircle2, Loader2, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp } from 'lucide-react';
 import type { Note, NoteData } from '../types';
 import crList from '../assets/cr.json';
 import naturezasList from '../assets/naturezas.json';
@@ -115,6 +115,13 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
   const [rowToDelete, setRowToDelete] = useState<number | null>(null);
   const [skipConfirm, setSkipConfirm] = useState(() => localStorage.getItem('skip_apportionment_delete_confirm') === 'true');
   const [showIaDisclaimer, setShowIaDisclaimer] = useState(true);
+  const [activeAction, setActiveAction] = useState<'save' | 'approve' | 'reopen' | 'reprocess' | null>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      setActiveAction(null);
+    }
+  }, [loading]);
 
   const [copiedBarcode, setCopiedBarcode] = useState(false);
 
@@ -173,6 +180,33 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
 
   const currentStepIndex = formData?.status === 'validado' ? 5 : 3;
 
+  // Estado para controle de minimização de blocos
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (key: string) => {
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleExpandAll = () => {
+    setCollapsedSections({});
+  };
+
+  const handleCollapseAll = () => {
+    const allKeys: Record<string, boolean> = {
+      accounting: true,
+      apportionment: true,
+      audit: true,
+    };
+    if (formData) {
+      Object.keys(formData).forEach(k => {
+        if (k !== 'rawText' && k !== 'status' && k !== 'accountingFields') {
+          allKeys[k] = true;
+        }
+      });
+    }
+    setCollapsedSections(allKeys);
+  };
+
   const handleDeleteClick = (index: number) => {
     if (skipConfirm) {
       onDeleteApportionmentRow(index);
@@ -193,6 +227,8 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
     
     return Object.keys(obj).map(key => {
       const currentPath = [...path, key];
+      const sectionKey = currentPath.join('.');
+      const isCollapsed = Boolean(collapsedSections[sectionKey]);
       const value = obj[key];
 
       // Oculta a renderização em cascata do array de rateio para evitar poluição e lentidão
@@ -200,38 +236,60 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
 
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         return (
-          <div key={currentPath.join('.')} className="section-card">
-            <span className="section-title">{getLabel(key)}</span>
-            {renderRecursiveFields(value, currentPath)}
+          <div key={sectionKey} className="section-card">
+            <div 
+              onClick={() => toggleSection(sectionKey)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
+              title="Clique para alternar o tamanho deste bloco"
+            >
+              {isCollapsed ? <ChevronRight size={16} color="#6b7280" /> : <ChevronDown size={16} color="#6b7280" />}
+              <span className="section-title" style={{ marginBottom: 0 }}>{getLabel(key)}</span>
+            </div>
+            {!isCollapsed && (
+              <div style={{ marginTop: '0.75rem' }}>
+                {renderRecursiveFields(value, currentPath)}
+              </div>
+            )}
           </div>
         );
       }
 
       if (Array.isArray(value)) {
         return (
-          <div key={currentPath.join('.')} className="section-card array-section">
-            <span className="section-title">{getLabel(key)}</span>
-            {value.map((item, index) => {
-              const itemPath = [...currentPath, index.toString()];
-              if (typeof item === 'object') {
-                return (
-                  <div key={itemPath.join('.')} className="array-item-card">
-                    <span className="item-index-label">{getLabel(index.toString())}</span>
-                    {renderRecursiveFields(item, itemPath)}
-                  </div>
-                );
-              }
-              return (
-                <div key={itemPath.join('.')} className="field-group">
-                  <input 
-                    className="field-input"
-                    type="text" 
-                    value={item || ''} 
-                    onChange={(e) => onInputChange(itemPath, e.target.value)}
-                  />
-                </div>
-              );
-            })}
+          <div key={sectionKey} className="section-card array-section">
+            <div 
+              onClick={() => toggleSection(sectionKey)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
+              title="Clique para alternar o tamanho deste bloco"
+            >
+              {isCollapsed ? <ChevronRight size={16} color="#6b7280" /> : <ChevronDown size={16} color="#6b7280" />}
+              <span className="section-title" style={{ marginBottom: 0 }}>{getLabel(key)}</span>
+            </div>
+            {!isCollapsed && (
+              <div style={{ marginTop: '0.75rem' }}>
+                {value.map((item, index) => {
+                  const itemPath = [...currentPath, index.toString()];
+                  if (typeof item === 'object') {
+                    return (
+                      <div key={itemPath.join('.')} className="array-item-card">
+                        <span className="item-index-label">{getLabel(index.toString())}</span>
+                        {renderRecursiveFields(item, itemPath)}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={itemPath.join('.')} className="field-group">
+                      <input 
+                        className="field-input"
+                        type="text" 
+                        value={item || ''} 
+                        onChange={(e) => onInputChange(itemPath, e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       }
@@ -355,6 +413,45 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
       <div className="editor-content">
         {formData ? (
           <>
+            {/* Controle Global Dinâmico de Expansão/Minimização de Blocos */}
+            {(() => {
+              const areAllCollapsed = Boolean(collapsedSections.accounting) && Boolean(collapsedSections.audit);
+              return (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-start', 
+                  marginBottom: '10px',
+                  paddingBottom: '6px',
+                  borderBottom: '1px solid #f1f5f9'
+                }}>
+                  <button 
+                    type="button" 
+                    onClick={areAllCollapsed ? handleExpandAll : handleCollapseAll}
+                    style={{ 
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.68rem', 
+                      padding: '3px 8px', 
+                      backgroundColor: '#ffffff', 
+                      border: '1px solid #cbd5e1', 
+                      borderRadius: '4px', 
+                      color: '#475569',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+                    title={areAllCollapsed ? "Expandir todos os blocos de curadoria" : "Esconder todos os blocos de curadoria"}
+                  >
+                    {areAllCollapsed ? <ChevronsDown size={12} /> : <ChevronsUp size={12} />}
+                    {areAllCollapsed ? 'Expandir Todos' : 'Esconder Todos'}
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Datalists de Autocomplete para CR e Natureza */}
             <datalist id="cr-auto-options">
               {crList.map((item) => (
@@ -374,96 +471,106 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
 
             {/* Seção Especial de Classificação Contábil no Topo */}
             <div className="section-card" style={{ borderLeft: '4px solid #10b981', background: '#f9fafb', padding: '1rem' }}>
-              <span className="section-title" style={{ color: '#0f766e', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {/* <Calculator size={15} color="#0f766e" /> */}
-                Classificação Contábil (Rateio)
-              </span>
+              <div 
+                onClick={() => toggleSection('accounting')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
+                title="Clique para alternar o tamanho deste bloco"
+              >
+                {collapsedSections.accounting ? <ChevronRight size={16} color="#0f766e" /> : <ChevronDown size={16} color="#0f766e" />}
+                <span className="section-title" style={{ color: '#0f766e', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  Classificação Contábil (Rateio)
+                </span>
+              </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
-                <div className="field-group" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Código CR</label>
-                  <input 
-                    className="field-input"
-                    type="text" 
-                    list="cr-auto-options"
-                    placeholder="Digite código ou busque descrição..."
-                    value={(formData.accountingFields as any)?.cr || ''} 
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onInputChange(['accountingFields', 'cr'], val);
-                      const match = crList.find(c => String(c.codCencus) === val || c.descricao.toLowerCase().includes(val.toLowerCase()));
-                      if (match) {
-                        onInputChange(['accountingFields', 'crDescription'], match.descricao);
-                      }
-                    }}
-                  />
-                  {(formData.accountingFields as any)?.crDescription && (
-                    <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).crDescription}>
-                      {(formData.accountingFields as any).crDescription}
-                    </span>
-                  )}
-                </div>
+              {!collapsedSections.accounting && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                    <div className="field-group" style={{ marginBottom: 0 }}>
+                      <label className="field-label">Código CR</label>
+                      <input 
+                        className="field-input"
+                        type="text" 
+                        list="cr-auto-options"
+                        placeholder="Digite código ou busque descrição..."
+                        value={(formData.accountingFields as any)?.cr || ''} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          onInputChange(['accountingFields', 'cr'], val);
+                          const match = crList.find(c => String(c.codCencus) === val || c.descricao.toLowerCase().includes(val.toLowerCase()));
+                          if (match) {
+                            onInputChange(['accountingFields', 'crDescription'], match.descricao);
+                          }
+                        }}
+                      />
+                      {(formData.accountingFields as any)?.crDescription && (
+                        <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).crDescription}>
+                          {(formData.accountingFields as any).crDescription}
+                        </span>
+                      )}
+                    </div>
 
-                <div className="field-group" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Código de Natureza</label>
-                  <input 
-                    className="field-input"
-                    type="text" 
-                    list="nat-auto-options"
-                    placeholder="Digite código ou busque descrição..."
-                    value={(formData.accountingFields as any)?.naturezaCode || ''} 
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onInputChange(['accountingFields', 'naturezaCode'], val);
-                      const match = naturezasList.find(n => String(n.codNat) === val || n.descricao.toLowerCase().includes(val.toLowerCase()));
-                      if (match) {
-                        onInputChange(['accountingFields', 'naturezaDescription'], match.descricao);
-                      }
-                    }}
-                  />
-                  {(formData.accountingFields as any)?.naturezaDescription && (
-                    <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).naturezaDescription}>
-                      {(formData.accountingFields as any).naturezaDescription}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field-label">Contrato</label>
-                <input 
-                  className="field-input"
-                  type="text" 
-                  value={(formData.accountingFields as any)?.contract === '-' ? '0' : ((formData.accountingFields as any)?.contract || '')} 
-                  onChange={(e) => onInputChange(['accountingFields', 'contract'], e.target.value)}
-                />
-              </div>
-
-              {/* Card de Validação Automática de Saldo do Rateio */}
-              {hasApportionment && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: isApportionmentBalanced ? '#ecfdf5' : '#fef2f2',
-                  border: `1px solid ${isApportionmentBalanced ? '#a7f3d0' : '#fecaca'}`,
-                  borderRadius: '8px',
-                  marginTop: '12px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isApportionmentBalanced ? '#047857' : '#b91c1c', fontWeight: 600 }}>
-                    {isApportionmentBalanced ? <CheckCircle2 size={15} color="#059669" /> : <AlertCircle size={15} color="#dc2626" />}
-                    <span>
-                      {isApportionmentBalanced 
-                        ? `Rateio: R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (100% alocado)` 
-                        : `Atenção: Total dos Itens (R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) ≠ Total Fatura (R$ ${invoiceTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
-                      }
-                    </span>
+                    <div className="field-group" style={{ marginBottom: 0 }}>
+                      <label className="field-label">Código de Natureza</label>
+                      <input 
+                        className="field-input"
+                        type="text" 
+                        list="nat-auto-options"
+                        placeholder="Digite código ou busque descrição..."
+                        value={(formData.accountingFields as any)?.naturezaCode || ''} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          onInputChange(['accountingFields', 'naturezaCode'], val);
+                          const match = naturezasList.find(n => String(n.codNat) === val || n.descricao.toLowerCase().includes(val.toLowerCase()));
+                          if (match) {
+                            onInputChange(['accountingFields', 'naturezaDescription'], match.descricao);
+                          }
+                        }}
+                      />
+                      {(formData.accountingFields as any)?.naturezaDescription && (
+                        <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).naturezaDescription}>
+                          {(formData.accountingFields as any).naturezaDescription}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {!isApportionmentBalanced && (
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                      Diferença: R$ {Math.abs(balanceDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+
+                  <div className="field-group" style={{ marginBottom: 0 }}>
+                    <label className="field-label">Contrato</label>
+                    <input 
+                      className="field-input"
+                      type="text" 
+                      value={(formData.accountingFields as any)?.contract === '-' ? '0' : ((formData.accountingFields as any)?.contract || '')} 
+                      onChange={(e) => onInputChange(['accountingFields', 'contract'], e.target.value)}
+                    />
+                  </div>
+
+                  {/* Card de Validação Automática de Saldo do Rateio */}
+                  {hasApportionment && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      backgroundColor: isApportionmentBalanced ? '#ecfdf5' : '#fef2f2',
+                      border: `1px solid ${isApportionmentBalanced ? '#a7f3d0' : '#fecaca'}`,
+                      borderRadius: '8px',
+                      marginTop: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isApportionmentBalanced ? '#047857' : '#b91c1c', fontWeight: 600 }}>
+                        {isApportionmentBalanced ? <CheckCircle2 size={15} color="#059669" /> : <AlertCircle size={15} color="#dc2626" />}
+                        <span>
+                          {isApportionmentBalanced 
+                            ? `Rateio: R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (100% alocado)` 
+                            : `Atenção: Total dos Itens (R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) ≠ Total Fatura (R$ ${invoiceTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                          }
+                        </span>
+                      </div>
+                      {!isApportionmentBalanced && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                          Diferença: R$ {Math.abs(balanceDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -472,82 +579,103 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             {/* Seção de Rateio Detalhado por Equipamento */}
             {formData.apportionment && Array.isArray(formData.apportionment) && formData.apportionment.length > 0 && (
               <div className="section-card" style={{ borderLeft: '4px solid #2563eb', background: '#f8fafc' }}>
-                <span className="section-title" style={{ color: '#1e3a8a', fontWeight: 700, display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Itens Faturados e Rateio
-                </span>
-                <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '0 0 0.75rem 0' }}>
-                  Esta fatura contém {formData.apportionment.length} itens detalhados com informações de séries e classificação.
-                </p>
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(true)}
-                  style={{ 
-                    width: '100%', 
-                    fontSize: '0.75rem', 
-                    padding: '8px 12px',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s ease',
-                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                <div 
+                  onClick={() => toggleSection('apportionment')}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
+                  title="Clique para alternar o tamanho deste bloco"
                 >
-                  Visualizar e Editar Tabela de Rateio
-                </button>
+                  {collapsedSections.apportionment ? <ChevronRight size={16} color="#1e3a8a" /> : <ChevronDown size={16} color="#1e3a8a" />}
+                  <span className="section-title" style={{ color: '#1e3a8a', fontWeight: 700, margin: 0, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Itens Faturados e Rateio
+                  </span>
+                </div>
+
+                {!collapsedSections.apportionment && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '0 0 0.75rem 0' }}>
+                      Esta fatura contém {formData.apportionment.length} itens detalhados com informações de séries e classificação.
+                    </p>
+                    <button 
+                      type="button"
+                      onClick={() => setIsModalOpen(true)}
+                      style={{ 
+                        width: '100%', 
+                        fontSize: '0.75rem', 
+                        padding: '8px 12px',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s ease',
+                        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    >
+                      Visualizar e Editar Tabela de Rateio
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {renderRecursiveFields(formData)}
-
             {/* Card de Trilha de Auditoria & Ciclo de Vida da Fatura */}
             <div className="section-card" style={{ borderLeft: '4px solid #6366f1', background: '#f8fafc', padding: '1rem', marginTop: '1.25rem' }}>
-              <span className="section-title" style={{ color: '#4338ca', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FileText size={15} color="#4338ca" />
-                Trilha de Auditoria & Ciclo de Vida
-              </span>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', color: '#334155' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>📥 Origem de Entrada:</span>
-                  <span style={{ fontWeight: 700, color: selectedNote?.fileName.startsWith('manual_') ? '#2563eb' : '#059669' }}>
-                    {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual via Dashboard' : 'Sincronização Automática via E-mail (Graph API)'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>🕒 Data de Recepção:</span>
-                  <span style={{ fontWeight: 600 }}>
-                    {selectedNote?.createdAt ? new Date(selectedNote.createdAt).toLocaleString('pt-BR') : 'Data registrada'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>🤖 Motor de IA & OCR:</span>
-                  <span style={{ fontWeight: 600, color: '#6d28d9' }}>
-                    Google Gemini 2.5 Flash (Leitura OCR + Enriquecimento Contábil)
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>📌 Status Atual da Curadoria:</span>
-                  <span style={{ 
-                    padding: '2px 8px', 
-                    borderRadius: '4px', 
-                    fontWeight: 700, 
-                    fontSize: '0.7rem',
-                    backgroundColor: formData?.status === 'validado' ? '#d1fae5' : '#fef3c7',
-                    color: formData?.status === 'validado' ? '#047857' : '#b45309'
-                  }}>
-                    {formData?.status === 'validado' ? '✅ Aprovada / Validada para Zeev' : '⏳ Pendente de Validação'}
-                  </span>
-                </div>
+              <div 
+                onClick={() => toggleSection('audit')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
+                title="Clique para alternar o tamanho deste bloco"
+              >
+                {collapsedSections.audit ? <ChevronRight size={16} color="#4338ca" /> : <ChevronDown size={16} color="#4338ca" />}
+                <span className="section-title" style={{ color: '#4338ca', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={15} color="#4338ca" />
+                  Trilha de Auditoria & Ciclo de Vida
+                </span>
               </div>
+
+              {!collapsedSections.audit && (
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', color: '#334155' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>📥 Origem de Entrada:</span>
+                    <span style={{ fontWeight: 700, color: selectedNote?.fileName.startsWith('manual_') ? '#2563eb' : '#059669' }}>
+                      {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual via Dashboard' : 'Sincronização Automática via E-mail (Graph API)'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>🕒 Data de Recepção:</span>
+                    <span style={{ fontWeight: 600 }}>
+                      {selectedNote?.createdAt ? new Date(selectedNote.createdAt).toLocaleString('pt-BR') : 'Data registrada'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>🤖 Motor de IA & OCR:</span>
+                    <span style={{ fontWeight: 600, color: '#6d28d9' }}>
+                      Google Gemini 2.5 Flash (Leitura OCR + Enriquecimento Contábil)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>📌 Status Atual da Curadoria:</span>
+                    <span style={{ 
+                      padding: '2px 8px', 
+                      borderRadius: '4px', 
+                      fontWeight: 700, 
+                      fontSize: '0.7rem',
+                      backgroundColor: formData?.status === 'validado' ? '#d1fae5' : '#fef3c7',
+                      color: formData?.status === 'validado' ? '#047857' : '#b45309'
+                    }}>
+                      {formData?.status === 'validado' ? '✅ Aprovada / Validada para Zeev' : '⏳ Pendente de Validação'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {renderRecursiveFields(formData)}
           </>
         ) : (
           <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: '6rem' }}>
@@ -557,16 +685,31 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         )}
       </div>
 
-      <div className="action-bar">
+      <div className="action-bar" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        gap: '8px', 
+        padding: '0.75rem 1rem', 
+        maxWidth: '100%', 
+        boxSizing: 'border-box',
+        overflow: 'hidden' 
+      }}>
         <button 
           className="btn" 
-          onClick={onReprocess}
+          onClick={() => {
+            setActiveAction('reprocess');
+            onReprocess();
+          }}
           disabled={loading || !selectedNote || userRole !== 'ADMIN'}
           style={{ 
             display: 'inline-flex', 
             alignItems: 'center', 
+            justifyContent: 'center',
             gap: '6px', 
-            marginRight: 'auto',
+            flex: '0 0 auto',
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.75rem',
             backgroundColor: userRole !== 'ADMIN' ? '#e5e7eb' : '#2563eb',
             color: userRole !== 'ADMIN' ? '#9ca3af' : 'white',
             border: 'none',
@@ -581,44 +724,79 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           }}
           title={userRole !== 'ADMIN' ? 'Apenas administradores podem reprocessar OCR' : 'Reprocessar OCR Google Gemini'}
         >
-          <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
-          Reprocessar
+          <RefreshCcw size={14} className={loading && activeAction === 'reprocess' ? 'animate-spin' : ''} />
+          {loading && activeAction === 'reprocess' ? 'Reprocessando...' : 'Reprocessar'}
         </button>
-        <button 
-          className="btn btn-outline" 
-          onClick={() => onSave()}
-          disabled={loading || !selectedNote}
-        >
-          <Save size={14} />
-          Salvar
-        </button>
-        {formData?.status === 'validado' ? (
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '0 0 auto' }}>
           <button 
             className="btn btn-outline" 
-            style={{
-              borderColor: '#f97316',
-              color: '#f97316',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
+            onClick={() => {
+              setActiveAction('save');
+              onSave();
             }}
-            onClick={() => onSave('pendente')}
             disabled={loading || !selectedNote}
-            title="Mudar o status da fatura de volta para Pendente para revisão"
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '6px',
+              flex: '0 0 auto',
+              padding: '0.5rem 0.75rem',
+              fontSize: '0.75rem'
+            }}
           >
-            <RefreshCcw size={14} />
-            Reabrir Fatura
+            {loading && activeAction === 'save' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {loading && activeAction === 'save' ? 'Salvando...' : 'Salvar'}
           </button>
-        ) : (
-          <button 
-            className="btn btn-primary" 
-            onClick={() => onSave('validado')}
-            disabled={loading || !selectedNote}
-          >
-            <Check size={14} />
-            Aprovar
-          </button>
-        )}
+
+          {formData?.status === 'validado' ? (
+            <button 
+              className="btn btn-outline" 
+              style={{
+                borderColor: '#f97316',
+                color: '#f97316',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                flex: '0 0 auto',
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.75rem'
+              }}
+              onClick={() => {
+                setActiveAction('reopen');
+                onSave('pendente');
+              }}
+              disabled={loading || !selectedNote}
+              title="Mudar o status da fatura de volta para Pendente para revisão"
+            >
+              <RefreshCcw size={14} className={loading && activeAction === 'reopen' ? 'animate-spin' : ''} />
+              {loading && activeAction === 'reopen' ? 'Reabrindo...' : 'Reabrir Fatura'}
+            </button>
+          ) : (
+            <button 
+              className="btn btn-primary" 
+              onClick={() => {
+                setActiveAction('approve');
+                onSave('validado');
+              }}
+              disabled={loading || !selectedNote}
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                flex: '0 0 auto',
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.75rem'
+              }}
+            >
+              {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              {loading && activeAction === 'approve' ? 'Aprovando no Zeev...' : 'Aprovar'}
+            </button>
+          )}
+        </div>
       </div>
 
       {showIaDisclaimer && (
