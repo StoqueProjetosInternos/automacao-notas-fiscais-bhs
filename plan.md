@@ -3248,9 +3248,70 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - `apps/dashboard/src/components/DataEditor.tsx`
   - `apps/dashboard/src/components/Sidebar.tsx`
   - `apps/dashboard/src/pages/Dashboard/index.tsx`
-- Commit: `1b6aeb53cbbacabfa6ff0feebfb7b9264426543b`
 - Status: Aplicado
 
+### CHG-0046 — Efeito Hover no Botão de Rateio e Simplificação de Rótulos de Status
 
+- Data/Hora: 2026-08-06 14:13
+- Contexto: Melhorias visuais no cabeçalho e limpeza de rótulos no Dashboard.
+- Objetivo: Adicionar animação hover ao botão de rateio do cabeçalho e simplificar rótulos de status.
+- Escopo:
+  - `apps/dashboard/src/components/Header.tsx`
+  - `apps/dashboard/src/components/DataEditor.tsx`
+  - `apps/dashboard/src/components/Sidebar.tsx`
+  - `apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `59b36ff69ff228807d9f7831f2bc8a649ef2cbf6`
+- Status: Aplicado
 
+### CHG-0214 — Efeito Hover Interativo no Botão de Aprovação de Fatura
 
+- Data/Hora: 2026-08-10 09:44
+- Contexto: O botão Aprovar na tela de curadoria de faturas utilizava propriedades de cor fixas em style inline, impedindo a aplicação de efeitos visuais de passagem do cursor (:hover).
+- Objetivo: Adicionar a classe CSS .btn-approve com transição suave, alteração de tonalidade verde e elevação ao passar o mouse, melhorando a usabilidade.
+- Escopo:
+  - Frontend:
+    - [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+    - [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+- Riscos: Nenhum. Alteração puramente cosmética e de experiência de usuário no frontend.
+- Proposta: Criar a classe .btn-approve no App.css com regras de :hover:not(:disabled) e substituir as cores inline no DataEditor.tsx.
+- Testes:
+  - Validar a passagem de cursor sobre o botão Aprovar no navegador.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.css apps/dashboard/src/components/DataEditor.tsx`
+- Status: Aplicado
+- Observações: Alterações de código aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
+
+### CHG-0215 — Efeito Feedback de Clique (Active) no Botão Importar Fatura PDF
+
+- Data/Hora: 2026-08-10 09:46
+- Contexto: O botão de importação de PDF na barra lateral utilizava manipulação de estilo por eventos de mouse JS inline, carecendo de resposta visual tátil ao clique.
+- Objetivo: Encapsular o estilo na classe .btn-import-sidebar no App.css e adicionar o efeito de clique :active com compressão proporcional.
+- Escopo:
+  - Frontend:
+    - [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+    - [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Nenhum. Alteração puramente cosmética e de usabilidade visual.
+- Proposta: Criar a classe .btn-import-sidebar e aplicar os pseudo-estados :hover e :active.
+- Testes:
+  - Validar compilação TypeScript e resposta de clique do botão no navegador.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/App.css apps/dashboard/src/components/Sidebar.tsx`
+- Status: Aplicado
+- Observações: Alterações de código aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
+
+### CHG-0216 — Estabilização de Altura dos Cards de Fatura em Modo de Confirmação na Sidebar
+
+- Data/Hora: 2026-08-10 11:52
+- Contexto: Ao clicar em arquivar ou excluir uma fatura na barra lateral, o card reduzia de tamanho devido à substituição do conteúdo por um formulário de texto curto.
+- Objetivo: Fixar a altura mínima minHeight em 84px com flexbox vertical, preservando as dimensões originais do card durante a confirmação de ações.
+- Escopo:
+  - Frontend:
+    - [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Nenhum. Alteração restrita às propriedades de estilização inline de layout do card.
+- Proposta: Adicionar minHeight: '84px', boxSizing: 'border-box' e justifyContent: 'center' ao container do item da lista.
+- Testes:
+  - Validar a abertura e fechamento da caixa de confirmação de exclusão e arquivamento no navegador.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/Sidebar.tsx`
+- Status: Revertido
+- Observações: Rollback executado a pedido do usuário devido a efeito colateral no layout da listagem de documentos.

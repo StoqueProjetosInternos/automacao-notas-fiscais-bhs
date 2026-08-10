@@ -380,7 +380,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             color: formData?.status === 'validado' ? '#059669' : '#b45309',
             border: `1px solid ${formData?.status === 'validado' ? '#a7f3d0' : '#fde68a'}`
           }}>
-            {formData?.status === 'validado' ? 'VALIDADO' : 'PENDENTE DE VALIDAÇÃO'}
+            {formData?.status === 'validado' ? 'VALIDADO' : 'PENDENTE'}
           </div>
         </div>
       </div>
@@ -630,36 +630,36 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               >
                 {collapsedSections.audit ? <ChevronRight size={16} color="#4338ca" /> : <ChevronDown size={16} color="#4338ca" />}
                 <span className="section-title" style={{ color: '#4338ca', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={15} color="#4338ca" />
-                  Trilha de Auditoria & Ciclo de Vida
+                  {/* <FileText size={15} color="#4338ca" /> */}
+                  Auditoria & Ciclo de Vida
                 </span>
               </div>
 
               {!collapsedSections.audit && (
                 <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', color: '#334155' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>📥 Origem de Entrada:</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>Origem de Entrada:</span>
                     <span style={{ fontWeight: 700, color: selectedNote?.fileName.startsWith('manual_') ? '#2563eb' : '#059669' }}>
                       {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual via Dashboard' : 'Sincronização Automática via E-mail (Graph API)'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>🕒 Data de Recepção:</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>Data de Recepção:</span>
                     <span style={{ fontWeight: 600 }}>
                       {selectedNote?.createdAt ? new Date(selectedNote.createdAt).toLocaleString('pt-BR') : 'Data registrada'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>🤖 Motor de IA & OCR:</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>Motor de IA & OCR:</span>
                     <span style={{ fontWeight: 600, color: '#6d28d9' }}>
-                      Google Gemini 2.5 Flash (Leitura OCR + Enriquecimento Contábil)
+                      Google Gemini 2.5 Flash (Leitura OCR)
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>📌 Status Atual da Curadoria:</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>Status Atual da Curadoria:</span>
                     <span style={{ 
                       padding: '2px 8px', 
                       borderRadius: '4px', 
@@ -668,7 +668,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                       backgroundColor: formData?.status === 'validado' ? '#d1fae5' : '#fef3c7',
                       color: formData?.status === 'validado' ? '#047857' : '#b45309'
                     }}>
-                      {formData?.status === 'validado' ? '✅ Aprovada / Validada para Zeev' : '⏳ Pendente de Validação'}
+                      {formData?.status === 'validado' ? 'Aprovada / Validada para Zeev' : 'Pendente'}
                     </span>
                   </div>
                 </div>
@@ -783,7 +783,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           </button>
         ) : (
           <button 
-            className="btn btn-primary" 
+            className="btn btn-approve" 
             onClick={() => {
               setActiveAction('approve');
               onSave('validado');
@@ -796,9 +796,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               gap: '6px',
               flex: '0 0 auto',
               padding: '0.5rem 0.75rem',
-              fontSize: '0.75rem',
-              backgroundColor: '#059669',
-              borderColor: '#059669'
+              fontSize: '0.75rem'
             }}
           >
             {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
