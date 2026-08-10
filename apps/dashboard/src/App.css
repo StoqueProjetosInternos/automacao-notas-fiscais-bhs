@@ -530,6 +530,24 @@ html, body, #root {
 .btn-danger { background: white; border-color: #fee2e2; color: var(--danger); }
 .btn-danger:hover { background: #fef2f2; }
 
+.btn-approve {
+  background-color: #059669;
+  border-color: #059669;
+  color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background-color: #047857;
+  border-color: #047857;
+  box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.25), 0 2px 4px -2px rgba(5, 150, 105, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-approve:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 /* STATUS DOTS */
 .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .status-pendente { background: var(--warning); }
@@ -1337,4 +1355,35 @@ html, body, #root {
 
 .fade-out {
   animation: fadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.btn-import-sidebar {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2FC808 0%, #26a306 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(47, 200, 8, 0.3);
+  transition: all 0.15s ease-in-out;
+  outline: none;
+}
+
+.btn-import-sidebar:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 10px rgba(47, 200, 8, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-import-sidebar:active {
+  transform: scale(0.97) translateY(0);
+  box-shadow: 0 1px 3px rgba(47, 200, 8, 0.2);
+  filter: brightness(0.95);
 }

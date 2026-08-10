@@ -631,7 +631,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                 {collapsedSections.audit ? <ChevronRight size={16} color="#4338ca" /> : <ChevronDown size={16} color="#4338ca" />}
                 <span className="section-title" style={{ color: '#4338ca', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {/* <FileText size={15} color="#4338ca" /> */}
-                  Trilha de Auditoria & Ciclo de Vida
+                  Auditoria & Ciclo de Vida
                 </span>
               </div>
 
@@ -783,7 +783,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
           </button>
         ) : (
           <button 
-            className="btn btn-primary" 
+            className="btn btn-approve" 
             onClick={() => {
               setActiveAction('approve');
               onSave('validado');
@@ -796,9 +796,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               gap: '6px',
               flex: '0 0 auto',
               padding: '0.5rem 0.75rem',
-              fontSize: '0.75rem',
-              backgroundColor: '#059669',
-              borderColor: '#059669'
+              fontSize: '0.75rem'
             }}
           >
             {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}

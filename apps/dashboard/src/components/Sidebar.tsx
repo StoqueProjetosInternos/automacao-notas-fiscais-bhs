@@ -195,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }
   
   const filteredNotes = notes.filter(n => {
-    const isNoteArchived = n.data.status === 'arquivado';
+    const isNoteArchived = n.data.status === 'arquivado' || n.data.status === 'validado';
     if (showArchived !== isNoteArchived) return false;
 
     const term = searchTerm.toLowerCase().trim();
@@ -291,28 +291,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-header" style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
         <button 
           onClick={onImportClick}
-          className="btn"
-          style={{ 
-            width: '100%', 
-            marginBottom: '0.85rem',
-            padding: '9px 14px',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            background: 'linear-gradient(135deg, #2FC808 0%, #26a306 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 5px rgba(47, 200, 8, 0.3)',
-            transition: 'all 0.2s ease',
-            outline: 'none'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.08)'}
-          onMouseOut={(e) => e.currentTarget.style.filter = 'none'}
+          className="btn-import-sidebar"
+          style={{ marginBottom: '0.85rem' }}
           title="Importar fatura PDF manualmente"
         >
           <Upload size={14} />
@@ -367,7 +347,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               transition: 'all 0.15s ease'
             }}
           >
-            Arquivadas
+            Arquivadas/Concluídas
           </button>
         </div>
 
@@ -456,7 +436,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           alignItems: 'center',
           fontWeight: 600
         }}>
-          <span>Total: {notes.filter(n => showArchived ? n.data.status === 'arquivado' : n.data.status !== 'arquivado').length} faturas</span>
+          <span>Total: {notes.filter(n => showArchived ? (n.data.status === 'arquivado' || n.data.status === 'validado') : (n.data.status !== 'arquivado' && n.data.status !== 'validado')).length} faturas</span>
           <span style={{ color: '#0284c7' }}>
             {totalItems === 0 
               ? "Sem resultados" 
