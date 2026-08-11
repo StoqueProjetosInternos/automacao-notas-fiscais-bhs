@@ -3278,6 +3278,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a passagem de cursor sobre o botão Aprovar no navegador.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/App.css apps/dashboard/src/components/DataEditor.tsx`
+- Commit: `99df429`
 - Status: Aplicado
 - Observações: Alterações de código aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
 
@@ -3296,6 +3297,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar compilação TypeScript e resposta de clique do botão no navegador.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/App.css apps/dashboard/src/components/Sidebar.tsx`
+- Commit: `99df429`
 - Status: Aplicado
 - Observações: Alterações de código aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
 
@@ -3313,5 +3315,92 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a abertura e fechamento da caixa de confirmação de exclusão e arquivamento no navegador.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/components/Sidebar.tsx`
+- Commit: `99df429`
 - Status: Revertido
 - Observações: Rollback executado a pedido do usuário devido a efeito colateral no layout da listagem de documentos.
+
+### CHG-0217 — Correção do Relatório em PDF com Orientação Paisagem e 17 Colunas Completas
+
+- Data/Hora: 2026-08-10 12:04
+- Contexto: A função exportToPDF gerava um documento em modo retrato com desalinhamento entre o cabeçalho e o corpo da tabela, omitindo 7 colunas do relatório de auditoria.
+- Objetivo: Reestruturar o gerador de HTML de impressão em modo paisagem (@page size: landscape), incluindo e alinhando todas as 17 colunas de auditoria existentes no CSV.
+- Escopo:
+  - Frontend:
+    - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Alteração restrita à formatação da janela de impressão temporária.
+- Proposta: Inserir a regra de impressão em paisagem e alinhar as 17 colunas no TH/TD da função exportToPDF.
+- Testes:
+  - Validar a abertura da janela de impressão de PDF e checar a presença de todas as colunas em modo paisagem.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0218 — Metadados de Rastreabilidade e Auditoria na Exportação de PDF e CSV
+
+- Data/Hora: 2026-08-10 12:07
+- Contexto: Relatórios fiscais e de IA extraídos não continham identificação do usuário solicitante, fuso horário, filtros ativos ou código único de auditoria.
+- Objetivo: Injetar bloco estruturado de metadados (ID único, Solicitante, Perfil, Data/Hora UTC-3, Filtros e Totais consolidados) nas saídas PDF e CSV.
+- Escopo:
+  - Frontend:
+    - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Alteração estrita nos geradores de arquivos de saída do frontend.
+- Proposta: Criar a função generateAuditMetadata e incluir os metadados nos métodos exportToExcel e exportToPDF.
+- Testes:
+  - Exportar relatórios em PDF e CSV e conferir a exatidão dos metadados impressos.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0219 — Estado de Carregamento e Alerta de Demora Prolongada no Histórico
+
+- Data/Hora: 2026-08-10 12:14
+- Contexto: A aba de Histórico não possuía notificação visual em caso de latência estendida na busca dos logs e o colSpan do spinner estava descorrelacionado das 17 colunas da tabela.
+- Objetivo: Corrigir o colSpan para 17, utilizar o ícone Loader2 animado e implementar o estado isSlowLoadingHistory após 3 segundos de espera.
+- Escopo:
+  - Frontend:
+    - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Nenhum. Alteração restrita à experiência visual do componente.
+- Proposta: Inserir temporizador na função loadUsageLogs e ajustar a renderização da linha de carregamento no tbody.
+- Testes:
+  - Alternar para a aba Histórico e validar o feedback visual de carregamento.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0220 — Criação da Documentação de Apresentação Executiva para Liderança (apresentacao_projeto_head.md)
+
+- Data/Hora: 2026-08-11 09:49
+- Contexto: Necessidade de material de apresentação sintético, objetivo e orientado a resultados para reunião com o Head de Tecnologia.
+- Objetivo: Elaborar o arquivo apresentacao_projeto_head.md destacando o problema resolvido, stack tecnológica, benefícios organizacionais e impacto do projeto.
+- Escopo:
+  - Documentação:
+    - [apresentacao_projeto_head.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apresentacao_projeto_head.md)
+- Riscos: Nenhum. Criação exclusiva de documentação técnica/executiva.
+- Proposta: Criar o arquivo apresentacao_projeto_head.md na raiz do repositório.
+- Testes:
+  - Validar a leitura e formatação do arquivo Markdown.
+- Rollback:
+  1) `git checkout -- apresentacao_projeto_head.md` (ou remoção caso não rastreado)
+- Status: Aplicado
+- Observações: Documento criado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0221 — Correção de Caminho Base de Assets para Deploy no GitHub Pages (Tela em Branco)
+
+- Data/Hora: 2026-08-11 10:36
+- Contexto: O deploy no GitHub Pages apresentava tela em branco devido ao caminho base do Vite estar configurado como '/' em vez de caminhos relativos, gerando erros 404 na busca dos assets JS e CSS.
+- Objetivo: Configurar base: './' no vite.config.ts e injetar VITE_BASE_PATH: './' com cópia de 404.html no workflow deploy.yml.
+- Escopo:
+  - CI/CD & Configuração:
+    - [vite.config.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/vite.config.ts)
+    - [deploy.yml](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.github/workflows/deploy.yml)
+- Riscos: Nenhum. Ajuste restrito ao roteamento de caminhos estáticos de build.
+- Proposta: Atualizar vite.config.ts e deploy.yml para usar caminhos relativos e criar fallback 404.html.
+- Testes:
+  - Inspecionar dist/index.html gerado pelo build e testar deploy via GitHub Actions.
+- Rollback:
+  1) `git checkout -- apps/dashboard/vite.config.ts .github/workflows/deploy.yml`
+- Status: Aplicado
+- Observações: Alterações aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
