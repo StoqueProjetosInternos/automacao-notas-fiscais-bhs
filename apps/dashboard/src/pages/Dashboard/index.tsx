@@ -85,6 +85,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs' | 'deadlines'>('notes');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [isSlowLoadingHistory, setIsSlowLoadingHistory] = useState(false);
   const [apiLogs, setApiLogs] = useState<string>('');
   const [loadingApiLogs, setLoadingApiLogs] = useState(false);
   const [clearingLogs, setClearingLogs] = useState(false);
@@ -261,6 +262,11 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
   const loadUsageLogs = async () => {
     setLoadingLogs(true);
+    setIsSlowLoadingHistory(false);
+    const slowTimer = setTimeout(() => {
+      setIsSlowLoadingHistory(true);
+    }, 3000);
+
     try {
       const logs = await fetchUsageLog();
       logs.sort((a: UsageLog, b: UsageLog) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
@@ -269,7 +275,9 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       console.error('Erro ao carregar logs de uso:', error);
       showToast('Erro ao carregar o histórico de uso.', 'error');
     } finally {
+      clearTimeout(slowTimer);
       setLoadingLogs(false);
+      setIsSlowLoadingHistory(false);
     }
   };
 
@@ -465,9 +473,14 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Estados para o painel redimensionável
-  const [editorWidth, setEditorWidth] = useState(500);
-  const [sidebarWidth, setSidebarWidth] = useState(340);
+  // Estados para o painel redimensionável com proporções equilibradas (PDF levemente maior)
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [editorWidth, setEditorWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.min(480, Math.max(420, Math.floor(window.innerWidth * 0.30)));
+    }
+    return 440;
+  });
   const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
   const [isDraggingEditor, setIsDraggingEditor] = useState(false);
 
@@ -811,8 +824,47 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
     navigate(target);
   };
 
+  const generateAuditMetadata = () => {
+    const reportId = 'AUD-' + new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14) + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const nowStr = new Date().toLocaleString('pt-BR') + ' (BRT / UTC-3)';
+    const userName = user?.name || user?.email?.split('@')[0] || 'Usuário Autenticado';
+    const userEmail = user?.email || 'N/D';
+    const userRole = user?.role || 'OPERATOR';
+
+    const activeFilters: string[] = [];
+    if (historySearchTerm) activeFilters.push(`Busca: "${historySearchTerm}"`);
+    if (historyModelFilter) activeFilters.push(`Modelo IA: ${historyModelFilter}`);
+    if (historyUserFilter) activeFilters.push(`Usuário: ${historyUserFilter}`);
+    if (historyOriginFilter) activeFilters.push(`Origem: ${historyOriginFilter}`);
+    if (historyDateFilter) activeFilters.push(`Data: ${historyDateFilter}`);
+    if (historyFileStatusFilter) activeFilters.push(`Status Fatura: ${historyFileStatusFilter}`);
+    if (historyAiStatusFilter) activeFilters.push(`Status IA: ${historyAiStatusFilter}`);
+    const filterStr = activeFilters.length > 0 ? activeFilters.join(' | ') : 'Escopo Total (sem filtros aplicados)';
+
+    const totalRecords = filteredUsageLogs.length;
+    const totalValor = filteredUsageLogs.reduce((acc, log) => acc + (Number(log.valorFatura) || 0), 0);
+    const totalTokensEntrada = filteredUsageLogs.reduce((acc, log) => acc + (Number(log.tokensEntrada) || 0), 0);
+    const totalTokensSaida = filteredUsageLogs.reduce((acc, log) => acc + (Number(log.tokensSaida) || 0), 0);
+    const totalCustoUsd = filteredUsageLogs.reduce((acc, log) => acc + (Number(log.custoUsd) || 0), 0);
+
+    return {
+      reportId,
+      nowStr,
+      userName,
+      userEmail,
+      userRole,
+      filterStr,
+      totalRecords,
+      totalValor,
+      totalTokensEntrada,
+      totalTokensSaida,
+      totalCustoUsd
+    };
+  };
+
   const exportToExcel = () => {
     try {
+      const meta = generateAuditMetadata();
       const headers = ['ID', 'Data/Hora', 'Usuário / Responsável', 'Origem', 'Arquivo', 'Modelo IA', 'Fornecedor', 'CNPJ Fornecedor', 'Status Fatura', 'Numero Documento', 'Valor Fatura', 'Tokens Entrada', 'Tokens Saida', 'Custo USD', 'Tempo Ms', 'Status IA', 'Zeev ID'];
       
       const rows = filteredUsageLogs.map(log => [
@@ -836,6 +888,13 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
       ]);
 
       const csvContent = [
+        `# STOQUE FISCAL INTELLIGENCE - RELATÓRIO DE AUDITORIA FISCAL`,
+        `# ID do Relatório: ${meta.reportId}`,
+        `# Solicitante: ${meta.userName} (${meta.userEmail}) - Perfil: ${meta.userRole}`,
+        `# Data de Emissão: ${meta.nowStr}`,
+        `# Filtros Ativos: ${meta.filterStr}`,
+        `# Resumo: ${meta.totalRecords} registros | Total Faturado: R$ ${meta.totalValor.toFixed(2)} | Tokens Entr/Saí: ${meta.totalTokensEntrada}/${meta.totalTokensSaida} | Custo IA Total: $ ${meta.totalCustoUsd.toFixed(5)}`,
+        `#`,
         headers.join(';'),
         ...rows.map(e => e.map(val => {
           if (val === undefined || val === null) return '';
@@ -862,6 +921,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
 
   const exportToPDF = () => {
     try {
+      const meta = generateAuditMetadata();
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
         showToast('Falha ao abrir janela de impressão. Verifique o bloqueador de pop-ups.', 'error');
@@ -872,51 +932,86 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         const valStr = log.valorFatura !== undefined && log.valorFatura !== null 
           ? 'R$ ' + log.valorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
           : 'N/D';
+        const custoStr = log.custoUsd !== undefined && log.custoUsd !== null ? '$ ' + Number(log.custoUsd).toFixed(5) : 'N/D';
         return '<tr>' +
           '<td>#' + log.id + '</td>' +
           '<td>' + new Date(log.dataHora).toLocaleString('pt-BR') + '</td>' +
           '<td>' + (log.usuarioEmail || log.usuarioNome || 'SISTEMA') + '</td>' +
           '<td>' + (log.origem || 'E-mail Sync') + '</td>' +
-          '<td>' + log.arquivo + '</td>' +
+          '<td>' + (log.arquivo || '') + '</td>' +
+          '<td>' + (log.modeloIa || 'N/D') + '</td>' +
           '<td>' + (log.fornecedor || 'N/D') + '</td>' +
+          '<td>' + (log.cnpjFornecedor || 'N/D') + '</td>' +
           '<td>' + (log.statusArquivo || 'Pendente') + '</td>' +
           '<td>' + (log.numeroDocumento || 'N/D') + '</td>' +
           '<td style="text-align: right;">' + valStr + '</td>' +
+          '<td style="text-align: right;">' + (log.tokensEntrada || 0) + '</td>' +
+          '<td style="text-align: right;">' + (log.tokensSaida || 0) + '</td>' +
+          '<td style="text-align: right;">' + custoStr + '</td>' +
+          '<td style="text-align: right;">' + (log.tempoProcessamentoMs || 0) + ' ms</td>' +
           '<td style="text-align: center;">' + (log.status || 'Sucesso') + '</td>' +
+          '<td>' + (log.zeevId || 'N/D') + '</td>' +
           '</tr>';
       }).join('');
 
       const htmlContent = [
         '<html>',
         '<head>',
-        '<title>Relatorio - Historico de Processamento</title>',
+        '<title>Relatório de Auditoria - Stoque Fiscal Intelligence</title>',
         '<style>',
-        'body { font-family: Arial, sans-serif; margin: 20px; color: #333; }',
-        'h2 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 20px; }',
-        'table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }',
-        'th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }',
-        'th { background-color: #f3f4f6; font-weight: bold; }',
-        'tr:nth-child(even) { background-color: #f9fafb; }',
-        '.footer { margin-top: 30px; font-size: 10px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px; }',
+        '@page { size: landscape; margin: 8mm; }',
+        'body { font-family: Arial, sans-serif; margin: 10px; color: #333; }',
+        'h2 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 4px; margin-bottom: 8px; font-size: 15px; }',
+        '.audit-box { background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 9px; line-height: 1.45; }',
+        '.audit-row { display: flex; justify-content: space-between; margin-bottom: 3px; }',
+        '.audit-divider { border-top: 1px solid #e2e8f0; margin: 4px 0; }',
+        'table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 8px; table-layout: auto; }',
+        'th, td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: left; word-break: break-word; }',
+        'th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }',
+        'tr:nth-child(even) { background-color: #f8fafc; }',
+        '.footer { margin-top: 15px; font-size: 8px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 6px; }',
         '</style>',
         '</head>',
         '<body>',
-        '<h2>Historico de Processamento - Stoque Fiscal Intelligence</h2>',
-        '<p style="font-size: 12px; margin-bottom: 15px;">',
-        '<strong>Total de Registros:</strong> ' + filteredUsageLogs.length + ' | ',
-        '<strong>Gerado em:</strong> ' + new Date().toLocaleString('pt-BR'),
-        '</p>',
+        '<h2>Histórico de Processamento e Auditoria - Stoque Fiscal Intelligence</h2>',
+        '<div class="audit-box">',
+        '  <div class="audit-row">',
+        '    <span><strong>ID do Relatório:</strong> ' + meta.reportId + '</span>',
+        '    <span><strong>Sistema:</strong> Stoque Fiscal Intelligence v2.0 | <strong>Ambiente:</strong> Produção</span>',
+        '  </div>',
+        '  <div class="audit-row">',
+        '    <span><strong>Solicitante:</strong> ' + meta.userName + ' (' + meta.userEmail + ') | <strong>Perfil:</strong> ' + meta.userRole + '</span>',
+        '    <span><strong>Data de Emissão:</strong> ' + meta.nowStr + '</span>',
+        '  </div>',
+        '  <div class="audit-row">',
+        '    <span><strong>Filtros Aplicados:</strong> ' + meta.filterStr + '</span>',
+        '  </div>',
+        '  <div class="audit-divider"></div>',
+        '  <div class="audit-row" style="font-weight: bold; color: #1e3a8a;">',
+        '    <span>Registros Exibidos: ' + meta.totalRecords + '</span>',
+        '    <span>Total Faturado: R$ ' + meta.totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>',
+        '    <span>Tokens Entr/Saí: ' + meta.totalTokensEntrada.toLocaleString('pt-BR') + ' / ' + meta.totalTokensSaida.toLocaleString('pt-BR') + '</span>',
+        '    <span>Custo IA Total: $ ' + meta.totalCustoUsd.toFixed(5) + '</span>',
+        '  </div>',
+        '</div>',
         '<table>',
         '<thead>',
         '<tr>',
         '<th>ID</th>',
         '<th>Data/Hora</th>',
+        '<th>Usuário</th>',
+        '<th>Origem</th>',
         '<th>Arquivo</th>',
         '<th>Modelo IA</th>',
         '<th>Fornecedor</th>',
+        '<th>CNPJ</th>',
         '<th>Status Fatura</th>',
-        '<th>Doc Num</th>',
+        '<th>Nº Doc</th>',
         '<th style="text-align: right;">Valor</th>',
+        '<th style="text-align: right;">Tk Entrada</th>',
+        '<th style="text-align: right;">Tk Saída</th>',
+        '<th style="text-align: right;">Custo ($)</th>',
+        '<th style="text-align: right;">Tempo</th>',
         '<th style="text-align: center;">Status IA</th>',
         '<th>Zeev ID</th>',
         '</tr>',
@@ -926,7 +1021,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         '</tbody>',
         '</table>',
         '<div class="footer">',
-        'Este relatorio foi gerado automaticamente pelo sistema Stoque Fiscal Intelligence.',
+        'Este relatório foi gerado automaticamente pelo sistema Stoque Fiscal Intelligence. ID de Validação: ' + meta.reportId,
         '</div>',
         '<script>',
         'window.onload = function() {',
@@ -1633,22 +1728,21 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                   <tbody>
                     {loadingLogs ? (
                       <tr>
-                        <td colSpan={15} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                        <td colSpan={17} style={{ padding: '48px 16px', textAlign: 'center', color: '#4b5563' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                            <div className="animate-spin" style={{
-                              width: '24px',
-                              height: '24px',
-                              border: '3px solid #e5e7eb',
-                              borderTopColor: '#2563eb',
-                              borderRadius: '50%'
-                            }} />
-                            <span>Carregando histórico...</span>
+                            <Loader2 size={28} className="animate-spin" style={{ color: '#2563eb' }} />
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Carregando histórico de auditoria...</span>
+                            {isSlowLoadingHistory && (
+                              <span style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 12px', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                                O carregamento está levando mais tempo que o usual. Aguarde a consolidação dos registros...
+                              </span>
+                            )}
                           </div>
                         </td>
                       </tr>
                     ) : paginatedUsageLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={15} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                        <td colSpan={17} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
                           Nenhum registro de processamento encontrado.
                         </td>
                       </tr>
