@@ -6,15 +6,30 @@ import { BoletoData } from "./types.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function findDataFile(relativePath: string): string {
+  const possiblePaths = [
+    path.resolve(process.cwd(), relativePath),
+    path.resolve(__dirname, "../../../../../", relativePath),
+    path.resolve(__dirname, "../../../../", relativePath),
+    path.resolve(__dirname, "../../../", relativePath),
+    path.resolve(__dirname, "../../", relativePath),
+    path.resolve((process as any).resourcesPath || '', relativePath),
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return path.resolve(process.cwd(), relativePath);
+}
+
 // Caminhos para as bases de referência
-const CONSOLIDATED_JSON_PATH = path.resolve(__dirname, "../../../../../data/rateios_consolidado.json");
-const BASE_PATH = path.resolve(__dirname, "../../../../../data/base_referencia.csv");
-const ITEMS_MAPPING_PATH = path.resolve(__dirname, "../../../../../data/mapeamento_itens.json");
-const CNPJ_ALIASES_PATH = path.resolve(__dirname, "../../../../../data/cnpj_aliases.json");
-const BASE_FORNECEDORES_JSON_PATH = path.resolve(__dirname, "../../../../../data/base_fornecedores_faturas.json");
-const ROOT_CR_JSON_PATH = path.resolve(__dirname, "../../../../../cr.json");
-const ROOT_CD_JSON_PATH = path.resolve(__dirname, "../../../../../cd.json");
-const ROOT_NATUREZAS_JSON_PATH = path.resolve(__dirname, "../../../../../naturezas.json");
+const CONSOLIDATED_JSON_PATH = findDataFile("data/rateios_consolidado.json");
+const BASE_PATH = findDataFile("data/base_referencia.csv");
+const ITEMS_MAPPING_PATH = findDataFile("data/mapeamento_itens.json");
+const CNPJ_ALIASES_PATH = findDataFile("data/cnpj_aliases.json");
+const BASE_FORNECEDORES_JSON_PATH = findDataFile("data/base_fornecedores_faturas.json");
+const ROOT_CR_JSON_PATH = findDataFile("cr.json");
+const ROOT_CD_JSON_PATH = findDataFile("cd.json");
+const ROOT_NATUREZAS_JSON_PATH = findDataFile("naturezas.json");
 
 // Cache e carregamento de descrições das Naturezas Contábeis da raiz
 let naturezaDescriptionsMap: Record<string, string> = {};

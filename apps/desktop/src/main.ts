@@ -15,6 +15,8 @@ app.commandLine.appendSwitch('disable-software-rasterizer');
 // Carrega variáveis de ambiente procurando em locais possíveis do .env
 const possibleEnvPaths = [
   path.resolve(process.cwd(), '.env'),
+  path.resolve(process.resourcesPath || '', '.env'),
+  path.resolve(__dirname, '../../../../.env'),
   path.resolve(__dirname, '../../../.env'),
   path.resolve(__dirname, '../../.env'),
   path.resolve(__dirname, '../.env'),
@@ -39,14 +41,31 @@ let mainWindow: BrowserWindow | null = null;
 
 async function startBackendServer() {
   try {
-    // Resolve o caminho dinamicamente em tempo de execução
-    const distAppPath = path.resolve(__dirname, '../../automacao/dist/server/app.js');
+    // Resolve o caminho dinamicamente em tempo de execução (dev ou empacotado)
+    const possibleAppPaths = [
+      path.resolve(__dirname, '../automacao/dist/server/app.js'),
+      path.resolve(__dirname, '../../automacao/dist/server/app.js'),
+      path.resolve(__dirname, 'automacao/dist/server/app.js'),
+      path.resolve(process.resourcesPath || '', 'automacao/dist/server/app.js'),
+    ];
+    let distAppPath = possibleAppPaths.find(p => fs.existsSync(p));
+    if (!distAppPath) {
+      distAppPath = path.resolve(__dirname, '../automacao/dist/server/app.js');
+    }
+    console.log(`[Desktop Backend] Carregando app do backend de: ${distAppPath}`);
     const appModule = await import(pathToFileURL(distAppPath).href);
     const expressApp: express.Express = appModule.default || appModule;
 
     // Servir arquivos estáticos do dashboard
-    const dashboardDistPath = path.resolve(__dirname, '../../dashboard/dist');
+    const possibleDashboardPaths = [
+      path.resolve(__dirname, '../dashboard/dist'),
+      path.resolve(__dirname, '../../dashboard/dist'),
+      path.resolve(__dirname, 'dashboard/dist'),
+      path.resolve(process.resourcesPath || '', 'dashboard/dist'),
+    ];
+    const dashboardDistPath = possibleDashboardPaths.find(p => fs.existsSync(p)) || path.resolve(__dirname, '../dashboard/dist');
     if (fs.existsSync(dashboardDistPath)) {
+      console.log(`[Desktop Backend] Servindo frontend de: ${dashboardDistPath}`);
       expressApp.use(express.static(dashboardDistPath));
 
       // Fallback para Single Page Application (SPA React Router) compatível com Express v5

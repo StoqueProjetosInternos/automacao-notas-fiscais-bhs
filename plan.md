@@ -3333,6 +3333,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a abertura da janela de impressão de PDF e checar a presença de todas as colunas em modo paisagem.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3350,6 +3351,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Exportar relatórios em PDF e CSV e conferir a exatidão dos metadados impressos.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3367,6 +3369,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Alternar para a aba Histórico e validar o feedback visual de carregamento.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3384,6 +3387,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a leitura e formatação do arquivo Markdown.
 - Rollback:
   1) `git checkout -- apresentacao_projeto_head.md` (ou remoção caso não rastreado)
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Documento criado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3402,5 +3406,6 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Inspecionar dist/index.html gerado pelo build e testar deploy via GitHub Actions.
 - Rollback:
   1) `git checkout -- apps/dashboard/vite.config.ts .github/workflows/deploy.yml`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alterações aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.

@@ -2,6 +2,8 @@
 node_modules/
 dist/
 dist-ssr/
+release/
+apps/desktop/release/
 
 # Variáveis de ambiente e segredos locais
 .env
