@@ -445,7 +445,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           return (
             <div 
               key={note.id} 
-              onClick={() => !isConfirmingDelete && !isConfirmingArchive && onSelectNote(note)}
+              onClick={() => !isConfirmingDelete && !isConfirmingArchive && onSelectNote(isSelected ? null : note)}
               style={{
                 backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
                 border: `1px solid ${isSelected ? '#93c5fd' : '#e2e8f0'}`,
@@ -585,32 +585,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
 
                     <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexShrink: 0 }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNoteIdArchiving(note.id);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: '1px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: status === 'arquivado' ? "#10b981" : "#94a3b8",
-                          transition: 'color 0.15s ease'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.color = status === 'arquivado' ? '#059669' : '#2563eb';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.color = status === 'arquivado' ? '#10b981' : '#94a3b8';
-                        }}
-                        title={status === 'arquivado' ? "Desarquivar fatura" : "Arquivar fatura"}
-                      >
-                        <Archive size={12} />
-                      </button>
+                      {!showArchived && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNoteIdArchiving(note.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '1px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: "#94a3b8",
+                            transition: 'color 0.15s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.color = '#2563eb';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.color = '#94a3b8';
+                          }}
+                          title="Arquivar fatura"
+                        >
+                          <Archive size={12} />
+                        </button>
+                      )}
                       {userRole === 'ADMIN' && (
                         <button
                           onClick={(e) => {

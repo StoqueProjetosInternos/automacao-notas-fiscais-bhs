@@ -41,6 +41,21 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Interceptor para tratar expiração de sessão globalmente
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+      if (!isLoginRequest) {
+        eraseCookie('stoque_auth_token');
+        window.dispatchEvent(new CustomEvent('stoque:session-expired'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const fetchNotes = async (): Promise<Note[]> => {
   const response = await apiClient.get<Note[]>('/api/notes');
   return response.data;
