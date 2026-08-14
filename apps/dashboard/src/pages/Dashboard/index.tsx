@@ -101,6 +101,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [historyOriginFilter, setHistoryOriginFilter] = useState('');
   const [historyPreviewPdfUrl, setHistoryPreviewPdfUrl] = useState<string | null>(null);
   const [historyPreviewTitle, setHistoryPreviewTitle] = useState<string>('');
+  const [historyPreviewRateioNote, setHistoryPreviewRateioNote] = useState<Note | null>(null);
   const [historyAiStatusFilter, setHistoryAiStatusFilter] = useState('');
   const [historySortField, setHistorySortField] = useState<string>('dataHora');
   const [historySortOrder, setHistorySortOrder] = useState<'asc' | 'desc'>('desc');
@@ -1723,12 +1724,15 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                       >
                         ID Zeev {historySortField === 'zeevId' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
                       </th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '150px' }}>
+                        Visualização
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {loadingLogs ? (
                       <tr>
-                        <td colSpan={17} style={{ padding: '48px 16px', textAlign: 'center', color: '#4b5563' }}>
+                        <td colSpan={18} style={{ padding: '48px 16px', textAlign: 'center', color: '#4b5563' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                             <Loader2 size={28} className="animate-spin" style={{ color: '#2563eb' }} />
                             <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Carregando histórico de auditoria...</span>
@@ -1742,7 +1746,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                       </tr>
                     ) : paginatedUsageLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={17} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                        <td colSpan={18} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
                           Nenhum registro de processamento encontrado.
                         </td>
                       </tr>
@@ -1897,6 +1901,67 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
                             ) : (
                               <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Pendente</span>
                             )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const foundNote = notes.find(n => n.id === log.noteId);
+                                  if (foundNote && foundNote.files.pdf) {
+                                    setHistoryPreviewPdfUrl(getFileUrl(foundNote.files.pdf));
+                                    setHistoryPreviewTitle(log.arquivo);
+                                  } else {
+                                    showToast('Arquivo físico PDF da fatura não foi localizado.', 'info');
+                                  }
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  color: '#1d4ed8',
+                                  backgroundColor: '#eff6ff',
+                                  border: '1px solid #dbeafe',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Visualizar PDF da fatura"
+                              >
+                                <FileText size={12} />
+                                PDF
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const foundNote = notes.find(n => n.id === log.noteId);
+                                  if (foundNote) {
+                                    setHistoryPreviewRateioNote(foundNote);
+                                  } else {
+                                    showToast('Dados de rateio contábil da fatura não foram localizados.', 'info');
+                                  }
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  color: '#047857',
+                                  backgroundColor: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Visualizar planilha de rateio contábil (.xlsx)"
+                              >
+                                <FileSpreadsheet size={12} />
+                                Rateio
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -2776,6 +2841,25 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
         onClose={() => setIsRateioPreviewOpen(false)} 
         selectedNote={selectedNote} 
         onDownload={handleDownloadSelectedNoteRateio} 
+      />
+
+      {/* Modal de Pré-visualização do Rateio Excel a partir do Histórico */}
+      <RateioPreviewModal 
+        isOpen={!!historyPreviewRateioNote} 
+        onClose={() => setHistoryPreviewRateioNote(null)} 
+        selectedNote={historyPreviewRateioNote} 
+        onDownload={() => {
+          if (historyPreviewRateioNote) {
+            const excelFile = historyPreviewRateioNote.files?.excel || `${historyPreviewRateioNote.id}/${historyPreviewRateioNote.id}.xlsx`;
+            const downloadUrl = getFileUrl(excelFile);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `${historyPreviewRateioNote.id}_rateio.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }} 
       />
     </div>
   );

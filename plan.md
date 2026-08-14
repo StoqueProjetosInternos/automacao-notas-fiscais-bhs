@@ -3672,6 +3672,132 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
 - Status: Aplicado
 - Observações: Alterações aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
+### CHG-0237 — Configuração de Ícone Customizado para a Aplicação Desktop Electron
+
+- Data/Hora: 2026-08-14 13:50
+- Contexto: A versão desktop utilizava o ícone padrão do Electron.
+- Objetivo:
+  1) Criar diretório apps/desktop/resources/ com os ícones icon.png e icon.ico no design do Stoque Fiscal Intelligence.
+  2) Configurar win.icon no apps/desktop/package.json para o electron-builder incorporar aos binários .exe.
+  3) Definir a propriedade icon na criação de BrowserWindow em apps/desktop/src/main.ts.
+- Escopo:
+  - Desktop:
+    - [package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/package.json)
+    - [main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/main.ts)
+    - `apps/desktop/resources/` (novo)
+- Riscos: Baixo. Configuração de assets estáticos do aplicativo.
+- Proposta: Integrar ícone oficial nos executáveis e na janela do aplicativo.
+- Testes:
+  - Reempacotar com npm.cmd run build:desktop e verificar o ícone nos arquivos .exe e na barra de tarefas.
+- Rollback:
+  1) `git checkout HEAD -- apps/desktop/package.json apps/desktop/src/main.ts`
+- Status: Aplicado
+- Observações: Configurações de código aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0238 — Central de Configurações Segura de Credenciais e Variáveis de Ambiente (SettingsModal)
+
+- Data/Hora: 2026-08-14 15:30
+- Contexto: Necessidade de permitir a administradores a visualização e atualização de chaves de IA (Gemini), tokens do Zeev, e-mail monitorado e SMTP através da interface com mascaramento de dados sensíveis.
+- Objetivo:
+  1) Criar settingsService.ts e rotas /api/settings protegidas por RBAC (ADMIN).
+  2) Mascarar segredos no envio para o frontend.
+  3) Criar componente SettingsModal.tsx integrado ao menu de perfil do Header.
+- Escopo:
+  - Backend:
+    - [settingsService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/settingsService.ts) (novo)
+    - [settingsController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/settingsController.ts) (novo)
+    - [settingsRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/settingsRoutes.ts) (novo)
+    - [app.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/app.ts)
+  - Frontend:
+    - [SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx) (novo)
+    - [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+    - [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+- Riscos: Baixo. Acesso restrito a administradores e mascaramento de senhas.
+- Proposta: Implementar central de credenciais do sistema.
+- Testes:
+  - Acessar modal de configurações como ADMIN, atualizar token/variável e validar persistência no .env e atualização em tempo real.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao apps/dashboard`
+- Status: Aplicado
+- Observações: Funcionalidade implementada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0239 — Correção de Fragmento JSX no Retorno de Header.tsx
+
+- Data/Hora: 2026-08-14 15:40
+- Contexto: Erro de compilação Babel devido à ausência da tag de abertura <> envolvendo <header> e <SettingsModal>.
+- Objetivo: Inserir o fragmento de abertura <> no return de Header.tsx.
+- Escopo:
+  - Frontend:
+    - [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Baixo. Correção de sintaxe JSX.
+- Proposta: Adicionar <> no return do Header.
+- Testes:
+  - Validar compilação do dashboard com Vite sem erros de JSX.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Header.tsx`
+- Status: Aplicado
+- Observações: Correção de sintaxe JSX aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0240 — Proteção com Encadeamento Opcional para Objeto de Usuário em Header e SettingsModal
+
+- Data/Hora: 2026-08-14 15:43
+- Contexto: Tela em branco por exceção de runtime ao acessar propriedades de user antes do término da resolução da sessão.
+- Objetivo: Proteger todos os acessos a user e currentUser com optional chaining e valores padrão.
+- Escopo:
+  - Frontend:
+    - [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+    - [SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx)
+- Riscos: Baixo. Correção defensiva de interface.
+- Proposta: Inserir user?. e fallback para strings vazias.
+- Testes:
+  - Recarregar a página do Dashboard e validar renderização imediata de todos os elementos sem exceções no console.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/components/SettingsModal.tsx`
+- Status: Aplicado
+- Observações: Correção aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0241 — Correção de Importação de Tipos com verbatimModuleSyntax em SettingsModal.tsx
+
+- Data/Hora: 2026-08-14 15:48
+- Contexto: Erro TS1484 ('MaskedSettings' is a type and must be imported using a type-only import) gerado pela regra verbatimModuleSyntax do TypeScript.
+- Objetivo: Declarar type explicitamente nas interfaces MaskedSettings e User em SettingsModal.tsx.
+- Escopo:
+  - Frontend:
+    - [SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx)
+- Riscos: Baixo. Adequação de tipagem estrita do TypeScript.
+- Proposta: Inserir modificador type na importação.
+- Testes:
+  - Executar build do Dashboard e validar código de saída 0.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/SettingsModal.tsx`
+- Status: Aplicado
+- Observações: Correção aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0242 — Visualização de Rateio Contábil no Histórico de Faturas
+
+- Data/Hora: 2026-08-14 16:20
+- Contexto: Usuários necessitam visualizar e auditar o rateio contábil diretamente a partir da aba de Histórico, da mesma forma que visualizam os PDFs.
+- Objetivo:
+  1) Adicionar coluna de Visualização (PDF e Rateio) na tabela de Histórico em Dashboard/index.tsx.
+  2) Integrar RateioPreviewModal para faturas selecionadas a partir do Histórico com suporte a download do Excel.
+- Escopo:
+  - Frontend:
+    - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Extensão de visualização de dados já existentes.
+- Proposta: Injetar botões de ação e modal de rateio no fluxo do Histórico.
+- Testes:
+  - Clicar no botão 'Rateio' em qualquer linha da aba Histórico e validar a abertura do modal com os centros de custo, contas e download.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Funcionalidade implementada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
+
+
+
+
+
 
 
 

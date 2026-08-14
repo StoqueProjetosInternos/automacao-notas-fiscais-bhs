@@ -166,3 +166,32 @@ export const uploadManualPdf = async (file: File): Promise<any> => {
   });
   return response.data;
 };
+
+export interface MaskedSettings {
+  geminiApiKey: { isConfigured: boolean; masked: string };
+  zeevApiUrl: string;
+  zeevApiToken: { isConfigured: boolean; masked: string };
+  zeevFlowId: string;
+  zeevRequester: string;
+  userEmail: string;
+  tenantId: string;
+  clientId: string;
+  clientSecret: { isConfigured: boolean; masked: string };
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: { isConfigured: boolean; masked: string };
+  smtpFrom: string;
+  smtpTo: string;
+}
+
+export const fetchSettings = async (): Promise<MaskedSettings> => {
+  const response = await apiClient.get<MaskedSettings>('/api/settings');
+  return response.data;
+};
+
+export const saveSettings = async (settings: Partial<Record<string, any>>): Promise<{ success: boolean, message: string, settings: MaskedSettings }> => {
+  const response = await apiClient.post<{ success: boolean, message: string, settings: MaskedSettings }>('/api/settings', settings);
+  return response.data;
+};

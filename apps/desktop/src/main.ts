@@ -88,12 +88,25 @@ async function startBackendServer() {
 }
 
 function createWindow() {
+  const possibleIconPaths = [
+    path.resolve(__dirname, '../resources/icon.ico'),
+    path.resolve(__dirname, '../resources/icon.png'),
+    path.resolve(__dirname, 'resources/icon.ico'),
+    path.resolve(__dirname, 'resources/icon.png'),
+    path.resolve(process.resourcesPath || '', 'resources/icon.ico'),
+    path.resolve(process.resourcesPath || '', 'resources/icon.png'),
+    path.resolve(process.resourcesPath || '', 'icon.ico'),
+    path.resolve(process.resourcesPath || '', 'icon.png'),
+  ];
+  const appIcon = possibleIconPaths.find(p => fs.existsSync(p));
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 1024,
     minHeight: 600,
     title: 'Stoque Fiscal Intelligence',
+    icon: appIcon,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
