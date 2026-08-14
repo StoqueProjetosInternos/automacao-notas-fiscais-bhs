@@ -242,11 +242,11 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
               title="Clique para alternar o tamanho deste bloco"
             >
-              {isCollapsed ? <ChevronRight size={16} color="#6b7280" /> : <ChevronDown size={16} color="#6b7280" />}
-              <span className="section-title" style={{ marginBottom: 0 }}>{getLabel(key)}</span>
+              {isCollapsed ? <ChevronRight size={14} color="#64748b" /> : <ChevronDown size={14} color="#64748b" />}
+              <span className="section-title" style={{ marginBottom: 0, fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>{getLabel(key)}</span>
             </div>
             {!isCollapsed && (
-              <div style={{ marginTop: '0.75rem' }}>
+              <div style={{ marginTop: '0.6rem' }}>
                 {renderRecursiveFields(value, currentPath)}
               </div>
             )}
@@ -262,11 +262,11 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
               title="Clique para alternar o tamanho deste bloco"
             >
-              {isCollapsed ? <ChevronRight size={16} color="#6b7280" /> : <ChevronDown size={16} color="#6b7280" />}
-              <span className="section-title" style={{ marginBottom: 0 }}>{getLabel(key)}</span>
+              {isCollapsed ? <ChevronRight size={14} color="#64748b" /> : <ChevronDown size={14} color="#64748b" />}
+              <span className="section-title" style={{ marginBottom: 0, fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>{getLabel(key)}</span>
             </div>
             {!isCollapsed && (
-              <div style={{ marginTop: '0.75rem' }}>
+              <div style={{ marginTop: '0.6rem' }}>
                 {value.map((item, index) => {
                   const itemPath = [...currentPath, index.toString()];
                   if (typeof item === 'object') {
@@ -315,7 +315,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
 
       return (
         <div key={currentPath.join('.')} className="field-group">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
             <label className="field-label" style={{ marginBottom: 0 }}>{getLabel(key)}</label>
             {isBarcodeField && displayValue && (
               <button
@@ -324,9 +324,9 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.68rem',
-                  padding: '2px 7px',
+                  gap: '3px',
+                  fontSize: '10.5px',
+                  padding: '1px 6px',
                   borderRadius: '4px',
                   border: '1px solid #cbd5e1',
                   backgroundColor: copiedBarcode ? '#ecfdf5' : '#ffffff',
@@ -337,7 +337,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                 }}
                 title="Copiar código de barras / linha digitável"
               >
-                {copiedBarcode ? <Check size={11} color="#059669" /> : <Copy size={11} />}
+                {copiedBarcode ? <Check size={10} color="#059669" /> : <Copy size={10} />}
                 {copiedBarcode ? 'Copiado!' : 'Copiar'}
               </button>
             )}
@@ -363,24 +363,47 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
   return (
     <>
       <div className="editor-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#111827', fontWeight: 700 }}>
-              <FileText size={18} color="#2563eb" />
+            <h2 style={{ fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: 700 }}>
+              <FileText size={15} color="#0284c7" />
               Curadoria de Dados
             </h2>
           </div>
-          <div className={`status-badge status-${formData?.status || 'pendente'}`} style={{ 
-            padding: '4px 10px', 
-            borderRadius: '12px', 
-            fontSize: '0.65rem', 
-            fontWeight: 700, 
-            textTransform: 'uppercase',
-            background: formData?.status === 'validado' ? '#ecfdf5' : '#fef3c7',
-            color: formData?.status === 'validado' ? '#059669' : '#b45309',
-            border: `1px solid ${formData?.status === 'validado' ? '#a7f3d0' : '#fde68a'}`
-          }}>
-            {formData?.status === 'validado' ? 'VALIDADO' : 'PENDENTE'}
+          <div>
+            {formData?.status === 'validado' ? (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#047857',
+                backgroundColor: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                padding: '1px 8px',
+                borderRadius: '4px'
+              }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                VALIDADO
+              </span>
+            ) : (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#b45309',
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fde68a',
+                padding: '1px 8px',
+                borderRadius: '4px'
+              }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
+                PENDENTE
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -420,8 +443,8 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'flex-start', 
-                  marginBottom: '10px',
-                  paddingBottom: '6px',
+                  marginBottom: '8px',
+                  paddingBottom: '4px',
                   borderBottom: '1px solid #f1f5f9'
                 }}>
                   <button 
@@ -431,8 +454,8 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',
-                      fontSize: '0.68rem', 
-                      padding: '3px 8px', 
+                      fontSize: '11px', 
+                      padding: '2px 8px', 
                       backgroundColor: '#ffffff', 
                       border: '1px solid #cbd5e1', 
                       borderRadius: '4px', 
@@ -445,7 +468,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
                     title={areAllCollapsed ? "Expandir todos os blocos de curadoria" : "Esconder todos os blocos de curadoria"}
                   >
-                    {areAllCollapsed ? <ChevronsDown size={12} /> : <ChevronsUp size={12} />}
+                    {areAllCollapsed ? <ChevronsDown size={11} /> : <ChevronsUp size={11} />}
                     {areAllCollapsed ? 'Expandir Todos' : 'Esconder Todos'}
                   </button>
                 </div>
@@ -470,21 +493,21 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             </datalist>
 
             {/* Seção Especial de Classificação Contábil no Topo */}
-            <div className="section-card" style={{ borderLeft: '4px solid #10b981', background: '#f9fafb', padding: '1rem' }}>
+            <div className="section-card">
               <div 
                 onClick={() => toggleSection('accounting')}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
                 title="Clique para alternar o tamanho deste bloco"
               >
-                {collapsedSections.accounting ? <ChevronRight size={16} color="#0f766e" /> : <ChevronDown size={16} color="#0f766e" />}
-                <span className="section-title" style={{ color: '#0f766e', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {collapsedSections.accounting ? <ChevronRight size={14} color="#64748b" /> : <ChevronDown size={14} color="#64748b" />}
+                <span className="section-title" style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
                   Classificação Contábil (Rateio)
                 </span>
               </div>
               
               {!collapsedSections.accounting && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                <div style={{ marginTop: '0.6rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '8px' }}>
                     <div className="field-group" style={{ marginBottom: 0 }}>
                       <label className="field-label">Código CR</label>
                       <input 
@@ -503,7 +526,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                         }}
                       />
                       {(formData.accountingFields as any)?.crDescription && (
-                        <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).crDescription}>
+                        <span style={{ fontSize: '10.5px', color: '#0284c7', display: 'block', marginTop: '3px', fontWeight: 500 }} title={(formData.accountingFields as any).crDescription}>
                           {(formData.accountingFields as any).crDescription}
                         </span>
                       )}
@@ -527,7 +550,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                         }}
                       />
                       {(formData.accountingFields as any)?.naturezaDescription && (
-                        <span style={{ fontSize: '0.7rem', color: '#0f766e', display: 'block', marginTop: '4px', fontStyle: 'italic' }} title={(formData.accountingFields as any).naturezaDescription}>
+                        <span style={{ fontSize: '10.5px', color: '#0284c7', display: 'block', marginTop: '3px', fontWeight: 500 }} title={(formData.accountingFields as any).naturezaDescription}>
                           {(formData.accountingFields as any).naturezaDescription}
                         </span>
                       )}
@@ -550,14 +573,14 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '8px 12px',
+                      padding: '6px 10px',
                       backgroundColor: isApportionmentBalanced ? '#ecfdf5' : '#fef2f2',
                       border: `1px solid ${isApportionmentBalanced ? '#a7f3d0' : '#fecaca'}`,
-                      borderRadius: '8px',
-                      marginTop: '12px'
+                      borderRadius: '6px',
+                      marginTop: '8px'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: isApportionmentBalanced ? '#047857' : '#b91c1c', fontWeight: 600 }}>
-                        {isApportionmentBalanced ? <CheckCircle2 size={15} color="#059669" /> : <AlertCircle size={15} color="#dc2626" />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: isApportionmentBalanced ? '#047857' : '#b91c1c', fontWeight: 600 }}>
+                        {isApportionmentBalanced ? <CheckCircle2 size={13} color="#059669" /> : <AlertCircle size={13} color="#dc2626" />}
                         <span>
                           {isApportionmentBalanced 
                             ? `Rateio: R$ ${apportionmentTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (100% alocado)` 
@@ -566,8 +589,8 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                         </span>
                       </div>
                       {!isApportionmentBalanced && (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#dc2626', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                          Diferença: R$ {Math.abs(balanceDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#dc2626', backgroundColor: '#fee2e2', padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                          Dif: R$ {Math.abs(balanceDiff).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       )}
                     </div>
@@ -578,21 +601,21 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
 
             {/* Seção de Rateio Detalhado por Equipamento */}
             {formData.apportionment && Array.isArray(formData.apportionment) && formData.apportionment.length > 0 && (
-              <div className="section-card" style={{ borderLeft: '4px solid #2563eb', background: '#f8fafc' }}>
+              <div className="section-card">
                 <div 
                   onClick={() => toggleSection('apportionment')}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
                   title="Clique para alternar o tamanho deste bloco"
                 >
-                  {collapsedSections.apportionment ? <ChevronRight size={16} color="#1e3a8a" /> : <ChevronDown size={16} color="#1e3a8a" />}
-                  <span className="section-title" style={{ color: '#1e3a8a', fontWeight: 700, margin: 0, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {collapsedSections.apportionment ? <ChevronRight size={14} color="#64748b" /> : <ChevronDown size={14} color="#64748b" />}
+                  <span className="section-title" style={{ color: '#0f172a', fontWeight: 700, margin: 0, fontSize: '12px' }}>
                     Itens Faturados e Rateio
                   </span>
                 </div>
 
                 {!collapsedSections.apportionment && (
-                  <div style={{ marginTop: '0.75rem' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#4b5563', margin: '0 0 0.75rem 0' }}>
+                  <div style={{ marginTop: '0.6rem' }}>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 0.5rem 0' }}>
                       Esta fatura contém {formData.apportionment.length} itens detalhados com informações de séries e classificação.
                     </p>
                     <button 
@@ -600,19 +623,19 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                       onClick={() => setIsModalOpen(true)}
                       style={{ 
                         width: '100%', 
-                        fontSize: '0.75rem', 
-                        padding: '8px 12px',
-                        backgroundColor: '#2563eb',
+                        fontSize: '11.5px', 
+                        padding: '6px 12px',
+                        backgroundColor: '#0284c7',
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        transition: 'background-color 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                        transition: 'background-color 0.15s ease',
+                        boxShadow: '0 1px 2px rgba(2, 132, 199, 0.2)'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
                     >
                       Visualizar e Editar Tabela de Rateio
                     </button>
@@ -622,53 +645,53 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             )}
 
             {/* Card de Trilha de Auditoria & Ciclo de Vida da Fatura */}
-            <div className="section-card" style={{ borderLeft: '4px solid #6366f1', background: '#f8fafc', padding: '1rem', marginTop: '1.25rem' }}>
+            <div className="section-card" style={{ marginTop: '8px' }}>
               <div 
                 onClick={() => toggleSection('audit')}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
                 title="Clique para alternar o tamanho deste bloco"
               >
-                {collapsedSections.audit ? <ChevronRight size={16} color="#4338ca" /> : <ChevronDown size={16} color="#4338ca" />}
-                <span className="section-title" style={{ color: '#4338ca', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {/* <FileText size={15} color="#4338ca" /> */}
+                {collapsedSections.audit ? <ChevronRight size={14} color="#64748b" /> : <ChevronDown size={14} color="#64748b" />}
+                <span className="section-title" style={{ color: '#0f172a', margin: 0, fontSize: '12px', fontWeight: 700 }}>
                   Auditoria & Ciclo de Vida
                 </span>
               </div>
 
               {!collapsedSections.audit && (
-                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', color: '#334155' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>Origem de Entrada:</span>
-                    <span style={{ fontWeight: 700, color: selectedNote?.fileName.startsWith('manual_') ? '#2563eb' : '#059669' }}>
-                      {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual via Dashboard' : 'Sincronização Automática via E-mail (Graph API)'}
+                <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', color: '#334155' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '5px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b', fontWeight: 500 }}>Origem de Entrada:</span>
+                    <span style={{ fontWeight: 600, color: selectedNote?.fileName.startsWith('manual_') ? '#0284c7' : '#059669' }}>
+                      {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual' : 'Sincronização via E-mail'}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>Data de Recepção:</span>
-                    <span style={{ fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '5px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b', fontWeight: 500 }}>Data de Recepção:</span>
+                    <span style={{ fontWeight: 600, color: '#0f172a' }}>
                       {selectedNote?.createdAt ? new Date(selectedNote.createdAt).toLocaleString('pt-BR') : 'Data registrada'}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #e2e8f0' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>Motor de IA & OCR:</span>
-                    <span style={{ fontWeight: 600, color: '#6d28d9' }}>
-                      Google Gemini 2.5 Flash (Leitura OCR)
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '5px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b', fontWeight: 500 }}>Motor de IA & OCR:</span>
+                    <span style={{ fontWeight: 600, color: '#7c3aed' }}>
+                      Google Gemini 2.5 Flash
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>Status Atual da Curadoria:</span>
+                    <span style={{ color: '#64748b', fontWeight: 500 }}>Status Atual:</span>
                     <span style={{ 
-                      padding: '2px 8px', 
+                      padding: '1px 6px', 
                       borderRadius: '4px', 
-                      fontWeight: 700, 
-                      fontSize: '0.7rem',
-                      backgroundColor: formData?.status === 'validado' ? '#d1fae5' : '#fef3c7',
-                      color: formData?.status === 'validado' ? '#047857' : '#b45309'
+                      fontWeight: 600, 
+                      fontSize: '11px',
+                      backgroundColor: formData?.status === 'validado' ? '#ecfdf5' : '#fffbeb',
+                      color: formData?.status === 'validado' ? '#047857' : '#b45309',
+                      border: `1px solid ${formData?.status === 'validado' ? '#a7f3d0' : '#fde68a'}`
                     }}>
-                      {formData?.status === 'validado' ? 'Aprovada / Validada para Zeev' : 'Pendente'}
+                      {formData?.status === 'validado' ? 'Validado para Zeev' : 'Pendente'}
                     </span>
                   </div>
                 </div>
@@ -680,7 +703,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         ) : (
           <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: '6rem' }}>
             <AlertCircle size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-            <p>Selecione um item.</p>
+            <p>Selecione uma fatura na lista lateral para iniciar a curadoria.</p>
           </div>
         )}
       </div>
@@ -689,8 +712,8 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        gap: '8px', 
-        padding: '0.75rem 1rem', 
+        gap: '10px', 
+        padding: '0.85rem 1.25rem', 
         maxWidth: '100%', 
         boxSizing: 'border-box'
       }}>
@@ -708,8 +731,9 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             justifyContent: 'center',
             gap: '6px', 
             flex: '0 0 auto',
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.75rem',
+            padding: '0.6rem 0.85rem',
+            fontSize: '0.8rem',
+            borderRadius: '6px',
             borderColor: userRole !== 'ADMIN' ? '#e5e7eb' : '#cbd5e1',
             backgroundColor: userRole !== 'ADMIN' ? '#f1f5f9' : '#ffffff',
             color: userRole !== 'ADMIN' ? '#9ca3af' : '#475569',
@@ -746,10 +770,15 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             display: 'inline-flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            gap: '6px',
+            gap: '6px', 
             flex: '0 0 auto',
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.75rem'
+            padding: '0.6rem 1rem',
+            fontSize: '0.8rem',
+            borderRadius: '6px',
+            borderColor: '#cbd5e1',
+            backgroundColor: '#ffffff',
+            color: '#334155',
+            fontWeight: 600
           }}
         >
           {loading && activeAction === 'save' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -762,14 +791,17 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             className="btn btn-outline" 
             style={{
               borderColor: '#f97316',
-              color: '#f97316',
+              color: '#ea580c',
+              backgroundColor: '#fff7ed',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
               flex: '0 0 auto',
-              padding: '0.5rem 0.75rem',
-              fontSize: '0.75rem'
+              padding: '0.6rem 1.15rem',
+              fontSize: '0.8rem',
+              borderRadius: '6px',
+              fontWeight: 600
             }}
             onClick={() => {
               setActiveAction('reopen');
@@ -793,10 +825,14 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
               display: 'inline-flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              gap: '6px',
+              gap: '6px', 
               flex: '0 0 auto',
-              padding: '0.5rem 0.75rem',
-              fontSize: '0.75rem'
+              padding: '0.6rem 1.25rem',
+              fontSize: '0.8rem',
+              borderRadius: '6px',
+              backgroundColor: '#059669',
+              color: 'white',
+              fontWeight: 600
             }}
           >
             {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}

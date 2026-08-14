@@ -41,6 +41,21 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+// Interceptor para tratar expiração de sessão globalmente
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+      if (!isLoginRequest) {
+        eraseCookie('stoque_auth_token');
+        window.dispatchEvent(new CustomEvent('stoque:session-expired'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const fetchNotes = async (): Promise<Note[]> => {
   const response = await apiClient.get<Note[]>('/api/notes');
   return response.data;
@@ -151,3 +166,32 @@ export const uploadManualPdf = async (file: File): Promise<any> => {
   });
   return response.data;
 };
+
+export interface MaskedSettings {
+  geminiApiKey: { isConfigured: boolean; masked: string };
+  zeevApiUrl: string;
+  zeevApiToken: { isConfigured: boolean; masked: string };
+  zeevFlowId: string;
+  zeevRequester: string;
+  userEmail: string;
+  tenantId: string;
+  clientId: string;
+  clientSecret: { isConfigured: boolean; masked: string };
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: { isConfigured: boolean; masked: string };
+  smtpFrom: string;
+  smtpTo: string;
+}
+
+export const fetchSettings = async (): Promise<MaskedSettings> => {
+  const response = await apiClient.get<MaskedSettings>('/api/settings');
+  return response.data;
+};
+
+export const saveSettings = async (settings: Partial<Record<string, any>>): Promise<{ success: boolean, message: string, settings: MaskedSettings }> => {
+  const response = await apiClient.post<{ success: boolean, message: string, settings: MaskedSettings }>('/api/settings', settings);
+  return response.data;
+};

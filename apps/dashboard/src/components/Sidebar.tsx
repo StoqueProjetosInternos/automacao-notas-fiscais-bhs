@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trash2, Archive, Upload, Mail, CheckCircle2, AlertCircle, Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Trash2, Archive, Upload, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Note } from '../types';
 
 interface SidebarProps {
@@ -25,20 +25,41 @@ const formatValue = (val: any): string => {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const formatDate = (isoStr?: string): string => {
-  if (!isoStr) return '';
-  try {
-    const d = new Date(isoStr);
-    if (isNaN(d.getTime())) return '';
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
-  } catch (e) {
-    return '';
+
+
+const formatDisplayDate = (note: Note): string => {
+  const due = note.data.financial?.dueDate;
+  if (due) {
+    if (due.includes('/')) return due;
+    if (due.includes('-')) {
+      const parts = due.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return due;
   }
+  const issue = note.data.financial?.issueDate;
+  if (issue) {
+    if (issue.includes('/')) return issue;
+    if (issue.includes('-')) {
+      const parts = issue.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return issue;
+  }
+  if (note.createdAt) {
+    try {
+      const d = new Date(note.createdAt);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return '';
 };
 
 const renderStatusBadge = (status?: string) => {
@@ -49,15 +70,15 @@ const renderStatusBadge = (status?: string) => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px',
-        fontSize: '0.66rem',
-        fontWeight: 700,
+        fontSize: '11px',
+        fontWeight: 600,
         color: '#047857',
         backgroundColor: '#ecfdf5',
         border: '1px solid #a7f3d0',
-        padding: '2px 8px',
-        borderRadius: '12px'
+        padding: '1px 6px',
+        borderRadius: '4px'
       }}>
-        <CheckCircle2 size={11} color="#059669" />
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
         Validado
       </span>
     );
@@ -68,15 +89,15 @@ const renderStatusBadge = (status?: string) => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px',
-        fontSize: '0.66rem',
-        fontWeight: 700,
-        color: '#b91c1c',
+        fontSize: '11px',
+        fontWeight: 600,
+        color: '#dc2626',
         backgroundColor: '#fef2f2',
         border: '1px solid #fecaca',
-        padding: '2px 8px',
-        borderRadius: '12px'
+        padding: '1px 6px',
+        borderRadius: '4px'
       }}>
-        <AlertCircle size={11} color="#dc2626" />
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }} />
         Erro
       </span>
     );
@@ -87,15 +108,15 @@ const renderStatusBadge = (status?: string) => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px',
-        fontSize: '0.66rem',
+        fontSize: '11px',
         fontWeight: 600,
         color: '#475569',
         backgroundColor: '#f1f5f9',
         border: '1px solid #cbd5e1',
-        padding: '2px 8px',
-        borderRadius: '12px'
+        padding: '1px 6px',
+        borderRadius: '4px'
       }}>
-        <Archive size={11} color="#64748b" />
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#94a3b8', display: 'inline-block' }} />
         Arquivado
       </span>
     );
@@ -105,37 +126,16 @@ const renderStatusBadge = (status?: string) => {
       display: 'inline-flex',
       alignItems: 'center',
       gap: '4px',
-      fontSize: '0.66rem',
-      fontWeight: 700,
+      fontSize: '11px',
+      fontWeight: 600,
       color: '#b45309',
-      backgroundColor: '#fef3c7',
+      backgroundColor: '#fffbeb',
       border: '1px solid #fde68a',
-      padding: '2px 8px',
-      borderRadius: '12px'
-    }}>
-      <Clock size={11} color="#b45309" />
-      Pendente
-    </span>
-  );
-};
-
-const renderSourceBadge = (fileName?: string) => {
-  const isManual = fileName?.startsWith('manual_');
-  return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '3px',
-      fontSize: '0.64rem',
-      fontWeight: 500,
-      color: '#475569',
-      backgroundColor: '#f8fafc',
-      border: '1px solid #e2e8f0',
-      padding: '1px 5px',
+      padding: '1px 6px',
       borderRadius: '4px'
     }}>
-      {isManual ? <Upload size={10} color="#64748b" /> : <Mail size={10} color="#64748b" />}
-      {isManual ? 'Manual' : 'E-mail'}
+      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b', display: 'inline-block' }} />
+      Pendente
     </span>
   );
 };
@@ -164,22 +164,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
   const [prevSortBy, setPrevSortBy] = useState(sortBy);
   const [prevShowArchived, setPrevShowArchived] = useState(showArchived);
-
-  // Mapeia o ID permanente sequencial de cada nota em ordem cronológica de criação (1, 2, 3...)
-  const chronologicalIdMap = React.useMemo(() => {
-    const sorted = [...notes].sort((a, b) => {
-      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      if (timeA !== timeB) return timeA - timeB;
-      return a.id.localeCompare(b.id, undefined, { numeric: true });
-    });
-
-    const map = new Map<string, number>();
-    sorted.forEach((note, index) => {
-      map.set(note.id, index + 1);
-    });
-    return map;
-  }, [notes]);
 
   if (searchTerm !== prevSearchTerm) {
     setPrevSearchTerm(searchTerm);
@@ -446,54 +430,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Lista de Cards Compactos de Faturas */}
-      <div className="note-list" style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', flex: 1 }}>
-        {currentNotes.map((note, idx) => {
-          const displaySeqId = chronologicalIdMap.get(note.id) || (indexOfFirstItem + idx + 1);
+      {/* Lista de Faturas formatada */}
+      <div className="note-list" style={{ padding: '0.6rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
+        {currentNotes.map((note) => {
           const isSelected = selectedNoteId === note.id;
           const isConfirmingDelete = noteIdDeleting === note.id;
           const isConfirmingArchive = noteIdArchiving === note.id;
-          const supplierName = note.data.supplier?.name || 'Fornecedor não identificado';
+          const supplierName = note.data.supplier?.name || 'FORNECEDOR NÃO IDENTIFICADO';
           const value = note.data.financial?.originalValue || note.data.valorTotal;
           const docType = note.data.documentType || (note.data.documentIdentifiers as any)?.documentType || 'Fatura';
           const status = note.data.status || 'pendente';
-
-          // Define a cor da borda de acento lateral com base no estado
-          let accentColor = '#3b82f6';
-          if (status === 'validado') accentColor = '#10b981';
-          else if (status === 'erro' || status === 'error') accentColor = '#ef4444';
-          else if (status === 'pendente') accentColor = '#f59e0b';
-          if (isSelected) accentColor = '#0284c7';
+          const displayDate = formatDisplayDate(note);
 
           return (
             <div 
               key={note.id} 
-              onClick={() => !isConfirmingDelete && !isConfirmingArchive && onSelectNote(note)}
+              onClick={() => !isConfirmingDelete && !isConfirmingArchive && onSelectNote(isSelected ? null : note)}
               style={{
                 backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
-                border: `1px solid ${isSelected ? '#bae6fd' : '#e2e8f0'}`,
-                borderLeft: `3px solid ${accentColor}`,
+                border: `1px solid ${isSelected ? '#93c5fd' : '#e2e8f0'}`,
+                borderLeft: isSelected ? '3px solid #0284c7' : '1px solid #e2e8f0',
                 borderRadius: '8px',
-                padding: '7px 9px',
+                padding: '10px 12px',
                 cursor: 'pointer',
-                boxShadow: isSelected ? '0 2px 6px rgba(2, 132, 199, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
+                boxShadow: isSelected ? '0 2px 8px rgba(2, 132, 199, 0.10)' : '0 1px 2px rgba(0,0,0,0.02)',
                 transition: 'all 0.15s ease',
-                position: 'relative'
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '5px'
               }}
               onMouseOver={(e) => {
                 if (!isSelected) {
                   e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
                 }
               }}
               onMouseOut={(e) => {
                 if (!isSelected) {
                   e.currentTarget.style.backgroundColor = '#ffffff';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
                 }
               }}
             >
               {isConfirmingDelete ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-                  <span style={{ fontSize: '0.7rem', color: '#b91c1c', fontWeight: 600 }}>Excluir esta fatura permanentemente?</span>
+                  <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600 }}>Excluir esta fatura permanentemente?</span>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       onClick={async () => {
@@ -502,8 +484,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }}
                       style={{
                         flex: 1,
-                        padding: '3px 6px',
-                        fontSize: '0.65rem',
+                        padding: '4px 8px',
+                        fontSize: '0.68rem',
                         background: '#ef4444',
                         color: 'white',
                         border: 'none',
@@ -518,8 +500,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => setNoteIdDeleting(null)}
                       style={{
                         flex: 1,
-                        padding: '3px 6px',
-                        fontSize: '0.65rem',
+                        padding: '4px 8px',
+                        fontSize: '0.68rem',
                         background: '#e2e8f0',
                         color: '#334155',
                         border: 'none',
@@ -534,7 +516,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               ) : isConfirmingArchive ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-                  <span style={{ fontSize: '0.7rem', color: status === 'arquivado' ? '#059669' : '#1d4ed8', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.72rem', color: status === 'arquivado' ? '#059669' : '#1d4ed8', fontWeight: 600 }}>
                     {status === 'arquivado' ? 'Desarquivar esta fatura?' : 'Arquivar esta fatura?'}
                   </span>
                   <div style={{ display: 'flex', gap: '6px' }}>
@@ -549,8 +531,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }}
                       style={{
                         flex: 1,
-                        padding: '3px 6px',
-                        fontSize: '0.65rem',
+                        padding: '4px 8px',
+                        fontSize: '0.68rem',
                         background: status === 'arquivado' ? '#10b981' : '#3b82f6',
                         color: 'white',
                         border: 'none',
@@ -565,8 +547,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => setNoteIdArchiving(null)}
                       style={{
                         flex: 1,
-                        padding: '3px 6px',
-                        fontSize: '0.65rem',
+                        padding: '4px 8px',
+                        fontSize: '0.68rem',
                         background: '#e2e8f0',
                         color: '#334155',
                         border: 'none',
@@ -581,68 +563,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               ) : (
                 <>
-                  {/* Linha 1: Índice + Fornecedor + Botões de Ação */}
+                  {/* Linha 1: Nome do Fornecedor + Ações */}
                   <div style={{ 
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: '6px',
-                    marginBottom: '3px'
+                    gap: '8px'
                   }}>
                     <div style={{ 
-                      fontSize: '0.75rem', 
+                      fontSize: '12px', 
                       fontWeight: 700,
-                      color: isSelected ? '#0369a1' : '#0f172a', 
+                      color: isSelected ? '#0284c7' : '#0f172a', 
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px'
+                      letterSpacing: '0.01em',
+                      textTransform: 'uppercase'
                     }} title={supplierName}>
-                      <span style={{ 
-                        fontSize: '0.6rem', 
-                        fontWeight: 800, 
-                        color: '#64748b',
-                        backgroundColor: '#f1f5f9',
-                        padding: '1px 4px',
-                        borderRadius: '3px'
-                      }}>
-                        #{displaySeqId}
-                      </span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {supplierName}
-                      </span>
+                      {supplierName}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNoteIdArchiving(note.id);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: '1px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: status === 'arquivado' ? "#10b981" : "#94a3b8",
-                          transition: 'color 0.15s ease'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.color = status === 'arquivado' ? '#059669' : '#2563eb';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.color = status === 'arquivado' ? '#10b981' : '#94a3b8';
-                        }}
-                        title={status === 'arquivado' ? "Desarquivar fatura" : "Arquivar fatura"}
-                      >
-                        <Archive size={12} />
-                      </button>
+                    <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexShrink: 0 }}>
+                      {!showArchived && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNoteIdArchiving(note.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '1px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: "#94a3b8",
+                            transition: 'color 0.15s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.color = '#2563eb';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.color = '#94a3b8';
+                          }}
+                          title="Arquivar fatura"
+                        >
+                          <Archive size={12} />
+                        </button>
+                      )}
                       {userRole === 'ADMIN' && (
                         <button
                           onClick={(e) => {
@@ -669,64 +639,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Linha 2: Tags de Origem (E-mail / Upload) e Tipo de Documento */}
+                  {/* Linha 2: Tipo de Documento • Data */}
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '5px', 
-                    marginBottom: '4px',
-                    flexWrap: 'wrap'
+                    fontSize: '11px',
+                    color: '#64748b',
+                    fontWeight: 400
                   }}>
-                    {renderSourceBadge(note.fileName)}
-                    <span style={{ 
-                      fontSize: '0.64rem', 
-                      fontWeight: 500,
-                      color: isSelected ? '#0284c7' : '#475569', 
-                      backgroundColor: isSelected ? '#e0f2fe' : '#f8fafc',
-                      border: `1px solid ${isSelected ? '#bae6fd' : '#e2e8f0'}`,
-                      padding: '1px 5px', 
-                      borderRadius: '4px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '170px'
-                    }} title={`Tipo de Documento: ${docType}`}>
+                    <span style={{ color: isSelected ? '#0369a1' : '#475569', fontWeight: 500 }}>
                       {docType}
                     </span>
+                    {displayDate && (
+                      <>
+                        <span style={{ color: '#cbd5e1' }}>•</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Calendar size={10} color="#94a3b8" />
+                          {displayDate}
+                        </span>
+                      </>
+                    )}
                   </div>
 
-                  {/* Linha 3: Data de Importação */}
-                  {note.createdAt && (
-                    <div style={{ 
-                      fontSize: '0.63rem', 
-                      color: '#64748b', 
-                      marginBottom: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontWeight: 500
-                    }}>
-                      <Calendar size={10} color="#94a3b8" />
-                      <span>{formatDate(note.createdAt)}</span>
-                    </div>
-                  )}
-
-                  {/* Linha 3 (Rodapé do Card): Badge de Status + Valor Financeiro em Destaque */}
+                  {/* Linha 3: Valor Financeiro (R$ 3.000,00) + Badge de Status (🟠 Pendente) */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    paddingTop: '4px',
-                    borderTop: '1px solid #f1f5f9'
+                    paddingTop: '3px',
+                    borderTop: '1px solid #f1f5f9',
+                    marginTop: '2px'
                   }}>
-                    {renderStatusBadge(status)}
                     <div style={{ 
-                      fontSize: '0.78rem', 
+                      fontSize: '12.5px', 
                       fontWeight: 700, 
-                      color: '#334155'
+                      color: '#0f172a'
                     }}>
                       R$ {formatValue(value)}
                     </div>
+                    {renderStatusBadge(status)}
                   </div>
                 </>
               )}

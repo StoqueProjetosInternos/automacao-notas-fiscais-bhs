@@ -106,10 +106,6 @@ export class ZeevService {
         { name: 'possuiRateio', value: 'Sim' },
         { name: 'cRPrincipal', value: noteData.accountingFields?.cr || '1103' },
         { name: 'diretorHead', value: 'Helder Venancio Marques' },
-        {
-          name: 'confimacaoDeExtensaoCorretaDoArquivoDeRateio',
-          value: 'Confirmo que baixei o modelo disponível no link acima'
-        },
         { name: 'naturezaDaRequisicao', value: natureCode },
         {
           name: 'finalidadeDoServico',
@@ -134,7 +130,12 @@ export class ZeevService {
         { name: 'possuiParcelamento', value: 'Não' },
         { name: 'valorDaPrimeiraParcela', value: formattedTotal },
         { name: 'parcela', value: '2' },
-        { name: 'vencimentoDaParcela', value: noteData.financial?.dueDate }
+        { name: 'vencimentoDaParcela', value: noteData.financial?.dueDate },
+        {
+          name: 'pessoaResponsavel',
+          value: process.env.ZEEV_REQUESTER || process.env.ZEEV_REQUESTER_EMAIL || 'hugo.bhs@stoque.com.br'
+        },
+        { name: 'origem', value: 'IA' }
       ];
 
       // 7. Montagem dos arquivos Base64 mapeados aos campos técnicos de arquivos no Zeev
@@ -169,6 +170,13 @@ export class ZeevService {
         formFields,
         files
       };
+
+      const requester = process.env.ZEEV_REQUESTER || process.env.ZEEV_REQUESTER_EMAIL || process.env.ZEEV_REQUESTER_LOGIN;
+      if (requester) {
+        payload.requester = requester.trim();
+        payload.requesterUser = requester.trim();
+        payload.requesterEmail = requester.trim();
+      }
 
       if (process.env.ZEEV_TEAM_ID) {
         payload.teamId = parseInt(process.env.ZEEV_TEAM_ID, 10);

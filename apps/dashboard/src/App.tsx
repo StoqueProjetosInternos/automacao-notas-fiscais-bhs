@@ -32,6 +32,16 @@ function App() {
     };
 
     initAuth();
+
+    const handleSessionExpired = () => {
+      logoutUser();
+      setUser(null);
+    };
+
+    window.addEventListener('stoque:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('stoque:session-expired', handleSessionExpired);
+    };
   }, []);
 
   if (checkingAuth) {

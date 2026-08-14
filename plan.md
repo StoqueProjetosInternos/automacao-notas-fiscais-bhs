@@ -3333,6 +3333,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a abertura da janela de impressão de PDF e checar a presença de todas as colunas em modo paisagem.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3350,6 +3351,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Exportar relatórios em PDF e CSV e conferir a exatidão dos metadados impressos.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3367,6 +3369,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Alternar para a aba Histórico e validar o feedback visual de carregamento.
 - Rollback:
   1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3384,6 +3387,7 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Validar a leitura e formatação do arquivo Markdown.
 - Rollback:
   1) `git checkout -- apresentacao_projeto_head.md` (ou remoção caso não rastreado)
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Documento criado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
@@ -3402,5 +3406,409 @@ Adicionar `console.log` organizados no arquivo `src/features/email/searchDataFro
   - Inspecionar dist/index.html gerado pelo build e testar deploy via GitHub Actions.
 - Rollback:
   1) `git checkout -- apps/dashboard/vite.config.ts .github/workflows/deploy.yml`
+- Commit: `6fb29ce`
 - Status: Aplicado
 - Observações: Alterações aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0222 — Correção de Sintaxe CSS no App.css (.btn)
+
+- Data/Hora: 2026-08-14 10:35
+- Contexto: Erro de parse no PostCSS durante a inicialização/build do dashboard devido a fechamento duplicado de bloco CSS.
+- Objetivo: Remover linhas duplicadas na classe .btn do App.css para permitir compilação correta.
+- Escopo:
+  - Frontend:
+    - [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+- Riscos: Baixo. Alteração puramente sintática de CSS.
+- Proposta: Remoção das linhas duplicadas de fechamento e transição em App.css.
+- Testes:
+  - Build do workspace dashboard com Vite.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/App.css`
+- Status: Aplicado
+- Observações: Correção aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0223 — Correção de Campos do Formulário Zeev (Remoção de Campo Desabilitado)
+
+- Data/Hora: 2026-08-14 11:45
+- Contexto: A API do Zeev rejeitou a criação de instância com erro 403 (execute.msgformfieldnotenabledintaskformfield) informando que o campo confimacaoDeExtensaoCorretaDoArquivoDeRateio não está disponível na etapa inicial.
+- Objetivo: Remover o campo obsoleto/desabilitado do payload no zeevService.ts.
+- Escopo:
+  - Backend:
+    - [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+- Riscos: Baixo. Alinhamento com os campos aceitos pelo formulário do Zeev.
+- Proposta: Remover o envio de confimacaoDeExtensaoCorretaDoArquivoDeRateio em zeevService.ts.
+- Testes:
+  - Executar simulação de aprovação no dashboard e verificar código de sucesso retornado pela API do Zeev.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+- Observações: Ajuste aplicado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0224 — Suporte a Identificação de Requisitante na API do Zeev (ZEEV_REQUESTER)
+
+- Data/Hora: 2026-08-14 11:50
+- Contexto: A API do Zeev retornou erro informando não ter encontrado o login ou identificador necessário para definir o requisitante da solicitação.
+- Objetivo: Injetar campos de identificação de requisitante (requester, requesterUser, requesterEmail) a partir da variável de ambiente ZEEV_REQUESTER no payload de criação de instâncias.
+- Escopo:
+  - Backend:
+    - [zeevClient.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/infra/zeev/zeevClient.ts)
+    - [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+- Riscos: Baixo. Propriedade opcional lida do ambiente.
+- Proposta: Adicionar suporte a requester no payload do ZeevClient e ZeevService.
+- Testes:
+  - Executar simulação de aprovação com ZEEV_REQUESTER configurado e validar resposta de sucesso.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/infra/zeev/zeevClient.ts apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+- Observações: Ajuste aplicado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0225 — Diagnóstico de Usuário e Organograma do Zeev (users/me)
+
+- Data/Hora: 2026-08-14 11:55
+- Contexto: Erro na API do Zeev por ausência de login/identificador de requisitante vinculado ao organograma do fluxo de produção.
+- Objetivo: Criar script check_zeev_user.ts para consultar /api/2/users/me e extrair os identificadores exatos de time e cargo (teamId/positionId) do usuário do token.
+- Escopo:
+  - Backend:
+    - [check_zeev_user.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/check_zeev_user.ts)
+- Riscos: Baixo. Script de consulta somente leitura.
+- Proposta: Implementar script de inspeção de credenciais Zeev.
+- Testes:
+  - Executar check_zeev_user.ts e validar resposta da API do Zeev com os metadados de autenticação.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/check_zeev_user.ts` (ou deletar arquivo)
+- Status: Aplicado
+- Observações: Script criado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0226 — Script de Teste Direto de Payload da Instância Zeev (isSimulation: true)
+
+- Data/Hora: 2026-08-14 12:00
+- Contexto: Testar diretamente a abertura simulada de instância no fluxo do Zeev com variações de identificador de requisitante e campos obrigatórios.
+- Objetivo: Criar test_zeev_payload.ts para depuração fina da chamada POST /api/2/instances no terminal.
+- Escopo:
+  - Backend:
+    - [test_zeev_payload.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/test_zeev_payload.ts)
+- Riscos: Baixo. Execução em modo isSimulation: true sem persistência de dados reais no Zeev.
+- Proposta: Implementar script de teste de payload.
+- Testes:
+  - Executar test_zeev_payload.ts e analisar resposta da API do Zeev.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/test_zeev_payload.ts` (ou deletar arquivo)
+- Status: Aplicado
+- Observações: Script criado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0227 — Teste Automatizado de Variações de Requisitante no Zeev
+
+- Data/Hora: 2026-08-14 12:05
+- Contexto: A API do Zeev exige formato específico para o identificador do requisitante na criação de instâncias.
+- Objetivo: Atualizar test_zeev_payload.ts para testar sequencialmente 7 variações de payload (login sem domínio, requesterUser, requesterLogin, requesterEmail e objeto aninhado).
+- Escopo:
+  - Backend:
+    - [test_zeev_payload.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/test_zeev_payload.ts)
+- Riscos: Baixo. Execução somente em simulação.
+- Proposta: Implementar loop de teste de variações de requisitante.
+- Testes:
+  - Executar test_zeev_payload.ts e identificar a variação que obtém código 200/201.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/test_zeev_payload.ts`
+- Status: Aplicado
+- Observações: Script atualizado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0228 — Script de Consulta de Metadados do Fluxo Zeev (GET /api/2/flows/:id)
+
+- Data/Hora: 2026-08-14 12:15
+- Contexto: Investigar a configuração do fluxo 2149/2044 no Zeev que provoca erro de resolução de requisitante na iniciação via API.
+- Objetivo: Criar check_zeev_flow_info.ts para consultar GET /api/2/flows/:id e validar status, deploy e configurações da API.
+- Escopo:
+  - Backend:
+    - [check_zeev_flow_info.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/check_zeev_flow_info.ts)
+- Riscos: Baixo. Consulta somente leitura.
+- Proposta: Implementar script de inspeção de fluxo.
+- Testes:
+  - Executar check_zeev_flow_info.ts e inspecionar resposta.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/check_zeev_flow_info.ts` (ou deletar arquivo)
+- Status: Aplicado
+- Observações: Script criado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0229 — Consulta de Processos Implantados no Zeev (GET /api/2/flows)
+
+- Data/Hora: 2026-08-14 12:20
+- Contexto: Verificar a lista de fluxos implantados (deploy: true) e validar se o fluxo 2149/2044 está publicado e acessível via API.
+- Objetivo: Atualizar check_zeev_flow_info.ts para listar processos ativos via GET /api/2/flows.
+- Escopo:
+  - Backend:
+    - [check_zeev_flow_info.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/check_zeev_flow_info.ts)
+- Riscos: Baixo. Consulta somente leitura.
+- Proposta: Implementar listagem e filtro de fluxos ativos no Zeev.
+- Testes:
+  - Executar check_zeev_flow_info.ts e inspecionar a lista de processos retornados.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/check_zeev_flow_info.ts`
+- Status: Aplicado
+- Observações: Script atualizado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0230 — Inclusão de Campos de Apoio à RN00 (pessoaResponsavel e origem) no Teste Zeev
+
+- Data/Hora: 2026-08-14 12:40
+- Contexto: A regra de negócio RN00 (Mudar Solicitante) falha quando os campos de apoio como pessoaResponsavel e origem não são passados no payload.
+- Objetivo: Atualizar test_zeev_payload.ts para enviar pessoaResponsavel (login/email) e origem, validando o atendimento à RN00 do Zeev.
+- Escopo:
+  - Backend:
+    - [test_zeev_payload.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/test_zeev_payload.ts)
+- Riscos: Baixo. Execução em modo isSimulation: true.
+- Proposta: Implementar testes com pessoaResponsavel e origem.
+- Testes:
+  - Executar test_zeev_payload.ts e validar resposta da API do Zeev.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/test_zeev_payload.ts`
+- Status: Aplicado
+- Observações: Script atualizado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0231 — Inclusão Definitiva dos Campos de Solicitante e Origem (pessoaResponsavel e origem) no ZeevService
+
+- Data/Hora: 2026-08-14 12:45
+- Contexto: A regra de negócio RN00 (Alterar Solicitante) do Zeev exige os campos pessoaResponsavel e origem para direcionamento autônomo sem parada em tarefa humana.
+- Objetivo: Injetar pessoaResponsavel (lido de ZEEV_REQUESTER) e origem ("IA") no payload padrão do zeevService.ts.
+- Escopo:
+  - Backend:
+    - [zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+- Riscos: Baixo. Compatibilidade total com os fluxos 2044 e 2149.
+- Proposta: Adicionar pessoaResponsavel e origem na montagem de formFields.
+- Testes:
+  - Executar simulação de aprovação no Dashboard e validar geração do processo no Zeev.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+- Observações: Campos injetados com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0232 — Diagnóstico e Homologação da API de Mensagens do Zeev (POST /api/2/messages)
+
+- Data/Hora: 2026-08-14 13:05
+- Contexto: Abertura de instâncias homologada com sucesso; ajuste fino do endpoint de mensagens para vincular comentários da IA no histórico da solicitação.
+- Objetivo: Criar script test_zeev_message.ts para testar os formatos aceitos pelo endpoint /api/2/messages e atualizar ZeevClient.postInstanceMessage.
+- Escopo:
+  - Backend:
+    - [test_zeev_message.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/test_zeev_message.ts)
+- Riscos: Baixo. Teste isolado na instância 240922.
+- Proposta: Implementar bateria de testes de formato de mensagem.
+- Testes:
+  - Executar test_zeev_message.ts e analisar detalhes de retorno da API.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/test_zeev_message.ts` (ou deletar arquivo)
+- Status: Aplicado
+- Observações: Script criado sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0233 — Correção do Contrato da API de Mensagens do Zeev (messageBody)
+
+- Data/Hora: 2026-08-14 13:10
+- Contexto: A validação do Zeev retornou erro 400 indicando a obrigatoriedade do campo messageBody.
+- Objetivo: Ajustar ZeevClient.postInstanceMessage e test_zeev_message.ts para enviar { instanceId, messageBody }.
+- Escopo:
+  - Backend:
+    - [zeevClient.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/infra/zeev/zeevClient.ts)
+    - [test_zeev_message.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/test_zeev_message.ts)
+- Riscos: Baixo. Alinhamento com o schema oficial do Zeev.
+- Proposta: Substituir message por messageBody no payload de mensagens.
+- Testes:
+  - Executar test_zeev_message.ts e validar resposta 200/201.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/infra/zeev/zeevClient.ts apps/automacao/src/scripts/test_zeev_message.ts`
+- Status: Aplicado
+- Observações: Ajuste aplicado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0234 — Ocultação do Botão de Arquivar na Aba de Arquivadas/Concluídas
+
+- Data/Hora: 2026-08-14 13:12
+- Contexto: Na aba Arquivadas/Concluídas, o botão de arquivamento continuava visível para as faturas da listagem.
+- Objetivo: Condicionar a renderização do botão de arquivamento em Sidebar.tsx com !showArchived para exibi-lo apenas em notas pendentes.
+- Escopo:
+  - Frontend:
+    - [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Baixo. Ajuste exclusivamente visual.
+- Proposta: Envolver botão de arquivamento com !showArchived.
+- Testes:
+  - Navegar para a aba Arquivadas/Concluídas e verificar a ausência do botão de arquivar nos cards da lista.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Sidebar.tsx`
+- Status: Aplicado
+- Observações: Ajuste de interface aplicado com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0235 — Correção de Tag JSX no Container de Ações de Fatura em Sidebar.tsx
+
+- Data/Hora: 2026-08-14 13:15
+- Contexto: Erro de compilação Babel (Expected corresponding JSX closing tag for <>) por ausência da tag de abertura do container de botões de ação.
+- Objetivo: Restaurar a tag de abertura <div style={{ display: 'flex', gap: '3px', alignItems: 'center', flexShrink: 0 }}> em Sidebar.tsx.
+- Escopo:
+  - Frontend:
+    - [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+- Riscos: Baixo. Correção de sintaxe JSX.
+- Proposta: Restaurar abertura do container de ações.
+- Testes:
+  - Carregar o Dashboard no navegador e validar ausência de erros de compilação.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Sidebar.tsx`
+- Status: Aplicado
+- Observações: Correção aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0236 — Alternância de Seleção de Notas e Redirecionamento Imediato por Expiração de Sessão
+
+- Data/Hora: 2026-08-14 13:20
+- Contexto: Usuários relataram necessidade de desmarcar faturas ao clicar novamente no mesmo item selecionado e redirecionamento instantâneo para login quando a sessão expira.
+- Objetivo:
+  1) Permitir deseleção no clique em Sidebar.tsx (onSelectNote(isSelected ? null : note)).
+  2) Interceptar erros 401/403 no Axios (api.ts) e despachar evento para App.tsx redirecionar imediatamente para /login.
+- Escopo:
+  - Frontend:
+    - [Sidebar.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Sidebar.tsx)
+    - [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+    - [App.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.tsx)
+- Riscos: Baixo. Melhorias de usabilidade e segurança de sessão.
+- Proposta: Injetar toggle de seleção e interceptor global de 401 com evento.
+- Testes:
+  - Clicar na fatura selecionada e verificar se o painel limpa a seleção.
+  - Simular expiração de sessão e validar redirecionamento automático para a tela de login.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Sidebar.tsx apps/dashboard/src/services/api.ts apps/dashboard/src/App.tsx`
+- Status: Aplicado
+- Observações: Alterações aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0237 — Configuração de Ícone Customizado para a Aplicação Desktop Electron
+
+- Data/Hora: 2026-08-14 13:50
+- Contexto: A versão desktop utilizava o ícone padrão do Electron.
+- Objetivo:
+  1) Criar diretório apps/desktop/resources/ com os ícones icon.png e icon.ico no design do Stoque Fiscal Intelligence.
+  2) Configurar win.icon no apps/desktop/package.json para o electron-builder incorporar aos binários .exe.
+  3) Definir a propriedade icon na criação de BrowserWindow em apps/desktop/src/main.ts.
+- Escopo:
+  - Desktop:
+    - [package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/package.json)
+    - [main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/main.ts)
+    - `apps/desktop/resources/` (novo)
+- Riscos: Baixo. Configuração de assets estáticos do aplicativo.
+- Proposta: Integrar ícone oficial nos executáveis e na janela do aplicativo.
+- Testes:
+  - Reempacotar com npm.cmd run build:desktop e verificar o ícone nos arquivos .exe e na barra de tarefas.
+- Rollback:
+  1) `git checkout HEAD -- apps/desktop/package.json apps/desktop/src/main.ts`
+- Status: Aplicado
+- Observações: Configurações de código aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0238 — Central de Configurações Segura de Credenciais e Variáveis de Ambiente (SettingsModal)
+
+- Data/Hora: 2026-08-14 15:30
+- Contexto: Necessidade de permitir a administradores a visualização e atualização de chaves de IA (Gemini), tokens do Zeev, e-mail monitorado e SMTP através da interface com mascaramento de dados sensíveis.
+- Objetivo:
+  1) Criar settingsService.ts e rotas /api/settings protegidas por RBAC (ADMIN).
+  2) Mascarar segredos no envio para o frontend.
+  3) Criar componente SettingsModal.tsx integrado ao menu de perfil do Header.
+- Escopo:
+  - Backend:
+    - [settingsService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/settingsService.ts) (novo)
+    - [settingsController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/settingsController.ts) (novo)
+    - [settingsRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/settingsRoutes.ts) (novo)
+    - [app.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/app.ts)
+  - Frontend:
+    - [SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx) (novo)
+    - [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+    - [api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+- Riscos: Baixo. Acesso restrito a administradores e mascaramento de senhas.
+- Proposta: Implementar central de credenciais do sistema.
+- Testes:
+  - Acessar modal de configurações como ADMIN, atualizar token/variável e validar persistência no .env e atualização em tempo real.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao apps/dashboard`
+- Status: Aplicado
+- Observações: Funcionalidade implementada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0239 — Correção de Fragmento JSX no Retorno de Header.tsx
+
+- Data/Hora: 2026-08-14 15:40
+- Contexto: Erro de compilação Babel devido à ausência da tag de abertura <> envolvendo <header> e <SettingsModal>.
+- Objetivo: Inserir o fragmento de abertura <> no return de Header.tsx.
+- Escopo:
+  - Frontend:
+    - [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+- Riscos: Baixo. Correção de sintaxe JSX.
+- Proposta: Adicionar <> no return do Header.
+- Testes:
+  - Validar compilação do dashboard com Vite sem erros de JSX.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Header.tsx`
+- Status: Aplicado
+- Observações: Correção de sintaxe JSX aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0240 — Proteção com Encadeamento Opcional para Objeto de Usuário em Header e SettingsModal
+
+- Data/Hora: 2026-08-14 15:43
+- Contexto: Tela em branco por exceção de runtime ao acessar propriedades de user antes do término da resolução da sessão.
+- Objetivo: Proteger todos os acessos a user e currentUser com optional chaining e valores padrão.
+- Escopo:
+  - Frontend:
+    - [Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+    - [SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx)
+- Riscos: Baixo. Correção defensiva de interface.
+- Proposta: Inserir user?. e fallback para strings vazias.
+- Testes:
+  - Recarregar a página do Dashboard e validar renderização imediata de todos os elementos sem exceções no console.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/components/SettingsModal.tsx`
+- Status: Aplicado
+- Observações: Correção aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0241 — Correção de Importação de Tipos com verbatimModuleSyntax em SettingsModal.tsx
+
+- Data/Hora: 2026-08-14 15:48
+- Contexto: Erro TS1484 ('MaskedSettings' is a type and must be imported using a type-only import) gerado pela regra verbatimModuleSyntax do TypeScript.
+- Objetivo: Declarar type explicitamente nas interfaces MaskedSettings e User em SettingsModal.tsx.
+- Escopo:
+  - Frontend:
+    - [SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx)
+- Riscos: Baixo. Adequação de tipagem estrita do TypeScript.
+- Proposta: Inserir modificador type na importação.
+- Testes:
+  - Executar build do Dashboard e validar código de saída 0.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/SettingsModal.tsx`
+- Status: Aplicado
+- Observações: Correção aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0242 — Visualização de Rateio Contábil no Histórico de Faturas
+
+- Data/Hora: 2026-08-14 16:20
+- Contexto: Usuários necessitam visualizar e auditar o rateio contábil diretamente a partir da aba de Histórico, da mesma forma que visualizam os PDFs.
+- Objetivo:
+  1) Adicionar coluna de Visualização (PDF e Rateio) na tabela de Histórico em Dashboard/index.tsx.
+  2) Integrar RateioPreviewModal para faturas selecionadas a partir do Histórico com suporte a download do Excel.
+- Escopo:
+  - Frontend:
+    - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Extensão de visualização de dados já existentes.
+- Proposta: Injetar botões de ação e modal de rateio no fluxo do Histórico.
+- Testes:
+  - Clicar no botão 'Rateio' em qualquer linha da aba Histórico e validar a abertura do modal com os centros de custo, contas e download.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Funcionalidade implementada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

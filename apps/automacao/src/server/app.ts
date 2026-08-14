@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { FILES_DIR } from './config/paths.js';
 import noteRoutes from './routes/noteRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
 import { authMiddleware } from './middlewares/authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,5 +44,8 @@ app.use('/api/auth', authRoutes);
 
 // Rotas de Notas protegidas por autenticação
 app.use('/api/notes', authMiddleware, noteRoutes);
+
+// Rotas de Configurações e Credenciais do Sistema (Protegidas)
+app.use('/api/settings', authMiddleware, settingsRoutes);
 
 export default app;
