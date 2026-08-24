@@ -54,9 +54,9 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
         <span style={{ 
           marginLeft: '8px', 
           fontSize: '0.9rem', 
-          color: '#6b7280', 
+          color: '#505246', 
           fontWeight: 500, 
-          borderLeft: '1px solid #e5e7eb', 
+          borderLeft: '1px solid #dcded4', 
           paddingLeft: '12px',
           display: 'inline-flex',
           alignItems: 'center',
@@ -106,8 +106,8 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderColor: '#a7f3d0',
-              backgroundColor: '#ecfdf5',
+              borderColor: '#C8E9BF',
+              backgroundColor: '#f7faf5',
               borderRadius: '6px',
               cursor: hasSelectedNote ? 'pointer' : 'not-allowed',
               opacity: hasSelectedNote ? 1 : 0.4,
@@ -115,16 +115,16 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             }} 
             onMouseOver={(e) => {
               if (hasSelectedNote) {
-                e.currentTarget.style.backgroundColor = '#d1fae5';
-                e.currentTarget.style.borderColor = '#059669';
+                e.currentTarget.style.backgroundColor = '#C8E9BF';
+                e.currentTarget.style.borderColor = '#2FC808';
                 e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 2px 6px rgba(5, 150, 105, 0.25)';
+                e.currentTarget.style.boxShadow = '0 2px 6px rgba(47, 200, 8, 0.25)';
               }
             }}
             onMouseOut={(e) => {
               if (hasSelectedNote) {
-                e.currentTarget.style.backgroundColor = '#ecfdf5';
-                e.currentTarget.style.borderColor = '#a7f3d0';
+                e.currentTarget.style.backgroundColor = '#f7faf5';
+                e.currentTarget.style.borderColor = '#C8E9BF';
                 e.currentTarget.style.transform = 'none';
                 e.currentTarget.style.boxShadow = 'none';
               }
@@ -133,7 +133,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             disabled={!hasSelectedNote}
             title={hasSelectedNote ? 'Baixar planilha Excel (.xlsx) de rateio da fatura selecionada' : 'Selecione uma fatura para baixar o rateio'}
           >
-            <FileSpreadsheet size={16} color="#059669" />
+            <FileSpreadsheet size={16} color="#202C25" />
           </button>
         )}
         <button 
@@ -158,22 +158,22 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
             alignItems: 'center', 
             gap: '8px', 
             padding: '4px 12px', 
-            background: isApiOnline ? '#f3f4f6' : '#fef2f2', 
+            background: isApiOnline ? '#f7faf5' : '#fef2f2', 
             borderRadius: '20px',
-            border: `1px solid ${isApiOnline ? 'transparent' : '#fee2e2'}`,
+            border: `1px solid ${isApiOnline ? '#C8E9BF' : '#fee2e2'}`,
             transition: 'all 0.3s'
           }}>
             <div style={{ 
               width: 8, 
               height: 8, 
               borderRadius: '50%', 
-              background: isApiOnline ? '#10b981' : '#ef4444',
-              boxShadow: isApiOnline ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none'
+              background: isApiOnline ? '#2FC808' : '#ef4444',
+              boxShadow: isApiOnline ? '0 0 8px rgba(47, 200, 8, 0.4)' : 'none'
             }} />
             <span style={{ 
               fontSize: '0.7rem', 
               fontWeight: 600, 
-              color: isApiOnline ? '#111827' : '#ef4444' 
+              color: isApiOnline ? '#101D15' : '#ef4444' 
             }}>
               {isApiOnline ? 'API Online' : 'API Offline'}
             </span>
@@ -188,7 +188,7 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
               <div className={`profile-avatar ${user?.role !== 'ADMIN' ? 'profile-avatar-user' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <User size={16} />
               </div>
-              <ChevronDown size={14} style={{ color: '#4b5563', transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              <ChevronDown size={14} style={{ color: '#505246', transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
             </button>
 
             {isDropdownOpen && (
@@ -199,15 +199,15 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
                 </div>
                 <div className="dropdown-divider"></div>
                 <div className="dropdown-user-role-container">
-                  <span style={{ color: '#4b5563', fontWeight: 500 }}>Perfil de Acesso:</span>
+                  <span style={{ color: '#505246', fontWeight: 500 }}>Perfil de Acesso:</span>
                   <span style={{ 
                     fontSize: '0.62rem', 
                     fontWeight: 700, 
-                    color: user?.role === 'ADMIN' ? '#1d4ed8' : '#047857',
-                    background: user?.role === 'ADMIN' ? '#eff6ff' : '#ecfdf5',
+                    color: user?.role === 'ADMIN' ? '#5548DD' : '#202C25',
+                    background: user?.role === 'ADMIN' ? '#D4D3E7' : '#C8E9BF',
                     padding: '1px 6px',
                     borderRadius: '4px',
-                    border: `1px solid ${user?.role === 'ADMIN' ? '#dbeafe' : '#a7f3d0'}`,
+                    border: `1px solid ${user?.role === 'ADMIN' ? '#5548DD' : '#2FC808'}`,
                     letterSpacing: '0.05em'
                   }}>
                     {user?.role || 'USER'}
