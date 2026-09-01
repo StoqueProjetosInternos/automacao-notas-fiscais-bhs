@@ -80,7 +80,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   const genAI = new GoogleGenerativeAI(apiKey);
   const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   // Modelos ativos suportados na API v1beta do Google Generative AI
-  const fallbackModels = [primaryModel, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.6-flash"].filter(
+  const fallbackModels = [primaryModel, "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-3.6-flash"].filter(
     (value, index, self) => self.indexOf(value) === index
   );
   const todayStr = new Date().toLocaleDateString("pt-BR"); // ex: 08/06/2026
@@ -102,9 +102,10 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     5. IDENTIFICADORES: Número do documento (Fatura/Nota) e Código do Cliente/Número da Conta (especialmente importante para empresas de Telecom/Utilities).
        - Para BOLETOS: Extraia a linha digitável completa (47 ou 48 dígitos numéricos) sem pontos ou espaços no campo 'barcode'.
        - Para DANFE: Se houver chave de acesso de 44 dígitos, extraia no campo 'chaveAcesso' em 'additionalInfo'.
-    6. TABELA DE ITENS / RATEIO (apportionment):
-       - Se o documento possuir uma tabela detalhada com os itens cobrados (por exemplo, equipamentos locados, serviços específicos discriminados em linhas), você DEVE extrair cada linha dessa tabela de itens de forma estruturada.
-       - Preencha o array "apportionment" onde cada objeto tem: "description" (descrição do item/equipamento e eventuais números de série/patrimônio associados), "quantity" (quantidade do item), "unitValue" (valor unitário) e "value" (valor total do item).
+    6. TABELA DE ITENS / RATEIO EXTENSO MULTI-PÁGINAS (apportionment):
+       - Se o documento possuir uma tabela detalhada com os itens cobrados (por exemplo, equipamentos locados, serviços discriminados em linhas), você DEVE percorrer TODAS as páginas do PDF e extrair ABSOLUTAMENTE TODAS as linhas da tabela de itens, sem resumir, omitir ou parar na primeira página.
+       - Preencha o array "apportionment" com todos os itens, onde cada objeto tem: "description" (formato: "NOME DO EQUIPAMENTO (Item CÓDIGO)"), "quantity" (quantidade), "unitValue" (valor unitário) e "value" (valor total da linha).
+       - ATENÇÃO: NUNCA use aspas duplas desescapadas dentro de descrições (use 'POL' para polegadas ou aspas simples).
 
     Validação de Regras do Processo de Pagamento Zeev:
     - Se a data de emissão for após o dia 25 do mês corrente: Defina "isIssuedAfterDay25": true. Sugira a regra "ALTERNATIVE" (vencimento em 60 dias da emissão ou próximo dia 10 útil após os 60 dias).
@@ -144,7 +145,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       },
       "apportionment": [
         {
-          "description": "MONITOR 24\" (018812)",
+          "description": "MONITOR 24 POL (Item 018812)",
           "quantity": 1,
           "unitValue": 54.25,
           "value": 54.25
@@ -160,7 +161,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   const attemptModelSequence = [
     primaryModel,
     primaryModel,
-    fallbackModels.includes("gemini-2.5-pro") ? "gemini-2.5-pro" : primaryModel,
+    fallbackModels.includes("gemini-3.1-pro-preview") ? "gemini-3.1-pro-preview" : primaryModel,
     fallbackModels.includes("gemini-3.6-flash") ? "gemini-3.6-flash" : primaryModel,
   ];
 
@@ -190,10 +191,32 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
 
       const responseText = result.response.text();
       
-      // Limpeza de Markdown caso a IA retorne no formato ```json ... ```
-      const cleanedText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-      
-      const aiData: AIResponse = JSON.parse(cleanedText);
+      function robustJsonParse(jsonString: string): AIResponse {
+        let cleaned = jsonString.trim();
+        cleaned = cleaned.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "");
+        
+        try {
+          return JSON.parse(cleaned);
+        } catch (err1: any) {
+          try {
+            // Corrige aspas não escapadas de polegadas tipo 24" ou 14"
+            let fixed = cleaned.replace(/(\d+)"/g, "$1 pol");
+            // Remove trailing commas antes de fechamento de array/objeto
+            fixed = fixed.replace(/,\s*([\]}])/g, "$1");
+            return JSON.parse(fixed);
+          } catch (err2) {
+            // Recupera JSON caso truncado no final do array de rateio
+            const lastItemIndex = cleaned.lastIndexOf("},");
+            if (lastItemIndex !== -1) {
+              const recovered = cleaned.substring(0, lastItemIndex + 1) + "]}";
+              return JSON.parse(recovered);
+            }
+            throw err1;
+          }
+        }
+      }
+
+      const aiData: AIResponse = robustJsonParse(responseText);
 
       // Monitoramento de Uso e Custos (Registrado após o parse para enriquecer com dados do fornecedor)
       const usage = result.response.usageMetadata;

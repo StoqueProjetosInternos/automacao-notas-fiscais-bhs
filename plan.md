@@ -981,6 +981,139 @@ Para consultar o histórico detalhado dos meses anteriores:
 - Status: Aplicado
 - Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
+### CHG-0262 — Resolução de Dependências Monorepo e Estabilização Gráfica no Desktop
+
+- Data/Hora: 2026-09-01 12:55
+- Contexto: A versão desktop apresentava erro Cannot find package dotenv devido à ausência de empacotamento do node_modules raiz pelo electron-builder no monorepo e congelamento gráfico causado pela flag disable-software-rasterizer.
+- Objetivo: Mapear ../../node_modules para resources/app/node_modules no package.json, aplicar app.disableHardwareAcceleration(), app.requestSingleInstanceLock() e carregamento direto em produção no main.ts.
+- Escopo:
+  - Desktop:
+    - [apps/desktop/package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/package.json)
+    - [apps/desktop/src/main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/main.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Garante autonomia de execução e resolução de todos os módulos de backend e frontend.
+- Testes: Reempacotamento com `npm.cmd run build:desktop` e validação de inicialização.
+- Rollback:
+  1) `git checkout HEAD -- apps/desktop/package.json apps/desktop/src/main.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0263 — Sincronização Estrita do Servidor Express e Resiliência de Inicialização no Desktop
+
+- Data/Hora: 2026-09-01 13:00
+- Contexto: Instâncias órfãs em segundo plano bloqueavam novas execuções via SingleInstanceLock, e a assincronicidade no listen do Express gerava condição de corrida com o carregamento da janela.
+- Objetivo: Encapsular startBackendServer em Promise resolvida no callback de listen, adicionar tratamento de erros nativo com dialog.showErrorBox e retry automático no carregamento da URL.
+- Escopo:
+  - Desktop:
+    - [apps/desktop/src/main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/main.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Garante sincronismo e visibilidade visual imediata da aplicação.
+- Testes: Reempacotamento com `npm.cmd run build:desktop` e teste de execução direta.
+- Rollback:
+  1) `git checkout HEAD -- apps/desktop/src/main.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0265 — Mapeamento de Itens e Vinculação de Séries para Faturas EMC (Aba Rateio_Detalhado)
+
+- Data/Hora: 2026-09-01 13:50
+- Contexto: A fatura da fornecedora EMC Tecnologia LTDA identifica equipamentos pelo código do Item/Ativo em vez do número de série, exigindo cruzamento específico com a aba Rateio_Detalhado da planilha Rateio Detalhado EMC.xlsx.
+- Objetivo: Processar a aba Rateio_Detalhado no script de consolidação para indexar os ativos da EMC e enriquecer os itens da fatura vinculando o código do item ao número de série, CR, natureza e contrato.
+- Escopo:
+  - Scripts:
+    - [apps/automacao/src/scripts/consolidate_rateios.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/consolidate_rateios.ts)
+  - Backend:
+    - [apps/automacao/src/features/pdf/dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Regra isolada e focada na aba Rateio_Detalhado da EMC.
+- Testes: Execução da consolidação e verificação de preenchimento da coluna Série na aba Rateio_Detalhado do Excel.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/scripts/consolidate_rateios.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0266 — Inclusão da Aba Rateio_Agrupado no Gerador de Planilhas Excel
+
+- Data/Hora: 2026-09-01 13:56
+- Contexto: Solicitação de padronização corporativa para que a planilha gerada contenha explicitamente a aba Rateio_Agrupado para consolidação por CR/Natureza/Contrato, espelhando o modelo de conferência fiscal.
+- Objetivo: Atualizar o nome da aba consolidada para Rateio_Agrupado em generateRateioExcel.ts, mantendo o detalhamento individual na aba Rateio_Detalhado.
+- Escopo:
+  - Excel:
+    - [apps/automacao/src/features/excel/generateRateioExcel.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/excel/generateRateioExcel.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Preserva a formatação de colunas exigida para processamento automático e leitura contábil.
+- Testes: Geração da planilha Excel da fatura EMC e verificação da presença das abas Rateio_Agrupado e Rateio_Detalhado com valores somados e séries preenchidas.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/excel/generateRateioExcel.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0267 — Migração para Gemini 3.1 Pro Preview e Parser Resiliente de JSON na IA
+
+- Data/Hora: 2026-09-01 14:06
+- Contexto: A extração da fatura EMC falhou por aspas de polegadas geradas pelo modelo (24") quebrando o JSON.parse e retorno 404 no modelo legado gemini-2.5-pro.
+- Objetivo: Atualizar o modelo de contingência para gemini-3.1-pro-preview, higienizar o prompt contra aspas internas e implementar parsing resiliente com recuperação automática no aiExtract.ts.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Assegura a integridade de leitura de documentos de alta volumetria.
+- Testes: Validação de compilação TypeScript com `npm --prefix apps/automacao run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0268 — Configuração das 3 Abas no Excel e Extração Multi-Páginas na IA
+
+- Data/Hora: 2026-09-01 15:35
+- Contexto: A planilha Excel gerada deve conter a aba Rateio (padrão Zeev), a aba Rateio_Agrupado (conferência corporativa por CR) e a aba Rateio_Detalhado (detalhamento por item com série), além de garantir a extração de 100% dos itens em faturas multi-páginas.
+- Objetivo: Implementar a estrutura de 3 abas em generateRateioExcel.ts e reforçar a instrução de extração completa multi-páginas no prompt de aiExtract.ts.
+- Escopo:
+  - Excel:
+    - [apps/automacao/src/features/excel/generateRateioExcel.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/excel/generateRateioExcel.ts)
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Entrega as 3 abas mantendo integridade estrutural e compatibilidade total.
+- Testes: Compilação TypeScript e verificação da presença das 3 abas no arquivo .xlsx gerado.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/excel/generateRateioExcel.ts apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0269 — Notificação Toast de Sessão Expirada e Encerramento por Inatividade
+
+- Data/Hora: 2026-09-01 15:52
+- Contexto: Usuários desconectados por inatividade de 15 minutos ou expiração de token não recebiam aviso contextual na tela de login informando o motivo do encerramento da sessão.
+- Objetivo: Registrar mensagem informativa em sessionStorage durante timeout de inatividade e respostas 401/403, exibindo um toast flutuante no componente Login com auto-dismiss em 6s.
+- Escopo:
+  - Frontend:
+    - [apps/dashboard/src/services/api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+    - [apps/dashboard/src/pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+    - [apps/dashboard/src/pages/Login/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Login/index.tsx)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a experiência do usuário com feedback claro e não intrusivo.
+- Testes: Compilação do dashboard com `npm --prefix apps/dashboard run build` e validação visual do toast ao forçar encerramento de sessão.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/services/api.ts apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/pages/Login/index.tsx`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
+
+
+
+
+
+
 
 
 

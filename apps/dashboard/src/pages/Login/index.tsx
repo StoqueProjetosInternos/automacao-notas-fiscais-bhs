@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../../services/api';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
+}
+
+interface SessionToast {
+  message: string;
+  type: 'info' | 'error' | 'success';
 }
 
 export const Login = ({ onLoginSuccess }: LoginProps) => {
@@ -13,7 +18,23 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   const [error, setError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [sessionToast, setSessionToast] = useState<SessionToast | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('stoque_session_toast');
+      if (stored) {
+        sessionStorage.removeItem('stoque_session_toast');
+        const parsed: SessionToast = JSON.parse(stored);
+        setSessionToast(parsed);
+        const timer = setTimeout(() => {
+          setSessionToast(null);
+        }, 6000);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +75,43 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
         boxSizing: 'border-box'
       }}
     >
+      {sessionToast && (
+        <div className="toast-container" style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999 }}>
+          <div 
+            className={`toast toast-${sessionToast.type}`} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              gap: '12px',
+              padding: '12px 18px',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+              background: '#eff6ff',
+              borderLeft: '4px solid #3b82f6',
+              color: '#1e40af',
+              fontSize: '0.8rem',
+              fontWeight: 600
+            }}
+          >
+            <div style={{ flex: 1 }}>{sessionToast.message}</div>
+            <button 
+              onClick={() => setSessionToast(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#1e40af',
+                fontSize: '1rem',
+                lineHeight: 1,
+                padding: '2px 4px'
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       {/* Coluna Esquerda: Banner Institucional Stoque (Cores do SFI) */}
       <div style={{
         flex: 1,
