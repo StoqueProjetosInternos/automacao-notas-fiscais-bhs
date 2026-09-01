@@ -78,12 +78,11 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash",
-    generationConfig: {
-      responseMimeType: "application/json"
-    }
-  });
+  const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // Modelos ativos suportados na API v1beta do Google Generative AI
+  const fallbackModels = [primaryModel, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.6-flash"].filter(
+    (value, index, self) => self.indexOf(value) === index
+  );
   const todayStr = new Date().toLocaleDateString("pt-BR"); // ex: 08/06/2026
 
   const prompt = `
@@ -154,11 +153,29 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     }
   `;
 
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 4;
   let lastError: any;
 
+  // Sequência de modelos ativos por tentativa com tolerância a oscilações transitórias
+  const attemptModelSequence = [
+    primaryModel,
+    primaryModel,
+    fallbackModels.includes("gemini-2.5-pro") ? "gemini-2.5-pro" : primaryModel,
+    fallbackModels.includes("gemini-3.6-flash") ? "gemini-3.6-flash" : primaryModel,
+  ];
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const currentModelName = attemptModelSequence[attempt - 1] || primaryModel;
+    const model = genAI.getGenerativeModel({ 
+      model: currentModelName,
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192
+      }
+    });
+
     try {
+      console.log(`[IA] Tentativa ${attempt}/${MAX_RETRIES} utilizando modelo: ${currentModelName}`);
       const apiStartTime = Date.now();
       const result = await model.generateContent([
         prompt,
@@ -184,12 +201,12 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
         const promptTokens = usage.promptTokenCount || 0;
         const responseTokens = usage.candidatesTokenCount || 0;
         
-        // Preços Gemini 2.5 Flash (USD)
+        // Preços Gemini (estimativa referencial USD)
         const costInput = (promptTokens / 1_000_000) * 0.30;
         const costOutput = (responseTokens / 1_000_000) * 2.50;
         const totalCost = costInput + costOutput;
 
-        console.log(`[IA Metrics] Tokens -> Entrada: ${promptTokens} | Saída: ${responseTokens}`);
+        console.log(`[IA Metrics] Modelo: ${currentModelName} | Tokens -> Entrada: ${promptTokens} | Saída: ${responseTokens}`);
         console.log(`[IA Metrics] Custo Estimado: $${totalCost.toFixed(6)} USD`);
 
         // Registro Persistente em CSV
@@ -237,7 +254,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           const userName = userInfo?.name || (fileName.startsWith("manual_") ? "Upload Manual" : "Microsoft Graph");
           const origem = fileName.startsWith("manual_") ? "Upload Manual" : "E-mail Sync";
 
-          const logLine = `${formattedDate},${fileName},gemini-2.5-flash,${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso,${userEmail},${userName},${origem}\n`;
+          const logLine = `${formattedDate},${fileName},${currentModelName},${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso,${userEmail},${userName},${origem}\n`;
           fs.appendFileSync(logPath, logLine, "utf8");
         } catch (logError) {
           console.error("[AVISO] Falha ao gravar log de uso:", logError);
@@ -281,11 +298,12 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       };
     } catch (error) {
       lastError = error;
-      console.warn(`[IA] Tentativa ${attempt} falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+      console.warn(`[IA] Tentativa ${attempt} (${currentModelName}) falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
       
       if (attempt < MAX_RETRIES) {
-        const waitTime = attempt * 2000; // 2s, 4s...
-        console.log(`[IA] Retentando em ${waitTime / 1000}s...`);
+        const delays = [3000, 6000, 10000];
+        const waitTime = delays[attempt - 1] || 10000;
+        console.log(`[IA] Retentando em ${waitTime / 1000}s (comutando de modelo se persistir instabilidade)...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }

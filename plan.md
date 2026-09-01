@@ -929,6 +929,61 @@ Para consultar o histórico detalhado dos meses anteriores:
 - Status: Aplicado
 - Observações: Alterações aplicadas com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
+### CHG-0259 — Mecanismo de Fallback de Modelos e Resiliência contra Erros 503 no Gemini
+
+- Data/Hora: 2026-09-01 12:00
+- Contexto: Extrações de faturas extensas e com múltiplos itens de rateio (ex: cliente EMC) apresentavam falha por erro 503 (Service Unavailable) devido à saturação de demanda temporária no modelo `gemini-2.5-flash`.
+- Objetivo: Implementar cascata de contingência de modelos (`gemini-2.5-flash` -> `gemini-2.0-flash` -> `gemini-1.5-flash`), backoff exponencial ampliado (3s, 6s, 10s), aumento de `maxOutputTokens` para 8192 e suporte à variável `GEMINI_MODEL`.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Transparência na comutação entre modelos compatíveis com o SDK do Google Generative AI.
+- Testes: Validação de compilação TypeScript com `npx tsc --noEmit` e teste de extração em PDFs volumosos.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0260 — Correção de Modelos Gemini (404/503) e Processamento Sequencial de Múltiplos Anexos de E-mail
+
+- Data/Hora: 2026-09-01 12:12
+- Contexto: O modelo gemini-1.5-flash retornava erro 404 por incompatibilidade com o identificador na v1beta, e a execução paralela (Promise.all) de múltiplos anexos no mesmo e-mail (Boleto + Fatura) gerava concorrência e perda de dados da fatura.
+- Objetivo: Atualizar aliases válidos de fallback para o Gemini (gemini-2.0-flash, gemini-2.5-flash, gemini-1.5-flash-latest) e converter o processamento de anexos para modo sequencial com ordenação prioritária de Notas Fiscais/Faturas.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+    - [apps/automacao/src/features/email/searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Elimina condições de corrida no sistema de arquivos e garante resolução do endpoint da IA.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e execução da sincronização de e-mails.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts apps/automacao/src/features/email/searchDataFromEmail.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0261 — Atualização de Modelos Gemini Ativos (gemini-2.5-flash, gemini-2.5-pro e gemini-3.6-flash)
+
+- Data/Hora: 2026-09-01 12:20
+- Contexto: Modelos legados gemini-2.0-flash e gemini-1.5-flash-latest retornavam erro 404 por estarem descontinuados na API v1beta do Google, consumindo tentativas úteis e impedindo o processamento de faturas durante oscilações 503.
+- Objetivo: Atualizar o catálogo de modelos para gemini-2.5-flash, gemini-2.5-pro e gemini-3.6-flash com sequência de 4 tentativas reais resilientes.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Todos os modelos utilizam o mesmo contrato de resposta JSON (`BoletoData`).
+- Testes: Validação de compilação TypeScript com `npm --prefix apps/automacao run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
+
+
 
 
 

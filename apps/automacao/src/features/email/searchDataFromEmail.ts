@@ -244,11 +244,25 @@ export class GraphEmailPdfProcessor {
         if (email.hasAttachments) {
           const attachments = await this.fetchAttachments(email.id);
           const pdfAttachments = attachments.filter(file => file.name?.toLowerCase().endsWith(".pdf"));
-          console.log(`[Email Sync] Encontrado(s) ${pdfAttachments.length} anexo(s) PDF para processamento paralelo.`);
+          console.log(`[Email Sync] Encontrado(s) ${pdfAttachments.length} anexo(s) PDF para processamento sequencial.`);
 
-          const results = await Promise.all(pdfAttachments.map(file => this.processPdfAttachment(file)));
-          if (results.includes(false)) {
-            processedAllPdfs = false;
+          // Ordenação: prioriza notas fiscais/faturas antes de boletos para enriquecimento estruturado
+          pdfAttachments.sort((a, b) => {
+            const nameA = (a.name || "").toLowerCase();
+            const nameB = (b.name || "").toLowerCase();
+            const isBoletoA = nameA.includes("boleto") || nameA.includes("bol");
+            const isBoletoB = nameB.includes("boleto") || nameB.includes("bol");
+            if (isBoletoA && !isBoletoB) return 1;
+            if (!isBoletoA && isBoletoB) return -1;
+            return 0;
+          });
+
+          for (const file of pdfAttachments) {
+            console.log(`[Email Sync] Processando anexo: ${file.name}`);
+            const success = await this.processPdfAttachment(file);
+            if (!success) {
+              processedAllPdfs = false;
+            }
           }
         }
 
