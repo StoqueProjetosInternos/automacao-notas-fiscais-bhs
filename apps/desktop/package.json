@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "build:main": "tsc",
-    "build:dashboard": "npm --workspace=stoque-fiscal-intelligence-dashboard run build",
-    "build:automacao": "npm --workspace=stoque-fiscal-intelligence run build",
+    "build:dashboard": "npm --prefix ../dashboard run build",
+    "build:automacao": "npm --prefix ../automacao run build",
     "dev": "npm run build:automacao && npm run build:dashboard && npm run build:main && electron .",
     "dist": "npm run build:automacao && npm run build:dashboard && npm run build:main && electron-builder",
     "pack": "npm run build:automacao && npm run build:dashboard && npm run build:main && electron-builder --dir"
@@ -47,12 +47,24 @@
     "electronVersion": "33.2.1",
     "appId": "br.com.stoque.fiscalintelligence",
     "productName": "Stoque Fiscal Intelligence",
+    "asar": false,
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "resources/**/*",
+      {
+        "from": "../../node_modules",
+        "to": "node_modules",
+        "filter": [
+          "**/*",
+          "!electron",
+          "!electron-builder",
+          "!@types",
+          "!typescript"
+        ]
+      },
       {
         "from": "../automacao/dist",
         "to": "automacao/dist"
@@ -90,6 +102,11 @@
         "nsis",
         "portable"
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }

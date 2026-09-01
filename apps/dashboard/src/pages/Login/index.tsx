@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../../services/api';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
+}
+
+interface SessionToast {
+  message: string;
+  type: 'info' | 'error' | 'success';
 }
 
 export const Login = ({ onLoginSuccess }: LoginProps) => {
@@ -13,7 +18,23 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   const [error, setError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [sessionToast, setSessionToast] = useState<SessionToast | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('stoque_session_toast');
+      if (stored) {
+        sessionStorage.removeItem('stoque_session_toast');
+        const parsed: SessionToast = JSON.parse(stored);
+        setSessionToast(parsed);
+        const timer = setTimeout(() => {
+          setSessionToast(null);
+        }, 6000);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,16 +70,53 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
         display: 'flex',
         minHeight: '100vh',
         width: '100vw',
-        backgroundColor: '#f9fafb',
-        fontFamily: 'Inter, sans-serif',
+        backgroundColor: '#EDEEE5',
+        fontFamily: "'Host Grotesk', sans-serif",
         boxSizing: 'border-box'
       }}
     >
+      {sessionToast && (
+        <div className="toast-container" style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999 }}>
+          <div 
+            className={`toast toast-${sessionToast.type}`} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              gap: '12px',
+              padding: '12px 18px',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+              background: '#eff6ff',
+              borderLeft: '4px solid #3b82f6',
+              color: '#1e40af',
+              fontSize: '0.8rem',
+              fontWeight: 600
+            }}
+          >
+            <div style={{ flex: 1 }}>{sessionToast.message}</div>
+            <button 
+              onClick={() => setSessionToast(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#1e40af',
+                fontSize: '1rem',
+                lineHeight: 1,
+                padding: '2px 4px'
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       {/* Coluna Esquerda: Banner Institucional Stoque (Cores do SFI) */}
       <div style={{
         flex: 1,
-        background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-        borderRight: '1px solid #e5e7eb',
+        background: '#EDEEE5',
+        borderRight: '1px solid #dcded4',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -70,8 +128,8 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
           background: 'white',
           padding: '2.5rem 3rem',
           borderRadius: '16px',
-          boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.05)',
-          border: '1px solid #e5e7eb',
+          boxShadow: '0 10px 25px -5px rgba(16, 29, 21, 0.08), 0 8px 10px -6px rgba(16, 29, 21, 0.04)',
+          border: '1px solid #dcded4',
           textAlign: 'center',
           maxWidth: '380px'
         }}>
@@ -82,7 +140,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
           />
           <div style={{ 
             fontSize: '0.85rem', 
-            color: '#4b5563', 
+            color: '#505246', 
             fontWeight: 500,
             lineHeight: '1.6',
             marginTop: '0.5rem'
@@ -111,16 +169,16 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
               <div style={{
                 width: '40px',
                 height: '40px',
-                border: '3px solid #f3f4f6',
+                border: '3px solid #EDEEE5',
                 borderTop: '3px solid #2FC808',
                 borderRadius: '50%',
                 margin: '0 auto 1.5rem',
                 animation: 'spin 1s linear infinite'
               }} />
-              <h2 style={{ fontSize: '1.20rem', fontWeight: 700, color: '#111827', margin: '0 0 0.5rem', letterSpacing: '-0.025em' }}>
+              <h2 style={{ fontSize: '1.20rem', fontWeight: 700, color: '#101D15', margin: '0 0 0.5rem', letterSpacing: '-0.025em' }}>
                 Acesso Autorizado
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>
+              <p style={{ fontSize: '0.8rem', color: '#505246', margin: 0 }}>
                 Carregando suas preferências contábeis...
               </p>
             </div>
@@ -130,13 +188,13 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                 <h1 style={{
                   fontSize: '1.5rem',
                   fontWeight: 700,
-                  color: '#111827',
+                  color: '#101D15',
                   margin: '0 0 0.5rem',
                   letterSpacing: '-0.025em'
                 }}>
                   Acesse o painel
                 </h1>
-                <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>
+                <p style={{ fontSize: '0.85rem', color: '#505246', margin: 0 }}>
                   Insira as credenciais do Fiscal Intelligence (SFI)
                 </p>
               </div>
@@ -163,7 +221,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                     display: 'block',
                     fontSize: '0.72rem',
                     fontWeight: 600,
-                    color: '#4b5563',
+                    color: '#505246',
                     marginBottom: '0.375rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
@@ -182,19 +240,20 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                       padding: '0.75rem 1rem',
                       fontSize: '0.85rem',
                       backgroundColor: '#ffffff',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #dcded4',
                       borderRadius: '8px',
-                      color: '#111827',
+                      color: '#101D15',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      transition: 'border-color 0.2s, box-shadow 0.2s'
+                      transition: 'border-color 0.2s, box-shadow 0.2s',
+                      fontFamily: 'inherit'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#2563eb';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      e.currentTarget.style.borderColor = '#2FC808';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(47, 200, 8, 0.2)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.borderColor = '#dcded4';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   />
@@ -205,7 +264,7 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                     display: 'block',
                     fontSize: '0.72rem',
                     fontWeight: 600,
-                    color: '#4b5563',
+                    color: '#505246',
                     marginBottom: '0.375rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
@@ -224,19 +283,20 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
                       padding: '0.75rem 1rem',
                       fontSize: '0.85rem',
                       backgroundColor: '#ffffff',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #dcded4',
                       borderRadius: '8px',
-                      color: '#111827',
+                      color: '#101D15',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      transition: 'border-color 0.2s, box-shadow 0.2s'
+                      transition: 'border-color 0.2s, box-shadow 0.2s',
+                      fontFamily: 'inherit'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#2563eb';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      e.currentTarget.style.borderColor = '#2FC808';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(47, 200, 8, 0.2)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.borderColor = '#dcded4';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   />

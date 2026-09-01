@@ -78,12 +78,11 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash",
-    generationConfig: {
-      responseMimeType: "application/json"
-    }
-  });
+  const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // Modelos ativos suportados na API v1beta do Google Generative AI
+  const fallbackModels = [primaryModel, "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-3.6-flash"].filter(
+    (value, index, self) => self.indexOf(value) === index
+  );
   const todayStr = new Date().toLocaleDateString("pt-BR"); // ex: 08/06/2026
 
   const prompt = `
@@ -103,9 +102,10 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     5. IDENTIFICADORES: Número do documento (Fatura/Nota) e Código do Cliente/Número da Conta (especialmente importante para empresas de Telecom/Utilities).
        - Para BOLETOS: Extraia a linha digitável completa (47 ou 48 dígitos numéricos) sem pontos ou espaços no campo 'barcode'.
        - Para DANFE: Se houver chave de acesso de 44 dígitos, extraia no campo 'chaveAcesso' em 'additionalInfo'.
-    6. TABELA DE ITENS / RATEIO (apportionment):
-       - Se o documento possuir uma tabela detalhada com os itens cobrados (por exemplo, equipamentos locados, serviços específicos discriminados em linhas), você DEVE extrair cada linha dessa tabela de itens de forma estruturada.
-       - Preencha o array "apportionment" onde cada objeto tem: "description" (descrição do item/equipamento e eventuais números de série/patrimônio associados), "quantity" (quantidade do item), "unitValue" (valor unitário) e "value" (valor total do item).
+    6. TABELA DE ITENS / RATEIO EXTENSO MULTI-PÁGINAS (apportionment):
+       - Se o documento possuir uma tabela detalhada com os itens cobrados (por exemplo, equipamentos locados, serviços discriminados em linhas), você DEVE percorrer TODAS as páginas do PDF e extrair ABSOLUTAMENTE TODAS as linhas da tabela de itens, sem resumir, omitir ou parar na primeira página.
+       - Preencha o array "apportionment" com todos os itens, onde cada objeto tem: "description" (formato: "NOME DO EQUIPAMENTO (Item CÓDIGO)"), "quantity" (quantidade), "unitValue" (valor unitário) e "value" (valor total da linha).
+       - ATENÇÃO: NUNCA use aspas duplas desescapadas dentro de descrições (use 'POL' para polegadas ou aspas simples).
 
     Validação de Regras do Processo de Pagamento Zeev:
     - Se a data de emissão for após o dia 25 do mês corrente: Defina "isIssuedAfterDay25": true. Sugira a regra "ALTERNATIVE" (vencimento em 60 dias da emissão ou próximo dia 10 útil após os 60 dias).
@@ -145,7 +145,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       },
       "apportionment": [
         {
-          "description": "MONITOR 24\" (018812)",
+          "description": "MONITOR 24 POL (Item 018812)",
           "quantity": 1,
           "unitValue": 54.25,
           "value": 54.25
@@ -154,11 +154,29 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     }
   `;
 
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 4;
   let lastError: any;
 
+  // Sequência de modelos ativos por tentativa com tolerância a oscilações transitórias
+  const attemptModelSequence = [
+    primaryModel,
+    primaryModel,
+    fallbackModels.includes("gemini-3.1-pro-preview") ? "gemini-3.1-pro-preview" : primaryModel,
+    fallbackModels.includes("gemini-3.6-flash") ? "gemini-3.6-flash" : primaryModel,
+  ];
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const currentModelName = attemptModelSequence[attempt - 1] || primaryModel;
+    const model = genAI.getGenerativeModel({ 
+      model: currentModelName,
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192
+      }
+    });
+
     try {
+      console.log(`[IA] Tentativa ${attempt}/${MAX_RETRIES} utilizando modelo: ${currentModelName}`);
       const apiStartTime = Date.now();
       const result = await model.generateContent([
         prompt,
@@ -173,10 +191,32 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
 
       const responseText = result.response.text();
       
-      // Limpeza de Markdown caso a IA retorne no formato ```json ... ```
-      const cleanedText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-      
-      const aiData: AIResponse = JSON.parse(cleanedText);
+      function robustJsonParse(jsonString: string): AIResponse {
+        let cleaned = jsonString.trim();
+        cleaned = cleaned.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "");
+        
+        try {
+          return JSON.parse(cleaned);
+        } catch (err1: any) {
+          try {
+            // Corrige aspas não escapadas de polegadas tipo 24" ou 14"
+            let fixed = cleaned.replace(/(\d+)"/g, "$1 pol");
+            // Remove trailing commas antes de fechamento de array/objeto
+            fixed = fixed.replace(/,\s*([\]}])/g, "$1");
+            return JSON.parse(fixed);
+          } catch (err2) {
+            // Recupera JSON caso truncado no final do array de rateio
+            const lastItemIndex = cleaned.lastIndexOf("},");
+            if (lastItemIndex !== -1) {
+              const recovered = cleaned.substring(0, lastItemIndex + 1) + "]}";
+              return JSON.parse(recovered);
+            }
+            throw err1;
+          }
+        }
+      }
+
+      const aiData: AIResponse = robustJsonParse(responseText);
 
       // Monitoramento de Uso e Custos (Registrado após o parse para enriquecer com dados do fornecedor)
       const usage = result.response.usageMetadata;
@@ -184,12 +224,12 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
         const promptTokens = usage.promptTokenCount || 0;
         const responseTokens = usage.candidatesTokenCount || 0;
         
-        // Preços Gemini 2.5 Flash (USD)
+        // Preços Gemini (estimativa referencial USD)
         const costInput = (promptTokens / 1_000_000) * 0.30;
         const costOutput = (responseTokens / 1_000_000) * 2.50;
         const totalCost = costInput + costOutput;
 
-        console.log(`[IA Metrics] Tokens -> Entrada: ${promptTokens} | Saída: ${responseTokens}`);
+        console.log(`[IA Metrics] Modelo: ${currentModelName} | Tokens -> Entrada: ${promptTokens} | Saída: ${responseTokens}`);
         console.log(`[IA Metrics] Custo Estimado: $${totalCost.toFixed(6)} USD`);
 
         // Registro Persistente em CSV
@@ -237,7 +277,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           const userName = userInfo?.name || (fileName.startsWith("manual_") ? "Upload Manual" : "Microsoft Graph");
           const origem = fileName.startsWith("manual_") ? "Upload Manual" : "E-mail Sync";
 
-          const logLine = `${formattedDate},${fileName},gemini-2.5-flash,${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso,${userEmail},${userName},${origem}\n`;
+          const logLine = `${formattedDate},${fileName},${currentModelName},${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso,${userEmail},${userName},${origem}\n`;
           fs.appendFileSync(logPath, logLine, "utf8");
         } catch (logError) {
           console.error("[AVISO] Falha ao gravar log de uso:", logError);
@@ -281,11 +321,12 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       };
     } catch (error) {
       lastError = error;
-      console.warn(`[IA] Tentativa ${attempt} falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+      console.warn(`[IA] Tentativa ${attempt} (${currentModelName}) falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
       
       if (attempt < MAX_RETRIES) {
-        const waitTime = attempt * 2000; // 2s, 4s...
-        console.log(`[IA] Retentando em ${waitTime / 1000}s...`);
+        const delays = [3000, 6000, 10000];
+        const waitTime = delays[attempt - 1] || 10000;
+        console.log(`[IA] Retentando em ${waitTime / 1000}s (comutando de modelo se persistir instabilidade)...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }

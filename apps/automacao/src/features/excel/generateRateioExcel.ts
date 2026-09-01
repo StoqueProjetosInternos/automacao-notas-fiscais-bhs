@@ -54,55 +54,7 @@ export async function generateRateioExcel(
 
   const workbook = new ExcelJS.Workbook();
 
-  /* =========================================================================
-   * ABA 1: Rateio (Agrupamento Consolidado - 7 colunas solicitadas)
-   * ========================================================================= */
-  const rateioSheet = workbook.addWorksheet("Rateio");
-  rateioSheet.columns = [
-    { width: 14 },
-    { width: 18 },
-    { width: 12 },
-    { width: 14 }
-  ];
-
-  // Título (merge A1:D1)
-  rateioSheet.mergeCells("A1:D1");
-  const rTitleCell = rateioSheet.getCell("A1");
-  rTitleCell.value = `Rateio ${partnerName}`;
-  rTitleCell.font = { bold: true, size: 14 };
-  rTitleCell.alignment = { vertical: "middle", horizontal: "center" };
-  rTitleCell.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "E2EFDA" } // verde claro
-  };
-  rateioSheet.getRow(1).height = 28;
-
-  // Cabeçalhos (linha 2)
-  const rateioHeaders = [
-    "Código CR",
-    "Cód. Natureza",
-    "Contrato",
-    "Valor"
-  ];
-  rateioSheet.addRow(rateioHeaders);
-
-  const rHeaderRow = rateioSheet.getRow(2);
-  rHeaderRow.eachCell(cell => {
-    cell.font = { bold: true };
-    cell.alignment = { horizontal: "center", vertical: "middle" };
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "D9D9D9" } // cinza
-    };
-    cell.border = {
-      top: { style: "thin" }, left: { style: "thin" },
-      bottom: { style: "thin" }, right: { style: "thin" }
-    };
-  });
-
-  // Agrupamento dos itens
+  // Agrupamento dos itens por combinação de CR, Natureza e Contrato
   interface GroupedItem {
     cr: string;
     crDescription: string;
@@ -141,9 +93,36 @@ export async function generateRateioExcel(
     }
   });
 
-  // Insere itens consolidados
+  /* =========================================================================
+   * ABA 1: Rateio (Compatibilidade Padrão Zeev IA - Linha 1 direta)
+   * ========================================================================= */
+  const rateioSheet = workbook.addWorksheet("Rateio");
+  rateioSheet.columns = [
+    { width: 14 },
+    { width: 18 },
+    { width: 12 },
+    { width: 14 }
+  ];
+
+  rateioSheet.addRow(["Código CR", "Cód. Natureza", "Contrato", "Valor"]);
+  const rHeaderRow = rateioSheet.getRow(1);
+  rHeaderRow.eachCell(cell => {
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "D9D9D9" } // cinza
+    };
+    cell.border = {
+      top: { style: "thin" }, left: { style: "thin" },
+      bottom: { style: "thin" }, right: { style: "thin" }
+    };
+  });
+  rateioSheet.getRow(1).height = 24;
+
   Array.from(groups.values()).forEach((g, index) => {
-    const rowNumber = index + 3;
+    const rowNumber = index + 2;
     const dataRow = rateioSheet.addRow([
       g.cr,
       g.naturezaCode,
@@ -159,15 +138,59 @@ export async function generateRateioExcel(
       };
     });
 
-    // Formatação monetária da soma
     rateioSheet.getCell(`D${rowNumber}`).numFmt = '"R$" #,##0.00';
   });
 
-  // Colunas já configuradas no início da aba para preservar o mergeCells
+  /* =========================================================================
+   * ABA 2: Rateio_Agrupado (Layout Corporativo de Conferência Fiscal)
+   * ========================================================================= */
+  const agrupadoSheet = workbook.addWorksheet("Rateio_Agrupado");
+  agrupadoSheet.columns = [
+    { width: 18 },
+    { width: 16 },
+    { width: 16 },
+    { width: 22 }
+  ];
 
+  agrupadoSheet.addRow(["Cód. Natureza", "CODCENCUS", "NUMCONTRATO", "Soma de Valor_Rateio"]);
+  const aHeaderRow = agrupadoSheet.getRow(1);
+  aHeaderRow.eachCell(cell => {
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "D9D9D9" } // cinza
+    };
+    cell.border = {
+      top: { style: "thin" }, left: { style: "thin" },
+      bottom: { style: "thin" }, right: { style: "thin" }
+    };
+  });
+  agrupadoSheet.getRow(1).height = 24;
+
+  Array.from(groups.values()).forEach((g, index) => {
+    const rowNumber = index + 2;
+    const dataRow = agrupadoSheet.addRow([
+      g.naturezaCode,
+      g.cr,
+      g.contract,
+      g.valueSum
+    ]);
+
+    dataRow.eachCell(cell => {
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = {
+        top: { style: "thin" }, left: { style: "thin" },
+        bottom: { style: "thin" }, right: { style: "thin" }
+      };
+    });
+
+    agrupadoSheet.getCell(`D${rowNumber}`).numFmt = '"R$" #,##0.00';
+  });
 
   /* =========================================================================
-   * ABA 2: Rateio_Detalhado (Detalhamento por Item)
+   * ABA 3: Rateio_Detalhado (Detalhamento por Item)
    * ========================================================================= */
   const detalhadoSheet = workbook.addWorksheet("Rateio_Detalhado");
   detalhadoSheet.columns = [

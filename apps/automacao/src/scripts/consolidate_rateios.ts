@@ -17,6 +17,13 @@ interface ConsolidatedRateio {
   contas: Record<string, any[]>;
   series: Record<string, any>;
   colaboradores: Record<string, any>;
+  emcItens: Record<string, {
+    serialNumber: string;
+    cr: string;
+    naturezaCode: string;
+    contract: string;
+    colaborador?: string;
+  }>;
 }
 
 // Normaliza string para comparação
@@ -56,6 +63,7 @@ async function consolidate() {
     contas: {},
     series: {},
     colaboradores: {},
+    emcItens: {},
   };
 
   // Funções de busca adaptativa de colunas
@@ -150,6 +158,33 @@ async function consolidate() {
           "display name",
           "colab",
         ]);
+
+        // Exceção Específica para Faturas EMC (Aba Rateio_Detalhado: Item/Ativo -> Série e Contabilidade)
+        const isEmcFile = folderName.toLowerCase().includes("emc") || fileName.toLowerCase().includes("emc");
+        const ativoKey = findKey(sampleRow, ["ativo", "item", "codigo item", "cod_item"]);
+        if (isEmcFile && sheetName === "Rateio_Detalhado" && ativoKey && serieKey) {
+          rawData.forEach((row) => {
+            const ativoCode = String(row[ativoKey] || "").trim();
+            const serial = String(row[serieKey] || "").trim().toUpperCase();
+            if (ativoCode) {
+              output.emcItens[ativoCode] = {
+                serialNumber: serial,
+                cr: crKey ? String(row[crKey] || "").trim() : "1103",
+                naturezaCode: naturezaKey ? String(row[naturezaKey] || "").trim() : "141401001",
+                contract: contratoKey ? String(row[contratoKey] || "").trim() : "0",
+                colaborador: colabKey ? String(row[colabKey] || "").trim() : undefined,
+              };
+              if (serial && serial !== "-" && serial !== "SERIE") {
+                output.series[serial] = {
+                  cr: crKey ? String(row[crKey] || "").trim() : "1103",
+                  naturezaCode: naturezaKey ? String(row[naturezaKey] || "").trim() : "141401001",
+                  contract: contratoKey ? String(row[contratoKey] || "").trim() : "0",
+                };
+              }
+            }
+          });
+          continue;
+        }
 
         // Padrão A: Rateios baseados em Série (Notebooks/Monitores)
         if (serieKey && crKey) {

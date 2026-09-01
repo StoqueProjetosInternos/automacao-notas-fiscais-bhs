@@ -7,13 +7,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function findDataFile(relativePath: string): string {
+  const resourcesPath = (process as any).resourcesPath || '';
   const possiblePaths = [
+    path.resolve(resourcesPath, relativePath),
+    path.resolve(resourcesPath, 'app', relativePath),
     path.resolve(process.cwd(), relativePath),
     path.resolve(__dirname, "../../../../../", relativePath),
     path.resolve(__dirname, "../../../../", relativePath),
     path.resolve(__dirname, "../../../", relativePath),
     path.resolve(__dirname, "../../", relativePath),
-    path.resolve((process as any).resourcesPath || '', relativePath),
   ];
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) return p;
@@ -332,7 +334,27 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
       const desc = item.description || "";
       const parMatches = [...desc.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim().toUpperCase());
 
-      // I. Tentar correspondência por Série de Hardware no banco consolidado
+      // I. Exceção de Negócio: Correspondência por Código de Item da EMC (Aba Rateio_Detalhado)
+      const isEmcSupplier = supplierName.toUpperCase().includes("EMC") || cleanCnpj === "22261093000140";
+      if (database && database.emcItens) {
+        const itemCodeMatch = desc.match(/Item\s+(\d+)/i) || desc.match(/\((\d+)\)/) || desc.match(/(\d{4,6})/);
+        const itemCode = itemCodeMatch ? itemCodeMatch[1] : null;
+        if (itemCode && database.emcItens[itemCode]) {
+          const emcMap = database.emcItens[itemCode];
+          console.log(`[Enrichment] Exceção EMC: Item ${itemCode} vinculado à Série: ${emcMap.serialNumber}`);
+          return {
+            ...item,
+            serialNumber: emcMap.serialNumber,
+            cr: emcMap.cr || defaultAccounting.cr,
+            crDescription: getCrDescription(emcMap.cr || defaultAccounting.cr),
+            naturezaCode: emcMap.naturezaCode || defaultAccounting.naturezaCode,
+            naturezaDescription: getNaturezaDescription(emcMap.naturezaCode || defaultAccounting.naturezaCode),
+            contract: emcMap.contract && emcMap.contract !== "0" && emcMap.contract !== "" ? emcMap.contract : "0"
+          };
+        }
+      }
+
+      // II. Tentar correspondência por Série de Hardware no banco consolidado
       if (database) {
         for (const code of parMatches) {
           if (database.series[code]) {

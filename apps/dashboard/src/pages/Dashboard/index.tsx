@@ -127,8 +127,18 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [isExiting, setIsExiting] = useState(false);
   const navigate = useNavigate();
 
-  // Monitor de Inatividade de 15 Minutos (se inativo, chama logout)
-  useActivityTimeout(onLogout, 15 * 60 * 1000);
+  // Monitor de Inatividade de 15 Minutos (se inativo, notifica e chama logout)
+  const handleInactivityLogout = () => {
+    try {
+      sessionStorage.setItem('stoque_session_toast', JSON.stringify({
+        message: 'Sua sessão foi encerrada por inatividade (15 minutos). Por favor, acesse novamente.',
+        type: 'info'
+      }));
+    } catch {}
+    onLogout();
+  };
+
+  useActivityTimeout(handleInactivityLogout, 15 * 60 * 1000);
 
   // Trava de segurança: Apenas ADMIN pode acessar Histórico e Logs
   useEffect(() => {

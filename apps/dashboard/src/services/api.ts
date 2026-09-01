@@ -49,6 +49,12 @@ apiClient.interceptors.response.use(
       const isLoginRequest = error.config?.url?.includes('/api/auth/login');
       if (!isLoginRequest) {
         eraseCookie('stoque_auth_token');
+        try {
+          sessionStorage.setItem('stoque_session_toast', JSON.stringify({
+            message: 'Sua sessão expirou ou foi encerrada. Por favor, acesse novamente.',
+            type: 'info'
+          }));
+        } catch {}
         window.dispatchEvent(new CustomEvent('stoque:session-expired'));
       }
     }

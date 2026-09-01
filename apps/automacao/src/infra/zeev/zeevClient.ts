@@ -22,6 +22,15 @@ export interface CreateInstanceFile {
   base64Content: string;
 }
 
+export interface InstanceTaskFileUpload {
+  instanceTaskId: number;
+  fileName: string;
+  base64Content: string;
+  resume?: string;
+  requesterCanSee?: boolean;
+  docType?: string;
+}
+
 export interface CreateInstancePayload {
   flowId: number;
   isSimulation: boolean;
@@ -91,6 +100,19 @@ export class ZeevClient {
   }
 
   /**
+   * Consulta detalhes e tarefas ativas de uma instância específica
+   */
+  public static async getInstance(instanceId: number | string): Promise<any> {
+    const url = `${this.getBaseUrl()}/api/2/instances/${instanceId}`;
+    console.log(`[ZeevClient] Consultando instância ID: ${instanceId}...`);
+    const response = await axios.get(url, {
+      headers: this.getHeaders(),
+      timeout: 15000
+    });
+    return response.data;
+  }
+
+  /**
    * Cria uma instância de processo enviando dados de formulário e anexos em Base64
    * Utiliza a chamada HTTP real para testes de validação ou abertura.
    */
@@ -102,6 +124,20 @@ export class ZeevClient {
       headers: this.getHeaders(),
       timeout: 45000
     });
+    return response.data;
+  }
+
+  /**
+   * Vincula um anexo diretamente ao controle de formulário da tarefa ativa da instância
+   */
+  public static async uploadInstanceTaskFile(data: InstanceTaskFileUpload): Promise<any> {
+    const url = `${this.getBaseUrl()}/api/2/files/instance-task`;
+    console.log(`[ZeevClient] Enviando arquivo ${data.fileName} para a tarefa ID ${data.instanceTaskId}...`);
+    const response = await axios.post(url, data, {
+      headers: this.getHeaders(),
+      timeout: 30000
+    });
+    console.log(`[ZeevClient] Arquivo ${data.fileName} vinculado com sucesso à tarefa ${data.instanceTaskId}:`, response.data);
     return response.data;
   }
 
