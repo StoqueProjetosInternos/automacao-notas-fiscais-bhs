@@ -16,7 +16,9 @@ router.get('/logs', requireAdmin, NoteController.getApiLogs);
 // Rota para limpar logs gerais de console da API (Apenas Admin)
 router.post('/logs/clear', requireAdmin, NoteController.clearApiLogs);
 
-// Rota para enviar alertas de vencimento por e-mail
+// Rotas para monitoramento e alertas de vencimento por e-mail
+router.get('/deadlines/status', NoteController.getDeadlineStatus);
+router.post('/deadlines/check', requireAdmin, NoteController.triggerDeadlineCheck);
 router.post('/deadlines/send-alerts', NoteController.sendDeadlineAlerts);
 
 // Rota para sincronizar e-mails (Apenas Admin)
