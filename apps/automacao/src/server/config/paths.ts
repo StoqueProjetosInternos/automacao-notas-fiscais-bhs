@@ -1,17 +1,28 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import fs from 'fs';
-
 function resolveFilesDir(): string {
   if (process.env.FILES_DIR) {
-    return path.resolve(process.env.FILES_DIR);
+    const customPath = path.resolve(process.env.FILES_DIR);
+    if (!fs.existsSync(customPath)) {
+      try {
+        fs.mkdirSync(customPath, { recursive: true });
+      } catch (err) {
+        console.error('[Paths] Falha ao criar diretório customizado:', err);
+      }
+    }
+    return customPath;
   }
 
+  const appData = process.env.APPDATA || (process.platform === 'darwin' ? (process.env.HOME || '') + '/Library/Preferences' : '/var/local');
+  const appDataExtracted = path.resolve(appData, 'StoqueFiscalIntelligence', 'data', 'extracted');
+
   const possiblePaths = [
+    appDataExtracted,
     path.resolve(process.cwd(), 'data', 'extracted'),
     path.resolve(__dirname, '..', '..', '..', '..', '..', 'data', 'extracted'),
     path.resolve(__dirname, '..', '..', '..', '..', 'data', 'extracted'),
@@ -20,12 +31,23 @@ function resolveFilesDir(): string {
   ];
 
   for (const p of possiblePaths) {
-    if (fs.existsSync(p) || fs.existsSync(path.dirname(p))) {
+    if (fs.existsSync(p)) {
       return p;
     }
   }
 
-  return path.resolve(process.cwd(), 'data', 'extracted');
+  try {
+    if (!fs.existsSync(appDataExtracted)) {
+      fs.mkdirSync(appDataExtracted, { recursive: true });
+    }
+    return appDataExtracted;
+  } catch {
+    const localDir = path.resolve(process.cwd(), 'data', 'extracted');
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
+    }
+    return localDir;
+  }
 }
 
 export const FILES_DIR = resolveFilesDir();

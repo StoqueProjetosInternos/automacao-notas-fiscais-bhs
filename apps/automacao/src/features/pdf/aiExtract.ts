@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PDFDocument } from "pdf-lib";
 import { BoletoData } from "./types.js";
 import fs from "fs";
 import path from "path";
@@ -78,12 +79,25 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  // Modelos ativos suportados na API v1beta do Google Generative AI
-  const fallbackModels = [primaryModel, "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-3.6-flash"].filter(
+  let primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // Salvaguarda contra cota zero (limit: 0) para modelos Pro em contas Free Tier
+  if (primaryModel.toLowerCase().includes("pro")) {
+    console.warn(`[IA] Modelo configurado '${primaryModel}' requer faturamento e possui cota zero no Free Tier. Comutando para 'gemini-3.6-flash'.`);
+    primaryModel = "gemini-3.6-flash";
+  }
+  // Modelos ativos suportados na API v1beta compatíveis com Free Tier
+  const fallbackModels = [primaryModel, "gemini-3.6-flash", "gemini-2.5-flash"].filter(
     (value, index, self) => self.indexOf(value) === index
   );
   const todayStr = new Date().toLocaleDateString("pt-BR"); // ex: 08/06/2026
+
+  let pageCount = 1;
+  try {
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    pageCount = pdfDoc.getPageCount();
+  } catch (pdfErr) {
+    console.warn("[IA] Não foi possível contar páginas via pdf-lib, assumindo fluxo padrão:", pdfErr);
+  }
 
   const prompt = `
     Você é um especialista em documentos fiscais brasileiros (Boletos, DANFE, DANFSe) e auditor de processos corporativos.
@@ -103,9 +117,12 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
        - Para BOLETOS: Extraia a linha digitável completa (47 ou 48 dígitos numéricos) sem pontos ou espaços no campo 'barcode'.
        - Para DANFE: Se houver chave de acesso de 44 dígitos, extraia no campo 'chaveAcesso' em 'additionalInfo'.
     6. TABELA DE ITENS / RATEIO EXTENSO MULTI-PÁGINAS (apportionment):
-       - Se o documento possuir uma tabela detalhada com os itens cobrados (por exemplo, equipamentos locados, serviços discriminados em linhas), você DEVE percorrer TODAS as páginas do PDF e extrair ABSOLUTAMENTE TODAS as linhas da tabela de itens, sem resumir, omitir ou parar na primeira página.
+       - ATENÇÃO CRÍTICA: Este arquivo PDF contém EXATAMENTE ${pageCount} PÁGINA(S).
+       - Se o documento possuir itens cobrados (equipamentos ou serviços), a tabela NÃO para na página 1 ou 2. Ela continua por TODAS as ${pageCount} páginas até a última página onde constam os últimos itens e o total geral.
+       - Você DEVE percorrer página por página e extrair TODAS as linhas da tabela de cada uma das páginas (inclusive páginas intermediárias como 3 e final como 4), sem omitir nenhuma linha.
        - Preencha o array "apportionment" com todos os itens, onde cada objeto tem: "description" (formato: "NOME DO EQUIPAMENTO (Item CÓDIGO)"), "quantity" (quantidade), "unitValue" (valor unitário) e "value" (valor total da linha).
        - ATENÇÃO: NUNCA use aspas duplas desescapadas dentro de descrições (use 'POL' para polegadas ou aspas simples).
+       - REGRA DE INTEGRIDADE CONTÁBIL: A soma de todos os campos 'value' dos objetos no array 'apportionment' DEVE ser igual ao 'chargedValue' da fatura. Não pare a extração na página 2; continue pelas páginas subsequentes até fechar 100% do valor da fatura.
 
     Validação de Regras do Processo de Pagamento Zeev:
     - Se a data de emissão for após o dia 25 do mês corrente: Defina "isIssuedAfterDay25": true. Sugira a regra "ALTERNATIVE" (vencimento em 60 dias da emissão ou próximo dia 10 útil após os 60 dias).
@@ -154,15 +171,16 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     }
   `;
 
-  const MAX_RETRIES = 4;
+  const MAX_RETRIES = 5;
   let lastError: any;
 
-  // Sequência de modelos ativos por tentativa com tolerância a oscilações transitórias
+  // Sequência de modelos ativos por tentativa com tolerância a oscilações transitórias (100% compatível com Free Tier)
   const attemptModelSequence = [
     primaryModel,
-    primaryModel,
-    fallbackModels.includes("gemini-3.1-pro-preview") ? "gemini-3.1-pro-preview" : primaryModel,
-    fallbackModels.includes("gemini-3.6-flash") ? "gemini-3.6-flash" : primaryModel,
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash",
   ];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -171,7 +189,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       model: currentModelName,
       generationConfig: {
         responseMimeType: "application/json",
-        maxOutputTokens: 8192
+        maxOutputTokens: 32768
       }
     });
 
@@ -217,6 +235,16 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       }
 
       const aiData: AIResponse = robustJsonParse(responseText);
+
+      // Validação de Integridade Contábil: detecta truncamento de itens multi-páginas
+      if (aiData.apportionment && aiData.apportionment.length > 1 && aiData.financial?.chargedValue > 0) {
+        const sumApportionment = aiData.apportionment.reduce((acc, it) => acc + (Number(it.value) || 0), 0);
+        const chargedVal = Number(aiData.financial.chargedValue);
+        const difference = Math.abs(chargedVal - sumApportionment);
+        if (difference > 2.00 && (sumApportionment / chargedVal) < 0.95) {
+          throw new Error(`Extração incompleta de itens de rateio: soma dos itens (R$ ${sumApportionment.toFixed(2)}) diverge do valor cobrado (R$ ${chargedVal.toFixed(2)}). Total de itens capturados: ${aiData.apportionment.length}. Comutando modelo...`);
+        }
+      }
 
       // Monitoramento de Uso e Custos (Registrado após o parse para enriquecer com dados do fornecedor)
       const usage = result.response.usageMetadata;
@@ -324,8 +352,8 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       console.warn(`[IA] Tentativa ${attempt} (${currentModelName}) falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
       
       if (attempt < MAX_RETRIES) {
-        const delays = [3000, 6000, 10000];
-        const waitTime = delays[attempt - 1] || 10000;
+        const delays = [4000, 8000, 15000, 20000];
+        const waitTime = delays[attempt - 1] || 15000;
         console.log(`[IA] Retentando em ${waitTime / 1000}s (comutando de modelo se persistir instabilidade)...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }

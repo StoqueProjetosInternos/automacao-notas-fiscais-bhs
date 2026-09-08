@@ -23,6 +23,18 @@ export class NoteService {
 
         if (fs.existsSync(jsonPath)) {
           const content = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+          if (!content.zeevInstanceId) {
+            const zeevSimPath = path.join(folderPath, 'zeev_response_simulation.json');
+            if (fs.existsSync(zeevSimPath)) {
+              try {
+                const simData = JSON.parse(fs.readFileSync(zeevSimPath, 'utf-8'));
+                const recoveredId = simData?.instanceId || simData?.id || simData?.code || simData?.instanceCode;
+                if (recoveredId) {
+                  content.zeevInstanceId = String(recoveredId);
+                }
+              } catch {}
+            }
+          }
           const stats = fs.statSync(folderPath);
           const createdAt = stats.birthtime && stats.birthtime.getTime() > 0 ? stats.birthtime.toISOString() : stats.mtime.toISOString();
           notes.push({
@@ -193,7 +205,14 @@ export class NoteService {
 
         const cols = this.splitCsvLine(line);
         if (cols.length >= headers.length) {
-          const fileName = cols[1];
+          const dateStr = cols[0]?.trim();
+          const fileName = cols[1]?.trim();
+
+          // Salvaguarda: descarta linhas nulas ou corrompidas (ex: compostas apenas por vírgulas)
+          if (!dateStr || !fileName) {
+            continue;
+          }
+
           const id = fileName.replace(/\.[^/.]+$/, ""); // remove a extensão
           
           const docNumCsv = cols[10];
@@ -259,7 +278,28 @@ export class NoteService {
             }
           }
 
-          const isManual = cols[1]?.startsWith('manual_');
+          // Resolução do ID Zeev a partir do CSV ou da instância registrada na nota
+          let resolvedZeevId = cols[8] || '';
+          if (!resolvedZeevId && matchingNote) {
+            resolvedZeevId = matchingNote.data.zeevInstanceId || matchingNote.data.zeevId || '';
+            if (!resolvedZeevId) {
+              const zeevSimPath = path.join(FILES_DIR, matchingNote.id, 'zeev_response_simulation.json');
+              if (fs.existsSync(zeevSimPath)) {
+                try {
+                  const simData = JSON.parse(fs.readFileSync(zeevSimPath, 'utf-8'));
+                  resolvedZeevId = String(simData?.instanceId || simData?.id || simData?.code || simData?.instanceCode || '');
+                } catch {}
+              }
+            }
+          }
+
+          // Fallbacks contábeis enriquecidos caso colunas do log estejam em branco
+          const resolvedSupplier = (cols[3] && cols[3] !== 'DESCONHECIDO') ? cols[3] : (matchingNote?.data?.supplier?.name || cols[3] || 'DESCONHECIDO');
+          const resolvedCnpj = cols[9] || matchingNote?.data?.supplier?.cnpjCpf || '';
+          const resolvedDocNum = cols[10] || matchingNote?.data?.documentIdentifiers?.documentNumber || '';
+          const resolvedValorFatura = cols[11] ? parseFloat(cols[11]) : (matchingNote?.data?.financial?.chargedValue || matchingNote?.data?.financial?.originalValue || undefined);
+
+          const isManual = fileName.startsWith('manual_');
           const defaultUserEmail = isManual ? 'Upload Manual' : 'SISTEMA (E-mail)';
           const defaultUserName = isManual ? 'Upload Manual' : 'Integração E-mail';
           const defaultOrigem = isManual ? 'Upload Manual' : 'E-mail Sync';
@@ -267,18 +307,18 @@ export class NoteService {
           logs.push({
             id: i,
             noteId: matchingNote ? matchingNote.id : undefined,
-            dataHora: this.parseCsvDate(cols[0]),
-            arquivo: cols[1],
-            modeloIa: cols[2],
-            fornecedor: cols[3],
+            dataHora: this.parseCsvDate(dateStr),
+            arquivo: fileName,
+            modeloIa: cols[2] || 'gemini-2.5-flash',
+            fornecedor: resolvedSupplier,
             tokensEntrada: parseInt(cols[4]) || 0,
             tokensSaida: parseInt(cols[5]) || 0,
             custoUsd: parseFloat(cols[6]) || 0,
             tempoProcessamentoMs: cols[7] || 'N/A',
-            zeevId: cols[8] || '',
-            cnpjFornecedor: cols[9] || '',
-            numeroDocumento: cols[10] || '',
-            valorFatura: cols[11] ? parseFloat(cols[11]) : undefined,
+            zeevId: resolvedZeevId,
+            cnpjFornecedor: resolvedCnpj,
+            numeroDocumento: resolvedDocNum,
+            valorFatura: resolvedValorFatura,
             status: cols[12] || 'Sucesso',
             statusArquivo: fileStatus,
             usuarioEmail: cols[13] || defaultUserEmail,
