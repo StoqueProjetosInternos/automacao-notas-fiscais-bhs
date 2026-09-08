@@ -836,7 +836,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             }}
           >
             {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            {loading && activeAction === 'approve' ? 'Aprovando no Zeev...' : 'Aprovar'}
+            {loading && activeAction === 'approve' ? 'Aprovando...' : 'Aprovar'}
           </button>
         )}
       </div>

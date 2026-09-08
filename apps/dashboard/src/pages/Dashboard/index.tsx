@@ -5,6 +5,7 @@ import { Sidebar } from '../../components/Sidebar';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { DataEditor } from '../../components/DataEditor';
 import { RateioPreviewModal } from '../../components/RateioPreviewModal';
+import { ExecutiveAnalytics } from '../../components/ExecutiveAnalytics';
 import { fetchNotes, updateNote, reprocessNotes, fetchUsageLog, deleteNote, syncEmails, fetchApiLogs, clearApiLogs, sendDeadlineAlerts, getFileUrl, uploadManualPdf, type UsageLog } from '../../services/api';
 import type { Note, NoteData } from '../../types';
 import { ArrowLeft, RefreshCcw, Loader2, FileSpreadsheet, FileText, Upload, Trash2, UserCheck, DollarSign, Clock } from 'lucide-react';
@@ -82,7 +83,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs' | 'deadlines'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'history' | 'logs' | 'deadlines' | 'analytics'>('notes');
   const [usageLogs, setUsageLogs] = useState<UsageLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [isSlowLoadingHistory, setIsSlowLoadingHistory] = useState(false);
@@ -327,7 +328,7 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
   };
 
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTab === 'history' || activeTab === 'analytics') {
       loadUsageLogs();
     } else if (activeTab === 'logs') {
       if (user.role !== 'ADMIN') {
@@ -2473,6 +2474,12 @@ export const Dashboard = ({ onLogout, user }: DashboardProps) => {
               </div>
             </div>
           </div>
+        ) : activeTab === 'analytics' ? (
+          <ExecutiveAnalytics
+            notes={notes}
+            usageLogs={usageLogs}
+            onBackToNotes={() => setActiveTab('notes')}
+          />
         ) : (
           <div className="fade-in" key="logs" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
             <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
