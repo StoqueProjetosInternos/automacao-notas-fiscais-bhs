@@ -1107,6 +1107,158 @@ Para consultar o histórico detalhado dos meses anteriores:
 - Status: Aplicado
 - Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
 
+### CHG-0270 — Validação de Integridade Contábil de Rateio e Extração Completa Multi-Páginas na IA
+
+- Data/Hora: 2026-09-08 09:46
+- Contexto: Faturas extensas multi-páginas (como a Fatura-5855 com 103 itens) sofriam corte prematuro no modelo gemini-2.5-flash, gerando apenas 28 itens sem acionar fallback de modelo.
+- Objetivo: Implementar regra de integridade contábil no aiExtract.ts que valida a soma dos itens em relação ao chargedValue, rejeita extrações truncadas e comuta automaticamente para gemini-3.6-flash ou gemini-3.1-pro-preview.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Faturas de item único ou sem rateio prévio não são afetadas pela validação, preservando o fluxo regular.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e reprocessamento da fatura Fatura-5855 com conferência dos 103 itens.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0271 — Remoção de Modelos Pro da Contingência e Fallback 100% Flash para Cota Free Tier
+
+- Data/Hora: 2026-09-08 09:55
+- Contexto: A chave de API do Google AI Studio do ambiente opera sob o plano gratuito (Free Tier), que atribui cota zero (limit: 0) a modelos da família Pro, causando erro 429 quando gemini-3.1-pro-preview era acionado na contingência.
+- Objetivo: Restringir a sequência de contingência e a definição do modelo primário exclusivamente a modelos da família Flash (gemini-3.6-flash e gemini-2.5-flash), incluindo salvaguarda defensiva contra configurações acidentais de modelos Pro.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. O modelo gemini-3.6-flash possui suporte comprovado a saídas extensas de tabelas multi-páginas e cota ativa no plano gratuito.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e validação do fluxo de extração sem erros de cota.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0272 — Detecção de Páginas via pdf-lib, Backoff para Erro 503 e Extração das Páginas 3 e 4
+
+- Data/Hora: 2026-09-08 12:06
+- Contexto: A extração interrompia a captura ao término da página 2 (capturando apenas 48 a 52 itens de 103) e a última tentativa coincidiu com indisponibilidade 503 temporária do Google.
+- Objetivo: Injetar a contagem exata de páginas via pdf-lib no prompt para obrigar a leitura de todas as 4 páginas, expandir o laço para 5 tentativas com backoff progressivo contra erros 503 e priorizar gemini-3.6-flash.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a robustez contra oscilações de rede e assegura a extração integral em documentos multi-páginas.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e validação da extração completa dos 103 registros.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0273 — Expansão de Limite de Saída (maxOutputTokens: 32768) e Atualização da Contingência Flash
+
+- Data/Hora: 2026-09-08 12:42
+- Contexto: A extração de faturas extensas multi-páginas (como Fatura-5855.pdf com 103 itens) excedia o teto hardcoded de 8.192 tokens (atingindo 8.178 tokens somando raciocínio interno e candidatos), provocando corte abrupto no JSON e erro de sintaxe. Adicionalmente, gemini-3.6-flash vinha sofrendo sobrecargas pontuais 503.
+- Objetivo: Expandir maxOutputTokens de 8192 para 32768 tokens, permitindo extração integral de grandes faturas sem truncamento, e atualizar a sequência de contingência de modelos Flash disponíveis e saudáveis (gemini-3.8-flash, gemini-3.7-flash, gemini-2.5-flash).
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Permanece 100% dentro dos limites do plano gratuito (Free Tier) e evita corte da resposta.
+- Testes: Build do projeto via `npm --prefix apps/automacao run build` e execução de extração de faturas multi-páginas.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0274 — Sanitização do Histórico de Uso e Resolução Automática de Instâncias Zeev
+
+- Data/Hora: 2026-09-08 13:15
+- Contexto: Registros de auditoria no histórico exibiam colunas em branco no topo devido a 113 linhas vazias no CSV, além de ausência do ID Zeev gerado após a aprovação de faturas.
+- Objetivo: Sanitizar o arquivo usage_log.csv, filtrar defensivamente registros com campos vazios no backend, complementar metadados fiscais a partir dos JSONs das notas e resolver automaticamente o ID Zeev a partir do arquivo zeev_response_simulation.json.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+    - [apps/automacao/src/server/services/zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+    - [apps/automacao/src/server/controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+  - Dados:
+    - [data/usage_log.csv](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/data/usage_log.csv)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a integridade visual e auditoria sem alterar lógica de negócios das notas.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e validação do retorno da rota de histórico.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/noteService.ts apps/automacao/src/server/services/zeevService.ts apps/automacao/src/server/controllers/noteController.ts data/usage_log.csv`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0275 — Monitoramento Automático de Vencimentos com Idempotência Diária no Electron
+
+- Data/Hora: 2026-09-08 13:26
+- Contexto: Alertas de vencimento dependiam de acionamento manual na interface, necessitando automação nativa e resiliente para o ambiente desktop Electron.
+- Objetivo: Implementar serviço de agendamento automático com verificação na inicialização (Startup Check), filtro de faturas com vencimento em até 10 dias, envio de e-mail preventivo e trava de idempotência diária em disco para evitar disparos duplicados.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/deadlineAlertService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/deadlineAlertService.ts)
+    - [apps/automacao/src/server/controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+    - [apps/automacao/src/server/routes/noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts)
+    - [apps/automacao/src/server/app.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/app.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Opera sem bloquear a thread do Electron e respeita rigorosamente a trava de um disparo por dia.
+- Testes: Build do projeto via `npm --prefix apps/automacao run build` e validação da consulta ao endpoint `/api/notes/deadlines/status`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/app.ts apps/automacao/src/server/routes/noteRoutes.ts apps/automacao/src/server/controllers/noteController.ts`
+  2) Remover `apps/automacao/src/server/services/deadlineAlertService.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0276 — Padronização de Mascaramento de Segurança para Tenant ID e Client ID
+
+- Data/Hora: 2026-09-08 13:33
+- Contexto: As variáveis TENANT_ID e CLIENT_ID eram expostas em texto puro na tela de configurações, divergindo do padrão seguro das demais variáveis de credenciais.
+- Objetivo: Unificar o padrão de segurança mascarando TENANT_ID e CLIENT_ID no backend ({ isConfigured, masked }), implementando controle de visibilidade (Eye/EyeOff) e protegendo contra sobrescrita indevida no dashboard.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/settingsService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/settingsService.ts)
+  - Frontend:
+    - [apps/dashboard/src/services/api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+    - [apps/dashboard/src/components/SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a segurança contra exposição acidental e preserva compatibilidade retroativa.
+- Testes: Build do backend com `npm --prefix apps/automacao run build` e do dashboard com `npm --prefix apps/dashboard run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/settingsService.ts apps/dashboard/src/services/api.ts apps/dashboard/src/components/SettingsModal.tsx`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0277 — Painel Executivo e Gráficos de Indicadores de Faturas e IA
+
+- Data/Hora: 2026-09-08 13:45
+- Contexto: A liderança precisava de uma visualização consolidada do volume financeiro processado, aprovações no Zeev, custos/eficiência da IA e alocação contábil de rateios.
+- Objetivo: Criar a aba Indicadores à direita de Prazos com 4 cartões de KPIs executivos e 4 painéis analíticos nativos (sem dependências externas) em puro React/SVG/CSS.
+- Escopo:
+  - Frontend:
+    - [apps/dashboard/src/components/ExecutiveAnalytics.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/ExecutiveAnalytics.tsx)
+    - [apps/dashboard/src/components/Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+    - [apps/dashboard/src/pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Componente modular em SVG/CSS que não sobrecarrega a thread nem gera conflito de pacotes.
+- Testes: Compilação TypeScript e Vite com `npm --prefix apps/dashboard run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
+  2) Remover `apps/dashboard/src/components/ExecutiveAnalytics.tsx`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
+
 
 
 
