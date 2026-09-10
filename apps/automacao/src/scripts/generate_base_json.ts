@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 
 const excelFilePath = path.resolve('../../base_fornecedores_faturas.xlsx');
-const jsonOutputPathDashboard = path.resolve('../dashboard/src/assets/base_fornecedores_faturas.json');
 const jsonOutputPathData = path.resolve('../../data/base_fornecedores_faturas.json');
 
 function convertExcelDate(dateStr: string): string {
@@ -49,9 +48,8 @@ try {
     };
   });
 
-  fs.writeFileSync(jsonOutputPathDashboard, JSON.stringify(mappedData, null, 2), 'utf8');
   fs.writeFileSync(jsonOutputPathData, JSON.stringify(mappedData, null, 2), 'utf8');
-  console.log(`Sucesso: Gravados ${mappedData.length} registros no Dashboard e em Data.`);
+  console.log(`Sucesso: Gravados ${mappedData.length} registros em data/base_fornecedores_faturas.json.`);
 } catch (error) {
   console.error("Erro ao gerar JSON a partir da planilha:", error);
 }

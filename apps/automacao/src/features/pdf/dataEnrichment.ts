@@ -29,9 +29,9 @@ const BASE_PATH = findDataFile("data/base_referencia.csv");
 const ITEMS_MAPPING_PATH = findDataFile("data/mapeamento_itens.json");
 const CNPJ_ALIASES_PATH = findDataFile("data/cnpj_aliases.json");
 const BASE_FORNECEDORES_JSON_PATH = findDataFile("data/base_fornecedores_faturas.json");
-const ROOT_CR_JSON_PATH = findDataFile("cr.json");
-const ROOT_CD_JSON_PATH = findDataFile("cd.json");
-const ROOT_NATUREZAS_JSON_PATH = findDataFile("naturezas.json");
+const ROOT_CR_JSON_PATH = findDataFile("data/cr.json");
+const ROOT_CD_JSON_PATH = findDataFile("data/cd.json");
+const ROOT_NATUREZAS_JSON_PATH = findDataFile("data/naturezas.json");
 
 // Cache e carregamento de descrições das Naturezas Contábeis da raiz
 let naturezaDescriptionsMap: Record<string, string> = {};
