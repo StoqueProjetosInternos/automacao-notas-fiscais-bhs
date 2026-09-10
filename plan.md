@@ -35,6 +35,44 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ## 3. Registros Ativos — Setembro / 2026
 
+### CHG-0229 — Restauração de Fidelidade Visual e Layout Compacto da Aba de Histórico
+
+- Data/Hora: 2026-09-10 16:26
+- Contexto: A tabela de histórico em HistoryTab.tsx havia sofrido regressão visual de layout com largura comprimida (1600px em vez de 2150px), quebra vertical em nomes de arquivos e fornecedores, divisão de usuário em duas linhas e fontes monoespaçadas desalinhadas da identidade Host Grotesk.
+- Objetivo: Restaurar a estrutura visual e estilos canônicos originais da tabela de histórico em HistoryTab.tsx, reativando a largura fixa de 2150px, tableLayout fixed, cabeçalho sticky, linhas zebradas com altura compacta de linha única e truncamento adequado de texto.
+- Escopo:
+  - [HistoryTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/HistoryTab.tsx)
+- Riscos: Baixo. Correção puramente estética e estrutural de JSX/CSS sem impacto em lógica de dados.
+- Proposta: Reaplicar a tabela original com dimensões precisas de cada coluna e botões de ação consistentes.
+- Testes:
+  - Compilação do dashboard via `npm run build` com código 0 e zero erros de TypeScript.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/HistoryTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO].
+
+### CHG-0228 — Integração da Planilha de Rateio Canônica do Fornecedor Magna
+
+- Data/Hora: 2026-09-10 15:56
+- Contexto: O fornecedor Magna possuía apenas enriquecimento genérico, necessitando de mapeamento de rateio por equipamento, número de série e código de ativo para compor adequadamente os R$ 12.105,08 faturados.
+- Objetivo: Mover rateio_magna.xlsx para data/, atualizar consolidate_rateios.ts para extrair as abas Rateio_Detalhado e Equipamentos (926 mapeamentos consolidados) e implementar regra de enriquecimento de itens da Magna em dataEnrichment.ts.
+- Escopo:
+  - [rateio_magna.xlsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/data/rateio_magna.xlsx)
+  - [consolidate_rateios.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/consolidate_rateios.ts)
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos: Baixo. Regra direcionada exclusivamente para o fornecedor Magna.
+- Proposta: Indexar magnaItens por número de série, código de ativo e equipamento, e associar o CR, natureza contábil e contrato correspondentes em cada item da fatura.
+- Testes:
+  - Consolidação executada com sucesso gerando 926 itens da Magna em data/rateios_consolidado.json.
+  - Teste de enriquecimento executado sobre a fatura existente da Magna: 356 itens enriquecidos com soma de R$ 12.105,08 exata.
+  - Planilha de rateio Excel da fatura regenerada com sucesso.
+  - Compilação via `npm run build` em apps/automacao finalizada com código 0.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/scripts/consolidate_rateios.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+  2) `cmd /c npx tsx src/scripts/consolidate_rateios.ts`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO].
+
 ### CHG-0227 — Fase 5: Auditoria e Higienização de Scripts Utilitários
 
 - Data/Hora: 2026-09-10 14:05
