@@ -35,6 +35,134 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ## 3. Registros Ativos — Setembro / 2026
 
+### CHG-0227 — Fase 5: Auditoria e Higienização de Scripts Utilitários
+
+- Data/Hora: 2026-09-10 14:05
+- Contexto: Após a unificação das bases de dados em data/, scripts utilitários em apps/automacao/src/scripts/ ainda mantinham referências ao caminho obsoleto de assets do dashboard.
+- Objetivo: Atualizar generate_base_json.ts para salvar exclusivamente na pasta unificada data/base_fornecedores_faturas.json, eliminando referências a caminhos antigos.
+- Escopo:
+  - [generate_base_json.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/generate_base_json.ts)
+- Riscos: Baixo. Script utilitário isolado fora da rota em tempo real.
+- Proposta: Remover jsonOutputPathDashboard e direcionar a saída unicamente para jsonOutputPathData.
+- Testes:
+  - Compilação via `npm run build` em apps/automacao (tsc) e apps/dashboard (tsc -b && vite build) com código 0.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/scripts/generate_base_json.ts`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Encerramento com sucesso de todas as fases (1 a 5) do plano de refatoração estrutural.
+
+### CHG-0226 — Fase 4 (Passo 4.3): Modularização do Componente HistoryTab
+
+- Data/Hora: 2026-09-10 14:02
+- Contexto: A aba de Histórico de Processamento em Dashboard/index.tsx continha mais de 1.100 linhas de código misturando filtros multidimensionais, KPIs executivos de custo/latência, exportações complexas para Excel/PDF e pré-visualização de faturas.
+- Objetivo: Isolar toda a visualização e operação do histórico em HistoryTab.tsx, desacoplando estados de busca, paginação, exportação e modais associados do orquestrador raiz.
+- Escopo:
+  - [HistoryTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/HistoryTab.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Todas as props e callbacks de desarquivamento e visualização foram preservados com tipagem estrita no TypeScript.
+- Proposta: Criar HistoryTab.tsx, mover filtros, paginação, exportação e modais de PDF/Rateio do histórico, e invocar o componente dentro da aba history em Dashboard/index.tsx.
+- Testes:
+  - Compilação via `cmd /c npm run build` em apps/dashboard com zero erros de TypeScript e bundle gerado com sucesso.
+- Rollback:
+  - 1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+  - 2) Remover `apps/dashboard/src/components/HistoryTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Redução de mais de 1.100 linhas em Dashboard/index.tsx (caiu para 840 linhas).
+
+### CHG-0225 — Fase 4 (Passo 4.2): Modularização do Componente LogsTab
+
+- Data/Hora: 2026-09-10 13:50
+- Contexto: A visualização de logs e o modal de confirmação de limpeza estavam acoplados diretamente ao componente raiz do Dashboard, inflando seu escopo com regras de console e modais secundários.
+- Objetivo: Isolar a aba de logs em LogsTab.tsx, encapsulando os estados de carregamento, cópia para clipboard, terminal escuro e modal de confirmação.
+- Escopo:
+  - [LogsTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/LogsTab.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Contrato direto via callbacks (onBack e showToast) e preservação das travas de acesso ADMIN.
+- Proposta: Criar LogsTab.tsx e substituir mais de 250 linhas em Dashboard/index.tsx por uma invocação modularizada.
+- Testes:
+  - npm run build em apps/dashboard com zero erros de TypeScript e bundle gerado com sucesso.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+  2) Remover `apps/dashboard/src/components/LogsTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Redução líquida de 250+ linhas em Dashboard/index.tsx.
+
+### CHG-0224 — Fase 4 (Passo 4.1): Modularização do Componente DeadlinesTab
+
+- Data/Hora: 2026-09-10 13:45
+- Contexto: O componente Dashboard/index.tsx acumulava mais de 2.830 linhas, misturando regras e tabelas de diferentes domínios e dificultando a manutenção.
+- Objetivo: Extrair a aba de Monitoramento de Prazos de Vencimento para o componente dedicado DeadlinesTab.tsx, desacoplando cálculos de dias restantes, ordenação, paginação e simulação de alertas de e-mail.
+- Escopo:
+  - [DeadlinesTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DeadlinesTab.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Contrato de propriedades bem delimitado (notes, onBack, onRefreshNotes, showToast).
+- Proposta: Criar DeadlinesTab.tsx contendo toda a computação de vencimentos e substituir mais de 450 linhas do arquivo raiz por uma única invocação declarativa.
+- Testes:
+  - npm run build em apps/dashboard com zero erros de TypeScript e bundle gerado com sucesso.
+  - npm run build em apps/automacao com compilação TypeScript validada com código 0.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+  2) Remover `apps/dashboard/src/components/DeadlinesTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Redução líquida de 460+ linhas em Dashboard/index.tsx.
+
+### CHG-0223 — Fase 3 da Refatoração: Higienização do index.css e Padronização de Classes no App.css
+
+- Data/Hora: 2026-09-10 13:35
+- Contexto: O index.css continha estilos legados do template Vite e o Dashboard utilizava centenas de linhas de CSS inline repetido para badges, paginação e tabelas.
+- Objetivo: Eliminar o código morto do index.css e criar classes semânticas no App.css, reduzindo a repetição e alinhando ao Brand Center da Stoque.
+- Escopo:
+  - [index.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/index.css)
+  - [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Mudanças puramente visuais e estruturais de CSS com checagem imediata no build.
+- Proposta: Limpar regras residuais de template no index.css, extrair classes utilitárias para badges, tabelas e paginação no App.css e substituir blocos inline repetitivos.
+- Testes:
+  - npm run build em apps/dashboard com zero erros de bundle.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/index.css apps/dashboard/src/App.css apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0222 — Fase 2 da Refatoração: Centralização e Unificação das Bases Cadastrais
+
+- Data/Hora: 2026-09-10 13:30
+- Contexto: Arquivos cadastrais de CR, Naturezas e Contratos existiam duplicados entre a raiz do projeto e a pasta assets do dashboard, além de resquícios de arquivos SVG de template.
+- Objetivo: Estabelecer a pasta data/ como fonte única da verdade cadastral, configurar alias @data no frontend, atualizar o backend e eliminar cópias redundantes.
+- Escopo:
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+  - [vite.config.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/vite.config.ts)
+  - [tsconfig.app.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/tsconfig.app.json)
+  - [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+  - [.gitignore](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.gitignore)
+- Riscos: Baixo. Validado através de compilação simultânea do backend e frontend com checagem de tipos estrita.
+- Proposta: Mover cr.json e naturezas.json para data/, criar alias @data no Vite/TypeScript e eliminar duplicatas em apps/dashboard/src/assets/ e na raiz.
+- Testes:
+  - npm run build em apps/dashboard (código 0).
+  - npm run build em apps/automacao (código 0).
+  - Execução de teste de carregamento de CR e Natureza no backend (código 0).
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts apps/dashboard/vite.config.ts apps/dashboard/tsconfig.app.json apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/pages/Dashboard/index.tsx .gitignore`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0221 — Fase 1 da Refatoração: Higienização da Raiz e Atualização do Gitignore
+
+- Data/Hora: 2026-09-10 13:25
+- Contexto: Início do ciclo de refatoração do projeto para eliminar arquivos órfãos, logs residuais e artefatos de compilação desktop não rastreados.
+- Objetivo: Proteger o repositório contra arquivos zip de release, eliminar arquivos residuais e organizar regras de exclusão no .gitignore.
+- Escopo:
+  - [.gitignore](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.gitignore)
+- Riscos: Baixo. Não altera código de execução da aplicação.
+- Proposta: Adicionar regras de exclusão para pacotes zip e scripts locais no .gitignore e remover logs residuais.
+- Testes:
+  - Execução de git status confirmando árvore de trabalho limpa.
+- Rollback:
+  1) `git checkout -- .gitignore`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
 ### CHG-0220 — Unificação de Contratos Recorrentes e Deduplicação nos Alertas de Prazos
 
 - Data/Hora: 2026-09-10 13:05
