@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, FileSpreadsheet, FileText, UserCheck, DollarSign, Clock } from 'lucide-react';
+import { ArrowLeft, FileSpreadsheet, FileText, UserCheck, DollarSign, Clock, Loader2 } from 'lucide-react';
 import type { Note } from '../types';
 import { type UsageLog, getFileUrl } from '../services/api';
 import { RateioPreviewModal } from './RateioPreviewModal';
@@ -622,396 +622,428 @@ export const HistoryTab = ({
         </div>
 
         {/* Tabela de Histórico */}
-        <div className="custom-scrollbar" style={{ overflowX: 'auto', width: '100%', paddingBottom: '6px' }}>
-          <table style={{ width: '100%', minWidth: '1600px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #f3f4f6', background: '#f9fafb' }}>
-                <th 
-                  onClick={() => handleSortHistory('id')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '70px' }}
-                >
-                  ID {historySortField === 'id' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('dataHora')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '140px' }}
-                >
-                  Data/Hora {historySortField === 'dataHora' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('usuario')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '160px' }}
-                >
-                  Usuário / Ação {historySortField === 'usuario' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('origem')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '110px' }}
-                >
-                  Origem {historySortField === 'origem' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('arquivo')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '180px' }}
-                >
-                  Arquivo {historySortField === 'arquivo' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('modeloIa')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '120px' }}
-                >
-                  Modelo IA {historySortField === 'modeloIa' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('fornecedor')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '180px' }}
-                >
-                  Fornecedor {historySortField === 'fornecedor' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('cnpj')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '140px' }}
-                >
-                  CNPJ Fornecedor {historySortField === 'cnpj' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('statusArquivo')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '110px' }}
-                >
-                  Status Fatura {historySortField === 'statusArquivo' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('numeroDocumento')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', width: '120px' }}
-                >
-                  Nº Documento {historySortField === 'numeroDocumento' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('valorFatura')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'right', width: '110px' }}
-                >
-                  Valor {historySortField === 'valorFatura' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('tokensEntrada')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '90px' }}
-                >
-                  Tokens Entr. {historySortField === 'tokensEntrada' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('tokensSaida')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '90px' }}
-                >
-                  Tokens Saída {historySortField === 'tokensSaida' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('custoUsd')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '90px' }}
-                >
-                  Custo ($) {historySortField === 'custoUsd' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('tempoMs')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '80px' }}
-                >
-                  Tempo (ms) {historySortField === 'tempoMs' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('statusIa')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '80px' }}
-                >
-                  Status IA {historySortField === 'statusIa' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th 
-                  onClick={() => handleSortHistory('zeevId')}
-                  className="table-header-clickable"
-                  style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '90px' }}
-                >
-                  Zeev ID {historySortField === 'zeevId' ? (historySortOrder === 'asc' ? ' ▲' : ' ▼') : ''}
-                </th>
-                <th style={{ padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '130px' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loadingLogs ? (
-                <tr>
-                  <td colSpan={18} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 500 }}>Carregando dados do histórico...</span>
-                      {isSlowLoadingHistory && (
-                        <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                          A base de histórico está sendo consultada. Aguarde um instante...
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : paginatedUsageLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={18} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
-                    Nenhum registro encontrado com os filtros atuais.
-                  </td>
-                </tr>
-              ) : (
-                paginatedUsageLogs.map((log) => (
-                  <tr 
-                    key={log.id} 
-                    style={{ 
-                      borderBottom: '1px solid #e5e7eb',
-                      transition: 'background-color 0.15s'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <td style={{ padding: '12px 16px', color: '#6b7280', fontFamily: 'monospace' }}>#{log.id}</td>
-                    <td style={{ padding: '12px 16px', color: '#111827', whiteSpace: 'nowrap' }}>
-                      {new Date(log.dataHora).toLocaleString('pt-BR')}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#374151', fontSize: '0.75rem' }}>
-                      <div style={{ fontWeight: 600, color: '#111827' }}>
-                        {log.usuarioNome || log.usuarioEmail || 'SISTEMA'}
-                      </div>
-                      {log.usuarioEmail && log.usuarioNome && (
-                        <div style={{ color: '#6b7280', fontSize: '0.7rem' }}>
-                          {log.usuarioEmail}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563', fontSize: '0.75rem' }}>
-                      <span style={{ 
-                        background: log.origem === 'Manual Upload' ? '#fef3c7' : '#f3f4f6', 
-                        color: log.origem === 'Manual Upload' ? '#92400e' : '#374151', 
-                        padding: '2px 6px', 
-                        borderRadius: '4px',
-                        fontWeight: 500,
-                        border: '1px solid #e5e7eb'
-                      }}>
-                        {log.origem || 'E-mail Sync'}
-                      </span>
-                    </td>
-                    <td 
-                      style={{ padding: '12px 16px', color: '#2563eb', fontWeight: 500, cursor: 'pointer' }}
-                      title="Clique para visualizar o arquivo original"
-                      onClick={() => {
-                        const foundNote = notes.find(n => n.id === log.noteId);
-                        if (foundNote && foundNote.files.pdf) {
-                          setHistoryPreviewPdfUrl(getFileUrl(foundNote.files.pdf));
-                          setHistoryPreviewTitle(log.arquivo);
-                        } else {
-                          showToast('Arquivo físico PDF da fatura não foi localizado.', 'info');
-                        }
-                      }}
-                    >
-                      {log.arquivo}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563' }}>
-                      <span style={{ 
-                        background: '#f3f4f6', 
-                        color: '#374151', 
-                        padding: '2px 6px', 
-                        borderRadius: '4px', 
-                        fontSize: '0.7rem',
-                        fontFamily: 'monospace'
-                      }}>
-                        {log.modeloIa || 'N/D'}
-                      </span>
-                    </td>
-                    <td 
-                      style={{ padding: '12px 16px', color: '#111827', fontWeight: 500 }}
-                      title={log.fornecedor}
-                    >
-                      {log.fornecedor}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563' }}>
-                      {log.cnpjFornecedor || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{ 
-                        background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#fef3c7', 
-                        color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#b45309', 
-                        border: `1px solid ${log.statusArquivo === 'Excluído' ? '#fecaca' : log.statusArquivo === 'Validado' ? '#a7f3d0' : log.statusArquivo === 'Arquivado' ? '#cbd5e1' : '#fde68a'}`,
-                        padding: '2px 8px', 
-                        borderRadius: '12px', 
-                        fontSize: '0.72rem', 
-                        fontWeight: 700 
-                      }}>
-                        {log.statusArquivo === 'Pendente' || !log.statusArquivo ? 'Pendente' : log.statusArquivo}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563' }}>
-                      {log.numeroDocumento || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 600, textAlign: 'right' }}>
-                      {log.valorFatura !== undefined && log.valorFatura !== null ? (
-                        `R$ ${log.valorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                      ) : (
-                        <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 'normal' }}>N/D</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span className="token-badge">{log.tokensEntrada.toLocaleString()}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span className="token-badge">{log.tokensSaida.toLocaleString()}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span className="cost-badge">${log.custoUsd.toFixed(6)}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>{log.tempoProcessamentoMs}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{ 
-                        background: log.status === 'Falha' ? '#fee2e2' : '#eff6ff', 
-                        color: log.status === 'Falha' ? '#b91c1c' : '#1d4ed8', 
-                        padding: '2px 8px', 
-                        borderRadius: '4px', 
-                        fontSize: '0.7rem', 
-                        fontWeight: 600 
-                      }}>
-                        {log.status || 'Sucesso'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center', color: '#4b5563' }}>
-                      {log.zeevId ? (
-                        <span style={{ 
-                          background: '#eff6ff', 
-                          color: '#1d4ed8', 
-                          padding: '2px 8px', 
-                          borderRadius: '4px', 
-                          fontSize: '0.7rem', 
-                          fontWeight: 600 
-                        }}>
-                          #{log.zeevId}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Pendente</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
+        <div 
+                className="custom-scrollbar" 
+                style={{ 
+                  overflow: 'auto', 
+                  maxHeight: 'calc(100vh - 270px)', 
+                  width: '100%', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}
+              >
+                <table style={{ width: '100%', minWidth: '2150px', borderCollapse: 'separate', borderSpacing: 0, textAlign: 'left', fontSize: '0.8rem', tableLayout: 'fixed' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    <tr style={{ background: '#f9fafb' }}>
+                      <th 
+                        onClick={() => handleSortHistory('id')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'id' ? '#2563eb' : '#4b5563', width: '70px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por ID"
+                      >
+                        ID {historySortField === 'id' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('dataHora')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'dataHora' ? '#2563eb' : '#4b5563', width: '150px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Data/Hora"
+                      >
+                        Data/Hora {historySortField === 'dataHora' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('usuario')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'usuario' ? '#2563eb' : '#4b5563', width: '180px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Usuário Responsável"
+                      >
+                        Usuário Responsável {historySortField === 'usuario' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('origem')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'origem' ? '#2563eb' : '#4b5563', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Origem"
+                      >
+                        Origem {historySortField === 'origem' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('arquivo')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'arquivo' ? '#2563eb' : '#4b5563', width: '200px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Nome do Arquivo"
+                      >
+                        Arquivo {historySortField === 'arquivo' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('modeloIa')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'modeloIa' ? '#2563eb' : '#4b5563', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Modelo de IA"
+                      >
+                        Modelo {historySortField === 'modeloIa' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('fornecedor')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'fornecedor' ? '#2563eb' : '#4b5563', width: '250px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Fornecedor"
+                      >
+                        Fornecedor {historySortField === 'fornecedor' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('cnpj')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'cnpj' ? '#2563eb' : '#4b5563', width: '140px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por CNPJ do Fornecedor"
+                      >
+                        CNPJ {historySortField === 'cnpj' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('statusArquivo')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'statusArquivo' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '140px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Status do Arquivo"
+                      >
+                        Status do Arquivo {historySortField === 'statusArquivo' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('numeroDocumento')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'numeroDocumento' ? '#2563eb' : '#4b5563', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Número do Documento Fiscal"
+                      >
+                        Doc. Fiscal {historySortField === 'numeroDocumento' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('valorFatura')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'valorFatura' ? '#2563eb' : '#4b5563', textAlign: 'right', width: '130px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Valor da Fatura"
+                      >
+                        Vlr. Fatura {historySortField === 'valorFatura' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('tokensEntrada')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'tokensEntrada' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Tokens de Entrada"
+                      >
+                        Tokens Ent. {historySortField === 'tokensEntrada' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('tokensSaida')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'tokensSaida' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Tokens de Saída"
+                      >
+                        Tokens Saí. {historySortField === 'tokensSaida' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('custoUsd')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'custoUsd' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Custo em USD"
+                      >
+                        Custo (USD) {historySortField === 'custoUsd' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('tempoMs')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'tempoMs' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Tempo de Processamento"
+                      >
+                        Tempo (ms) {historySortField === 'tempoMs' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('statusIa')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'statusIa' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por Status da IA"
+                      >
+                        Status IA {historySortField === 'statusIa' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th 
+                        onClick={() => handleSortHistory('zeevId')}
+                        style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: historySortField === 'zeevId' ? '#2563eb' : '#4b5563', textAlign: 'center', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        title="Clique para ordenar por ID Zeev"
+                      >
+                        ID Zeev {historySortField === 'zeevId' ? (historySortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </th>
+                      <th style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 10, borderBottom: '2px solid #e5e7eb', padding: '12px 16px', fontWeight: 600, color: '#4b5563', textAlign: 'center', width: '150px' }}>
+                        Visualização
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingLogs ? (
+                      <tr>
+                        <td colSpan={18} style={{ padding: '48px 16px', textAlign: 'center', color: '#4b5563' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                            <Loader2 size={28} className="animate-spin" style={{ color: '#2563eb' }} />
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Carregando histórico de auditoria...</span>
+                            {isSlowLoadingHistory && (
+                              <span style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '4px 12px', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                                O carregamento está levando mais tempo que o usual. Aguarde a consolidação dos registros...
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : paginatedUsageLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={18} style={{ padding: '40px 16px', textAlign: 'center', color: '#6b7280' }}>
+                          Nenhum registro de processamento encontrado.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedUsageLogs.map((log, index) => (
+                        <tr 
+                          key={log.id} 
+                          className="history-row"
                           onClick={() => {
-                            const foundNote = notes.find(n => n.id === log.noteId);
-                            if (foundNote && foundNote.files.pdf) {
-                              setHistoryPreviewPdfUrl(getFileUrl(foundNote.files.pdf));
-                              setHistoryPreviewTitle(log.arquivo);
-                            } else {
-                              showToast('Arquivo físico PDF da fatura não foi localizado.', 'info');
+                            if (log.statusArquivo !== 'Excluído' && log.noteId) {
+                              const foundNote = notes.find(n => n.id === log.noteId);
+                              if (foundNote && foundNote.files.pdf) {
+                                setHistoryPreviewPdfUrl(getFileUrl(foundNote.files.pdf));
+                                setHistoryPreviewTitle(log.arquivo);
+                              } else {
+                                showToast('Arquivo físico PDF da fatura não foi localizado.', 'info');
+                              }
                             }
                           }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            color: '#1d4ed8',
-                            backgroundColor: '#eff6ff',
-                            border: '1px solid #dbeafe',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
+                          style={{ 
+                            cursor: log.statusArquivo !== 'Excluído' ? 'pointer' : 'default',
+                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                            borderBottom: '1px solid #f1f5f9',
+                            transition: 'background-color 0.15s ease'
                           }}
-                          title="Visualizar PDF da fatura"
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f1f5f9';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                          }}
                         >
-                          <FileText size={12} />
-                          PDF
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const foundNote = notes.find(n => n.id === log.noteId);
-                            if (foundNote) {
-                              setHistoryPreviewRateioNote(foundNote);
-                            } else {
-                              showToast('Dados de rateio contábil da fatura não foram localizados.', 'info');
-                            }
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            color: '#047857',
-                            backgroundColor: '#ecfdf5',
-                            border: '1px solid #a7f3d0',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                          title="Visualizar planilha de rateio contábil (.xlsx)"
-                        >
-                          <FileSpreadsheet size={12} />
-                          Rateio
-                        </button>
-                        {log.statusArquivo === 'Arquivado' ? (
-                          <button
-                            type="button"
-                            onClick={() => { if (log.noteId) onUnarchiveNote(log.noteId); }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '4px 8px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              color: '#4b5563',
-                              backgroundColor: '#f3f4f6',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
+                          <td style={{ padding: '12px 16px', color: '#6b7280', fontWeight: 'bold' }}>
+                            #{log.id}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#111827' }}>
+                            {new Date(log.dataHora).toLocaleString('pt-BR')}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#1f2937', fontWeight: 500 }} title={log.usuarioEmail || log.usuarioNome}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <UserCheck size={13} color="#2563eb" style={{ flexShrink: 0 }} />
+                              <span style={{ fontSize: '0.76rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {log.usuarioEmail || log.usuarioNome || 'SISTEMA'}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: 600, 
+                              backgroundColor: log.origem === 'Upload Manual' ? '#eff6ff' : '#f0fdf4', 
+                              color: log.origem === 'Upload Manual' ? '#1d4ed8' : '#15803d' 
+                            }}>
+                              {log.origem || 'E-mail Sync'}
+                            </span>
+                          </td>
+                           <td 
+                            className={log.statusArquivo !== 'Excluído' ? 'history-file-link' : ''}
+                            style={{ 
+                              padding: '12px 16px', 
+                              color: log.statusArquivo !== 'Excluído' ? '#2563eb' : '#4b5563', 
+                              textDecoration: log.statusArquivo !== 'Excluído' ? 'underline' : 'none',
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}
-                            title="Desarquivar fatura para reabrir curadoria"
+                            title={log.arquivo}
                           >
-                            Restaurar
-                          </button>
-                        ) : log.statusArquivo !== 'Excluído' && (
-                          <button
-                            type="button"
-                            onClick={() => { if (log.noteId) onArchiveNote(log.noteId); }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '4px 8px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              color: '#6b7280',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
+                            {log.arquivo}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#6b7280' }}>
+                            <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>
+                              {log.modeloIa}
+                            </span>
+                          </td>
+                          <td 
+                            style={{ 
+                              padding: '12px 16px', 
+                              color: '#111827', 
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}
-                            title="Arquivar fatura"
+                            title={log.fornecedor}
                           >
-                            Arquivar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                            {log.fornecedor}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4b5563' }}>
+                            {log.cnpjFornecedor || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span style={{ 
+                              background: log.statusArquivo === 'Excluído' ? '#fee2e2' : log.statusArquivo === 'Validado' ? '#d1fae5' : log.statusArquivo === 'Arquivado' ? '#f3f4f6' : '#fef3c7', 
+                              color: log.statusArquivo === 'Excluído' ? '#b91c1c' : log.statusArquivo === 'Validado' ? '#065f46' : log.statusArquivo === 'Arquivado' ? '#4b5563' : '#b45309', 
+                              border: `1px solid ${log.statusArquivo === 'Excluído' ? '#fecaca' : log.statusArquivo === 'Validado' ? '#a7f3d0' : log.statusArquivo === 'Arquivado' ? '#cbd5e1' : '#fde68a'}`,
+                              padding: '2px 8px', 
+                              borderRadius: '12px', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700 
+                            }}>
+                              {log.statusArquivo === 'Pendente' || !log.statusArquivo ? 'Pendente' : log.statusArquivo}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4b5563' }}>
+                            {log.numeroDocumento || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/D</span>}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 600, textAlign: 'right' }}>
+                            {log.valorFatura !== undefined && log.valorFatura !== null ? (
+                              `R$ ${log.valorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 'normal' }}>N/D</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span className="token-badge">{log.tokensEntrada.toLocaleString()}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span className="token-badge">{log.tokensSaida.toLocaleString()}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span className="cost-badge">${log.custoUsd.toFixed(6)}</span>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#4b5563', textAlign: 'center' }}>{log.tempoProcessamentoMs}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span style={{ 
+                              background: log.status === 'Falha' ? '#fee2e2' : '#eff6ff', 
+                              color: log.status === 'Falha' ? '#b91c1c' : '#1d4ed8', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '0.7rem', 
+                              fontWeight: 600 
+                            }}>
+                              {log.status || 'Sucesso'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center', color: '#4b5563' }}>
+                            {log.zeevId ? (
+                              <span style={{ 
+                                background: '#eff6ff', 
+                                color: '#1d4ed8', 
+                                padding: '2px 8px', 
+                                borderRadius: '4px', 
+                                fontSize: '0.7rem', 
+                                fontWeight: 600 
+                              }}>
+                                #{log.zeevId}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Pendente</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const foundNote = notes.find(n => n.id === log.noteId);
+                                  if (foundNote && foundNote.files.pdf) {
+                                    setHistoryPreviewPdfUrl(getFileUrl(foundNote.files.pdf));
+                                    setHistoryPreviewTitle(log.arquivo);
+                                  } else {
+                                    showToast('Arquivo físico PDF da fatura não foi localizado.', 'info');
+                                  }
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  color: '#1d4ed8',
+                                  backgroundColor: '#eff6ff',
+                                  border: '1px solid #dbeafe',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Visualizar PDF da fatura"
+                              >
+                                <FileText size={12} />
+                                PDF
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const foundNote = notes.find(n => n.id === log.noteId);
+                                  if (foundNote) {
+                                    setHistoryPreviewRateioNote(foundNote);
+                                  } else {
+                                    showToast('Dados de rateio contábil da fatura não foram localizados.', 'info');
+                                  }
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  color: '#047857',
+                                  backgroundColor: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Visualizar planilha de rateio contábil (.xlsx)"
+                              >
+                                <FileSpreadsheet size={12} />
+                                Rateio
+                              </button>
+                              {log.statusArquivo === 'Arquivado' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => { if (log.noteId) onUnarchiveNote(log.noteId); }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    color: '#4b5563',
+                                    backgroundColor: '#f3f4f6',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Desarquivar fatura para reabrir curadoria"
+                                >
+                                  Restaurar
+                                </button>
+                              ) : log.statusArquivo !== 'Excluído' && (
+                                <button
+                                  type="button"
+                                  onClick={() => { if (log.noteId) onArchiveNote(log.noteId); }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    color: '#6b7280',
+                                    backgroundColor: '#ffffff',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Arquivar fatura"
+                                >
+                                  Arquivar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
         {/* Paginação */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
