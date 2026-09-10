@@ -35,6 +35,24 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ## 3. Registros Ativos — Setembro / 2026
 
+### CHG-0220 — Unificação de Contratos Recorrentes e Deduplicação nos Alertas de Prazos
+
+- Data/Hora: 2026-09-10 13:05
+- Contexto: O e-mail automático diário omitia contratos recorrentes como a Claro S.A./NET (1 dia restante) por consultar apenas faturas reais processadas em disco, além de duplicar linhas de fornecedores com múltiplos arquivos.
+- Objetivo: Unificar a base de contratos recorrentes com as faturas reais pendentes no DeadlineAlertService, projetar datas dinâmicas no mês vigente e deduplicar fornecedores repetidos.
+- Escopo:
+  - [deadlineAlertService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/deadlineAlertService.ts)
+  - [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+- Riscos: Baixo. Leitura local em disco de arquivos JSON consolidados com fallbacks defensivos.
+- Proposta: Implementar getDynamicDueDate e mesclagem de base_fornecedores_faturas.json no backend, priorizando notas fiscais reais sobre estimativas de contratos e formatando status singular/plural.
+- Testes:
+  - Compilação TypeScript com zero erros (cmd.exe /c "npx tsc --noEmit").
+  - Execução de teste automatizado verificando a presença de Claro S.A./NET e a deduplicação de EMC.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/deadlineAlertService.ts apps/automacao/src/server/services/noteService.ts`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
 ### CHG-0219 — Linha de Somatória de Fechamento nas Abas Rateio e Rateio_Agrupado
 
 - Data/Hora: 2026-09-10 11:36

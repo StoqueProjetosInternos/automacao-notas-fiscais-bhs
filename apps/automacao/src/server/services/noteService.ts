@@ -427,12 +427,15 @@ export class NoteService {
     criticalItems.forEach(item => {
       const color = item.diasRestantes <= 7 ? '#ef4444' : '#eab308';
       const severity = item.diasRestantes <= 7 ? 'Crítico' : 'Alerta';
+      const diasLabel = item.diasRestantes === 0 
+        ? 'Hoje' 
+        : (item.diasRestantes === 1 ? '1 dia' : `${item.diasRestantes} dias`);
       tableRows += `
         <tr style="border-bottom: 1px solid #e5e7eb;">
           <td style="padding: 12px; font-weight: bold; color: #111827;">${item.fornecedor}</td>
-          <td style="padding: 12px; color: #374151;">R$ ${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="padding: 12px; color: #374151;">R$ ${Number(item.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td style="padding: 12px; color: #374151;">${item.vencimento}</td>
-          <td style="padding: 12px; font-weight: bold; color: ${color};">${item.diasRestantes} dias (${severity})</td>
+          <td style="padding: 12px; font-weight: bold; color: ${color};">${diasLabel} (${severity})</td>
         </tr>
       `;
     });

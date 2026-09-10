@@ -53,6 +53,21 @@ export class DeadlineAlertService {
     }
   }
 
+  private static findDataFile(relativePath: string): string {
+    const resourcesPath = (process as any).resourcesPath || '';
+    const possiblePaths = [
+      path.resolve(resourcesPath, relativePath),
+      path.resolve(resourcesPath, 'app', relativePath),
+      path.resolve(process.cwd(), relativePath),
+      path.resolve(path.dirname(FILES_DIR), '..', relativePath),
+      path.resolve(path.dirname(FILES_DIR), relativePath),
+    ];
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return path.resolve(process.cwd(), relativePath);
+  }
+
   private static parseBrazilianDate(dateStr?: string): Date | null {
     if (!dateStr) return null;
     const parts = dateStr.trim().split('/');
@@ -65,6 +80,38 @@ export class DeadlineAlertService {
     }
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  private static getDynamicDueDate(originalDateStr: string): string {
+    const parsedOriginal = this.parseBrazilianDate(originalDateStr);
+    if (!parsedOriginal) return originalDateStr;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const diaOriginal = parsedOriginal.getDate();
+
+    let candidateDate = new Date(hoje.getFullYear(), hoje.getMonth(), diaOriginal);
+    if (candidateDate.getMonth() !== hoje.getMonth()) {
+      candidateDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    }
+
+    if (candidateDate.getTime() < hoje.getTime()) {
+      let nextMonth = hoje.getMonth() + 1;
+      let nextYear = hoje.getFullYear();
+      if (nextMonth > 11) {
+        nextMonth = 0;
+        nextYear += 1;
+      }
+      candidateDate = new Date(nextYear, nextMonth, diaOriginal);
+      if (candidateDate.getMonth() !== nextMonth) {
+        candidateDate = new Date(nextYear, nextMonth + 1, 0);
+      }
+    }
+
+    const dd = String(candidateDate.getDate()).padStart(2, '0');
+    const mm = String(candidateDate.getMonth() + 1).padStart(2, '0');
+    const yyyy = candidateDate.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   }
 
   public static async checkAndDispatchDailyAlerts(force: boolean = false): Promise<DeadlineState> {
@@ -85,8 +132,8 @@ export class DeadlineAlertService {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
-      const criticalItems: any[] = [];
-
+      // 1. Processa notas fiscais reais pendentes com deduplicação
+      const realCriticalMap = new Map<string, any>();
       for (const note of pendingNotes) {
         const dueDateStr = note.data.financial?.dueDate;
         const dueDate = this.parseBrazilianDate(dueDateStr);
@@ -97,14 +144,71 @@ export class DeadlineAlertService {
         const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diasRestantes <= 10 && diasRestantes >= -15) {
-          criticalItems.push({
-            fornecedor: note.data.supplier?.name || 'DESCONHECIDO',
-            valor: Number(note.data.financial?.chargedValue || note.data.financial?.originalValue || 0),
-            vencimento: dueDateStr,
-            diasRestantes
-          });
+          const supplierName = note.data.supplier?.name || 'DESCONHECIDO';
+          const cnpj = note.data.supplier?.cnpjCpf || '';
+          const valor = Number(note.data.financial?.chargedValue || note.data.financial?.originalValue || 0);
+          const docNum = note.data.documentIdentifiers?.documentNumber || '';
+          const dedupKey = `${cnpj || supplierName}_${docNum || valor}_${dueDateStr}`;
+
+          if (!realCriticalMap.has(dedupKey)) {
+            realCriticalMap.set(dedupKey, {
+              fornecedor: supplierName,
+              valor,
+              vencimento: dueDateStr,
+              diasRestantes,
+              cnpj
+            });
+          }
         }
       }
+
+      // 2. Mescla com catálogo de contratos recorrentes
+      const contractCriticalMap = new Map<string, any>();
+      const baseFornecedoresPath = this.findDataFile('data/base_fornecedores_faturas.json');
+      if (fs.existsSync(baseFornecedoresPath)) {
+        try {
+          const rawContracts = JSON.parse(fs.readFileSync(baseFornecedoresPath, 'utf-8'));
+          if (Array.isArray(rawContracts)) {
+            for (const contract of rawContracts) {
+              const dynamicDueDate = this.getDynamicDueDate(contract.vencimento);
+              const dueDate = this.parseBrazilianDate(dynamicDueDate);
+              if (!dueDate) continue;
+
+              dueDate.setHours(0, 0, 0, 0);
+              const diffTime = dueDate.getTime() - hoje.getTime();
+              const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+              if (diasRestantes <= 10 && diasRestantes >= -15) {
+                const supplierName = contract.fornecedor || 'DESCONHECIDO';
+                const cnpj = contract.cnpj || '';
+                const valor = Number(contract.valor || 0);
+                const dedupKey = `${cnpj || supplierName}_${contract.documento || valor}_${dynamicDueDate}`;
+
+                // Se já existe uma nota fiscal real pendente para esse mesmo fornecedor e vencimento, a nota real prevalece
+                const alreadyCoveredByRealNote = Array.from(realCriticalMap.values()).some(real => 
+                  (cnpj && real.cnpj === cnpj) || (real.fornecedor.toUpperCase() === supplierName.toUpperCase())
+                );
+
+                if (!alreadyCoveredByRealNote && !contractCriticalMap.has(dedupKey)) {
+                  contractCriticalMap.set(dedupKey, {
+                    fornecedor: supplierName,
+                    valor,
+                    vencimento: dynamicDueDate,
+                    diasRestantes,
+                    cnpj
+                  });
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          console.warn('[DeadlineAlertService] Aviso ao processar base de contratos recorrentes:', err.message);
+        }
+      }
+
+      // 3. Combina e ordena por urgência (menor prazo primeiro)
+      const criticalItems = [...realCriticalMap.values(), ...contractCriticalMap.values()];
+      criticalItems.sort((a, b) => a.diasRestantes - b.diasRestantes);
 
       if (criticalItems.length === 0) {
         const updatedState: DeadlineState = {
