@@ -49,7 +49,7 @@ Para consultar o histórico detalhado dos meses anteriores:
   - Verificação da planilha gerada via script com conferência dos valores somados.
 - Rollback:
   1) `git checkout -- apps/automacao/src/features/excel/generateRateioExcel.ts`
-- Commit: `e9fff81`
+- Commit: `2350708`
 - Status: Aplicado
 - Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
 
@@ -68,7 +68,7 @@ Para consultar o histórico detalhado dos meses anteriores:
   - Validação da coluna Nº de Série na fatura da Magna com 356 itens.
 - Rollback:
   1) `git checkout -- apps/automacao/src/features/pdf/tableItemsExtractor.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
-- Commit: `e9fff81`
+- Commit: `2350708`
 - Status: Aplicado
 - Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
 
@@ -89,7 +89,7 @@ Para consultar o histórico detalhado dos meses anteriores:
 - Rollback:
   1) `git checkout -- apps/automacao/src/features/pdf/extractDataFromPDF.ts`
   2) `cmd.exe /c "del apps\automacao\src\features\pdf\tableItemsExtractor.ts"`
-- Commit: `e9fff81`
+- Commit: `2350708`
 - Status: Aplicado
 - Observações: Implementação aplicada sob aprovação [APROVAR-CODIGO] do usuário com garantia expressa de reversão imediata caso necessário.
 
@@ -109,7 +109,7 @@ Para consultar o histórico detalhado dos meses anteriores:
   - Teste de extração via test_pdf.ts em PDF de fatura multipáginas.
 - Rollback:
   1) `git checkout -- apps/automacao/src/features/pdf/aiExtract.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
-- Commit: `e9fff81`
+- Commit: `2350708`
 - Status: Aplicado
 - Observações: Alterações aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
 
