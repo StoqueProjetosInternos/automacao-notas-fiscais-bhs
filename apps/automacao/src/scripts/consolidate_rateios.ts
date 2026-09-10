@@ -24,6 +24,15 @@ interface ConsolidatedRateio {
     contract: string;
     colaborador?: string;
   }>;
+  magnaItens: Record<string, {
+    serialNumber?: string;
+    ativo?: string;
+    cr: string;
+    naturezaCode: string;
+    contract: string;
+    colaborador?: string;
+    equipment?: string;
+  }>;
 }
 
 // Normaliza string para comparação
@@ -58,12 +67,19 @@ async function consolidate() {
   console.log("--- Iniciando Consolidação de Rateios ---");
   const files = scanDirectory(BASE_RATEIOS_DIR);
 
+  // Inclui planilhas de rateio base em data/ (ex: rateio_magna.xlsx)
+  const dataRateioMagna = path.resolve(__dirname, "../../../../data/rateio_magna.xlsx");
+  if (fs.existsSync(dataRateioMagna) && !files.includes(dataRateioMagna)) {
+    files.push(dataRateioMagna);
+  }
+
   const output: ConsolidatedRateio = {
     faturas: {},
     contas: {},
     series: {},
     colaboradores: {},
     emcItens: {},
+    magnaItens: {},
   };
 
   // Funções de busca adaptativa de colunas
@@ -181,6 +197,48 @@ async function consolidate() {
                   contract: contratoKey ? String(row[contratoKey] || "").trim() : "0",
                 };
               }
+            }
+          });
+          continue;
+        }
+
+        // Exceção Específica para Faturas Magna (Aba Rateio_Detalhado e Equipamentos)
+        const isMagnaFile = fileName.toLowerCase().includes("magna") || folderName.toLowerCase().includes("magna");
+        if (isMagnaFile && (sheetName === "Rateio_Detalhado" || sheetName === "Equipamentos")) {
+          rawData.forEach((row) => {
+            const serial = serieKey ? String(row[serieKey] || "").trim().toUpperCase() : "";
+            const ativo = String(row["Ativo"] || row["ativo"] || "").trim();
+            const cr = crKey ? String(row[crKey] || "1103").trim() : "1103";
+            const natureza = naturezaKey ? String(row[naturezaKey] || "141401001").trim() : "141401001";
+            const contrato = contratoKey ? String(row[contratoKey] || "0").trim() : "0";
+            const colab = colabKey ? String(row[colabKey] || "").trim() : undefined;
+            const equip = String(row["Equipamento"] || "").trim();
+
+            const itemRecord = {
+              serialNumber: serial && serial !== "-" && serial !== "SERIE" ? serial : undefined,
+              ativo: ativo || undefined,
+              cr: cr || "1103",
+              naturezaCode: natureza || "141401001",
+              contract: contrato || "0",
+              colaborador: colab,
+              equipment: equip
+            };
+
+            if (serial && serial !== "-" && serial !== "SERIE") {
+              output.magnaItens[serial] = itemRecord;
+              output.series[serial] = {
+                cr: itemRecord.cr,
+                naturezaCode: itemRecord.naturezaCode,
+                contract: itemRecord.contract
+              };
+            }
+            if (ativo) {
+              output.magnaItens[ativo] = itemRecord;
+              const padded = ativo.padStart(6, "0");
+              output.magnaItens[padded] = itemRecord;
+            }
+            if (equip && (!serial || serial === "-" || serial === "SERIE")) {
+              output.magnaItens[equip.toUpperCase()] = itemRecord;
             }
           });
           continue;
@@ -324,6 +382,12 @@ async function consolidate() {
   );
   console.log(
     ` - Colaboradores: ${Object.keys(output.colaboradores).length} funcionários`,
+  );
+  console.log(
+    ` - Itens EMC: ${Object.keys(output.emcItens).length} ativos/séries`,
+  );
+  console.log(
+    ` - Itens Magna: ${Object.keys(output.magnaItens).length} ativos/séries`,
   );
 }
 

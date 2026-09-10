@@ -417,7 +417,62 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
         }
       }
 
-      // II. Tentar correspondência por Série de Hardware no banco consolidado
+      // II. Exceção de Negócio: Correspondência por Ativo / Série / Equipamento da Magna
+      const isMagnaSupplier = supplierName.toUpperCase().includes("MAGNA") || cleanCnpj.includes("08052026") || isMagna;
+      if (isMagnaSupplier && database && (database as any).magnaItens) {
+        const magnaDb = (database as any).magnaItens;
+        let magnaMap: any = null;
+
+        // 1. Tenta correspondência pela série já extraída no item
+        if (item.serialNumber && magnaDb[item.serialNumber.toUpperCase()]) {
+          magnaMap = magnaDb[item.serialNumber.toUpperCase()];
+        }
+
+        // 2. Tenta correspondência pelos termos entre parênteses (Série ou Código de Ativo)
+        if (!magnaMap) {
+          for (const code of parMatches) {
+            const upperCode = code.toUpperCase();
+            if (magnaDb[upperCode]) {
+              magnaMap = magnaDb[upperCode];
+              break;
+            }
+            const stripped = upperCode.replace(/^0+/, '');
+            if (stripped && magnaDb[stripped]) {
+              magnaMap = magnaDb[stripped];
+              break;
+            }
+          }
+        }
+
+        // 3. Tenta correspondência por categoria de equipamento padrão da Magna (Mochila, Mouse, Dock)
+        if (!magnaMap) {
+          const descUpper = desc.toUpperCase();
+          if (descUpper.includes("MOCHILA") && magnaDb["MOCHILA"]) {
+            magnaMap = magnaDb["MOCHILA"];
+          } else if (descUpper.includes("MOUSE") && magnaDb["MOUSE"]) {
+            magnaMap = magnaDb["MOUSE"];
+          } else if (descUpper.includes("DOCK") && magnaDb["DOCK STATION"]) {
+            magnaMap = magnaDb["DOCK STATION"];
+          }
+        }
+
+        if (magnaMap) {
+          const finalCr = magnaMap.cr || "1103";
+          const finalNat = magnaMap.naturezaCode || "141401001";
+          const finalContract = magnaMap.contract && magnaMap.contract !== "0" && magnaMap.contract !== "" ? magnaMap.contract : "0";
+          return {
+            ...item,
+            serialNumber: magnaMap.serialNumber || item.serialNumber || "-",
+            cr: finalCr,
+            crDescription: getCrDescription(finalCr),
+            naturezaCode: finalNat,
+            naturezaDescription: getNaturezaDescription(finalNat),
+            contract: finalContract
+          };
+        }
+      }
+
+      // III. Tentar correspondência por Série de Hardware no banco consolidado
       if (database) {
         for (const code of parMatches) {
           if (database.series[code]) {
