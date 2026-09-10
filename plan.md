@@ -35,6 +35,33 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ## 3. Registros Ativos — Setembro / 2026
 
+### CHG-0230 — Correção e Precisão da Origem de Entrada (Upload Manual vs E-mail Sync)
+
+- Data/Hora: 2026-09-10 17:48
+- Contexto: No histórico de processamento, faturas submetidas via upload manual apareciam incorretamente com origem 'E-mail Sync' devido à verificação de prefixo divergente (manual_ vs upload_) e à falta de propagação explícita de origem na extração.
+- Objetivo: Garantir que uploads manuais registrem 'Upload Manual' e faturas sincronizadas registrem 'E-mail Sync' no log usage_log.csv, no JSON da nota e nas abas do Dashboard.
+- Escopo:
+  - [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/types.ts)
+  - [aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - [extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+  - [noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+  - [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+  - [searchDataFromEmail.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/email/searchDataFromEmail.ts)
+  - [main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/main.ts)
+  - [types.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/types.ts)
+  - [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+  - [usage_log.csv](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/data/usage_log.csv)
+  - [TIM SA_17188833_2026-09-10.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/data/extracted/TIM%20SA_17188833_2026-09-10/TIM%20SA_17188833_2026-09-10.json)
+- Riscos: Baixo. Compatibilidade estrita do CSV e das rotas preservada.
+- Proposta: Propagar origin explicitamente em todo o fluxo de ingestão, ajustar comparador de prefixos para suportar upload_ e manual_, higienizar registros retroativos no CSV.
+- Testes:
+  - Compilação do workspace automacao via `tsc` concluída com código 0.
+  - Compilação do dashboard via `tsc -b && vite build` concluída com código 0.
+- Rollback:
+  1) `git checkout -- apps/ data/`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO].
+
 ### CHG-0229 — Restauração de Fidelidade Visual e Layout Compacto da Aba de Histórico
 
 - Data/Hora: 2026-09-10 16:26

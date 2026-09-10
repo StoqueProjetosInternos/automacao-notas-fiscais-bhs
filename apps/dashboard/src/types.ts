@@ -42,6 +42,11 @@ export interface NoteData {
   
   apportionment?: ApportionmentItem[];
   accountingFields?: AccountingFields;
+  origin?: string;
+  importedBy?: {
+    email?: string;
+    name?: string;
+  };
   
   // Suporte a campos de legado que podem existir nos JSONs salvos
   valorTotal?: number;

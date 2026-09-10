@@ -52,7 +52,7 @@ interface AIResponse {
 /**
  * Função que utiliza o Gemini 2.5 Flash para extrair dados com precisão humana.
  */
-export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unknown", userInfo?: { email?: string; name?: string }): Promise<BoletoData> {
+export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unknown", userInfo?: { email?: string; name?: string; origin?: string }): Promise<BoletoData> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -247,8 +247,9 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
                 if (!trimmed) return "";
                 const cols = trimmed.split(",");
                 if (cols.length < 16) {
-                  const defaultUser = cols[1]?.startsWith("manual_") ? "Upload Manual" : "SISTEMA (E-mail)";
-                  const defaultOrigem = cols[1]?.startsWith("manual_") ? "Upload Manual" : "E-mail Sync";
+                  const isLineManual = cols[1]?.startsWith("upload_") || cols[1]?.startsWith("manual_");
+                  const defaultUser = isLineManual ? "Upload Manual" : "SISTEMA (E-mail)";
+                  const defaultOrigem = isLineManual ? "Upload Manual" : "E-mail Sync";
                   return `${trimmed},${defaultUser},${defaultUser},${defaultOrigem}`;
                 }
                 return line;
@@ -266,9 +267,10 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           const docNum = aiData.document?.number || "";
           const fatValue = aiData.financial?.originalValue || 0;
 
-          const userEmail = userInfo?.email || (fileName.startsWith("manual_") ? "Upload Manual" : "SISTEMA (E-mail)");
-          const userName = userInfo?.name || (fileName.startsWith("manual_") ? "Upload Manual" : "Microsoft Graph");
-          const origem = fileName.startsWith("manual_") ? "Upload Manual" : "E-mail Sync";
+          const isManual = userInfo?.origin === "Upload Manual" || fileName.startsWith("upload_") || fileName.startsWith("manual_");
+          const userEmail = userInfo?.email || (isManual ? "Upload Manual" : "SISTEMA (E-mail)");
+          const userName = userInfo?.name || (isManual ? "Upload Manual" : "Microsoft Graph");
+          const origem = userInfo?.origin || (isManual ? "Upload Manual" : "E-mail Sync");
 
           const logLine = `${formattedDate},${fileName},${currentModelName},${escapedSupplier},${promptTokens},${responseTokens},${totalCost.toFixed(6)},${latencyMs},,${cnpj},${docNum},${fatValue},Sucesso,${userEmail},${userName},${origem}\n`;
           fs.appendFileSync(logPath, logLine, "utf8");
@@ -278,6 +280,11 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       }
 
       // Converte o retorno da IA para a interface BoletoData do projeto, preservando a estrutura rica
+      const isDocManual = userInfo?.origin === "Upload Manual" || fileName.startsWith("upload_") || fileName.startsWith("manual_");
+      const docOrigem = userInfo?.origin || (isDocManual ? "Upload Manual" : "E-mail Sync");
+      const docUserEmail = userInfo?.email || (isDocManual ? "Upload Manual" : "SISTEMA (E-mail)");
+      const docUserName = userInfo?.name || (isDocManual ? "Upload Manual" : "Microsoft Graph");
+
       return {
         documentType: aiData.document.type,
         supplier: { 
@@ -309,6 +316,11 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           unitValue: item.unitValue,
           value: item.value
         })),
+        origin: docOrigem,
+        importedBy: {
+          email: docUserEmail,
+          name: docUserName
+        },
         rawText: JSON.stringify(aiData)
       };
     } catch (error) {

@@ -407,7 +407,11 @@ export class GraphEmailPdfProcessor {
 
     try {
       // Chama o extrator via IA (que agora já cria a pasta, salva PDF, JSON e TXT)
-      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath);
+      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath, {
+        email: "SISTEMA (E-mail)",
+        name: "Microsoft Graph",
+        origin: "E-mail Sync"
+      });
       console.log(`Dados extraídos via IA para ${file.name}`);
 
       // Gerar Excel dentro da mesma pasta organizada

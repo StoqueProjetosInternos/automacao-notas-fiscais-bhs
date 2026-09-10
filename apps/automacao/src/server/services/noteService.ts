@@ -299,10 +299,14 @@ export class NoteService {
           const resolvedDocNum = cols[10] || matchingNote?.data?.documentIdentifiers?.documentNumber || '';
           const resolvedValorFatura = cols[11] ? parseFloat(cols[11]) : (matchingNote?.data?.financial?.chargedValue || matchingNote?.data?.financial?.originalValue || undefined);
 
-          const isManual = fileName.startsWith('manual_');
+          const isManual = fileName.startsWith('manual_') || fileName.startsWith('upload_');
           const defaultUserEmail = isManual ? 'Upload Manual' : 'SISTEMA (E-mail)';
           const defaultUserName = isManual ? 'Upload Manual' : 'Integração E-mail';
           const defaultOrigem = isManual ? 'Upload Manual' : 'E-mail Sync';
+          let resolvedOrigem = (cols[15] && cols[15].trim() !== '') ? cols[15].trim() : defaultOrigem;
+          if (isManual && resolvedOrigem === 'E-mail Sync') {
+            resolvedOrigem = 'Upload Manual';
+          }
 
           logs.push({
             id: i,
@@ -323,7 +327,7 @@ export class NoteService {
             statusArquivo: fileStatus,
             usuarioEmail: cols[13] || defaultUserEmail,
             usuarioNome: cols[14] || defaultUserName,
-            origem: cols[15] || defaultOrigem
+            origem: resolvedOrigem
           });
         }
       }
@@ -474,10 +478,15 @@ export class NoteService {
     return { success: true, message: `Alertas de vencimento enviados com sucesso para ${smtpTo}.` };
   }
 
-  public static async importManualNote(tempPdfPath: string, userInfo?: { email?: string; name?: string }) {
+  public static async importManualNote(tempPdfPath: string, userInfo?: { email?: string; name?: string; origin?: string }) {
     try {
+      const finalUserInfo = {
+        email: userInfo?.email || 'Upload Manual',
+        name: userInfo?.name || 'Upload Manual',
+        origin: userInfo?.origin || 'Upload Manual'
+      };
       // 1. Extração via IA Gemini
-      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath, userInfo);
+      const { parsedContent, outputDir } = await extractDataFromPDF(tempPdfPath, finalUserInfo);
       
       // 2. Geração da planilha Excel de rateio correspondente
       await generateRateioExcel(parsedContent, outputDir);

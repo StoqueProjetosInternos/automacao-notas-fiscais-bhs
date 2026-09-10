@@ -63,5 +63,10 @@ export interface BoletoData {
     isInstallmentPay?: boolean;       // Identifica se há menção a parcelamento
     installmentsCount?: number;       // Quantidade de parcelas se houver
   };
+  origin?: string;
+  importedBy?: {
+    email?: string;
+    name?: string;
+  };
 }
 

@@ -170,8 +170,10 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
   const balanceDiff = invoiceTotalValue - apportionmentTotalValue;
   const isApportionmentBalanced = Math.abs(balanceDiff) < 0.05;
 
+  const isManualCapture = selectedNote?.data?.origin === 'Upload Manual' || selectedNote?.fileName.startsWith('manual_') || selectedNote?.fileName.startsWith('upload_');
+
   const steps = [
-    { key: 'capture', label: 'Captura', desc: selectedNote?.fileName.startsWith('manual_') ? 'Upload' : 'E-mail' },
+    { key: 'capture', label: 'Captura', desc: isManualCapture ? 'Upload' : 'E-mail' },
     { key: 'ocr', label: 'Leitura IA', desc: 'Gemini' },
     { key: 'enrich', label: 'Rateio', desc: 'Concluído' },
     { key: 'curation', label: 'Curadoria', desc: formData?.status === 'validado' ? 'Aprovada' : 'Revisão' },
@@ -661,8 +663,8 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
                 <div style={{ marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', color: '#334155' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '5px', borderBottom: '1px solid #f1f5f9' }}>
                     <span style={{ color: '#64748b', fontWeight: 500 }}>Origem de Entrada:</span>
-                    <span style={{ fontWeight: 600, color: selectedNote?.fileName.startsWith('manual_') ? '#0284c7' : '#059669' }}>
-                      {selectedNote?.fileName.startsWith('manual_') ? 'Upload Manual' : 'Sincronização via E-mail'}
+                    <span style={{ fontWeight: 600, color: isManualCapture ? '#0284c7' : '#059669' }}>
+                      {isManualCapture ? 'Upload Manual' : 'Sincronização via E-mail'}
                     </span>
                   </div>
 

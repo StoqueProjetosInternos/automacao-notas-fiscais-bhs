@@ -18,7 +18,7 @@ interface ExtractedData {
  * Função principal de extração utilizando Inteligência Artificial (Google Gemini).
  * Agora com alta precisão humana para qualquer layout de documento.
  */
-async function extractDataFromPDF(pdfPath: string, userInfo?: { email?: string; name?: string }): Promise<ExtractedData> {
+async function extractDataFromPDF(pdfPath: string, userInfo?: { email?: string; name?: string; origin?: string }): Promise<ExtractedData> {
   console.log(`[IA] Processando PDF: ${path.basename(pdfPath)}`);
 
   try {
@@ -37,6 +37,15 @@ async function extractDataFromPDF(pdfPath: string, userInfo?: { email?: string; 
 
     // Enriquecimento de dados contábeis via base de referência
     const parsedContent = await enrichData(parsedContentRaw);
+
+    const isManual = userInfo?.origin === "Upload Manual" || baseName.startsWith("upload_") || baseName.startsWith("manual_");
+    parsedContent.origin = userInfo?.origin || (isManual ? "Upload Manual" : "E-mail Sync");
+    if (userInfo?.email || userInfo?.name) {
+      parsedContent.importedBy = {
+        email: userInfo?.email || (isManual ? "Upload Manual" : "SISTEMA (E-mail)"),
+        name: userInfo?.name || (isManual ? "Upload Manual" : "Microsoft Graph")
+      };
+    }
 
     const cleanSupplierName = (parsedContent.supplier?.name || "Fornecedor_Nao_Identificado")
       .replace(/[\\/:*?"<>|.]/g, "")

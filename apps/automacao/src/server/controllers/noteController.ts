@@ -204,7 +204,11 @@ export class NoteController {
 
           console.log(`[API] Upload temporário salvo em: ${tempPath}`);
 
-          const userObj = (req as any).user ? { email: (req as any).user.email, name: (req as any).user.name } : undefined;
+          const userObj = {
+            email: (req as any).user?.email || 'Upload Manual',
+            name: (req as any).user?.name || 'Upload Manual',
+            origin: 'Upload Manual'
+          };
           const result = await NoteService.importManualNote(tempPath, userObj);
           
           if (fs.existsSync(tempPath)) {

@@ -60,7 +60,11 @@ async function main() {
 
       if (localPdf) {
         console.log(`Processando arquivo local: ${localPdf}`);
-        const { parsedContent, outputDir } = await extractDataFromPDF(localPdf);
+        const { parsedContent, outputDir } = await extractDataFromPDF(localPdf, {
+          email: "SISTEMA (Local)",
+          name: "CLI Local",
+          origin: "CLI Local"
+        });
         const excelPath = await generateRateioExcel(parsedContent, outputDir);
         console.log(`\nProcessamento local concluído.`);
         console.log(`Pasta: ${outputDir}`);
