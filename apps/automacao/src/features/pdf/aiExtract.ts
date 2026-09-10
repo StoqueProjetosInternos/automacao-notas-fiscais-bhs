@@ -47,13 +47,6 @@ interface AIResponse {
     unitValue: number;
     value: number;
   }>;
-  zeevValidation: {
-    isWithinIdealDeadline: boolean;
-    isIssuedAfterDay25: boolean;
-    suggestedPaymentRule: "IDEAL" | "ALTERNATIVE";
-    isInstallmentPay: boolean;
-    installmentsCount?: number;
-  };
 }
 
 /**
@@ -116,18 +109,9 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     5. IDENTIFICADORES: Número do documento (Fatura/Nota) e Código do Cliente/Número da Conta (especialmente importante para empresas de Telecom/Utilities).
        - Para BOLETOS: Extraia a linha digitável completa (47 ou 48 dígitos numéricos) sem pontos ou espaços no campo 'barcode'.
        - Para DANFE: Se houver chave de acesso de 44 dígitos, extraia no campo 'chaveAcesso' em 'additionalInfo'.
-    6. TABELA DE ITENS / RATEIO EXTENSO MULTI-PÁGINAS (apportionment):
-       - ATENÇÃO CRÍTICA: Este arquivo PDF contém EXATAMENTE ${pageCount} PÁGINA(S).
-       - Se o documento possuir itens cobrados (equipamentos ou serviços), a tabela NÃO para na página 1 ou 2. Ela continua por TODAS as ${pageCount} páginas até a última página onde constam os últimos itens e o total geral.
-       - Você DEVE percorrer página por página e extrair TODAS as linhas da tabela de cada uma das páginas (inclusive páginas intermediárias como 3 e final como 4), sem omitir nenhuma linha.
-       - Preencha o array "apportionment" com todos os itens, onde cada objeto tem: "description" (formato: "NOME DO EQUIPAMENTO (Item CÓDIGO)"), "quantity" (quantidade), "unitValue" (valor unitário) e "value" (valor total da linha).
-       - ATENÇÃO: NUNCA use aspas duplas desescapadas dentro de descrições (use 'POL' para polegadas ou aspas simples).
-       - REGRA DE INTEGRIDADE CONTÁBIL: A soma de todos os campos 'value' dos objetos no array 'apportionment' DEVE ser igual ao 'chargedValue' da fatura. Não pare a extração na página 2; continue pelas páginas subsequentes até fechar 100% do valor da fatura.
-
-    Validação de Regras do Processo de Pagamento Zeev:
-    - Se a data de emissão for após o dia 25 do mês corrente: Defina "isIssuedAfterDay25": true. Sugira a regra "ALTERNATIVE" (vencimento em 60 dias da emissão ou próximo dia 10 útil após os 60 dias).
-    - Se o vencimento for igual ou superior a 30 dias da data de emissão: Defina "isWithinIdealDeadline": true. Sugira "IDEAL".
-    - Se o vencimento for menor que 30 dias da emissão: Defina "isWithinIdealDeadline": false. Sugira "ALTERNATIVE" (vencimento ajustado para 30 dias da data de emissão).
+    6. DESCRIÇÃO DOS SERVIÇOS / ITENS:
+       - Se houver descrição resumida ou poucos itens de serviço, preencha o array "apportionment".
+       - Não tente transcrever listas exaustivas com centenas de linhas. A IA deve focar na precisão dos valores totais, fornecedor, datas e identificadores do documento. O detalhamento contábil fino é tratado pelo backend.
     - IMPORTANTE: Retorne APENAS o JSON válido. Não inclua marcações extras de texto, explicações ou comentários de código.
 
     Retorne EXATAMENTE este formato JSON:
@@ -148,13 +132,6 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
         "clientAccount": "432892312",
         "type": "NFSE"
       },
-      "zeevValidation": {
-        "isWithinIdealDeadline": true,
-        "isIssuedAfterDay25": false,
-        "suggestedPaymentRule": "IDEAL",
-        "isInstallmentPay": false,
-        "installmentsCount": 1
-      },
       "additionalInfo": {
         "chavePix": "...",
         "banco": "...",
@@ -162,23 +139,21 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       },
       "apportionment": [
         {
-          "description": "MONITOR 24 POL (Item 018812)",
+          "description": "Prestação de Serviços (Item 1)",
           "quantity": 1,
-          "unitValue": 54.25,
-          "value": 54.25
+          "unitValue": 100.00,
+          "value": 100.00
         }
       ]
     }
   `;
 
-  const MAX_RETRIES = 5;
+  const MAX_RETRIES = 3;
   let lastError: any;
 
-  // Sequência de modelos ativos por tentativa com tolerância a oscilações transitórias (100% compatível com Free Tier)
+  // Sequência de modelos estáveis evitando modelos instáveis que retornam 503
   const attemptModelSequence = [
     primaryModel,
-    "gemini-3.8-flash",
-    "gemini-3.7-flash",
     "gemini-2.5-flash",
     "gemini-2.5-flash",
   ];
@@ -189,7 +164,7 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       model: currentModelName,
       generationConfig: {
         responseMimeType: "application/json",
-        maxOutputTokens: 32768
+        maxOutputTokens: 8192
       }
     });
 
@@ -235,16 +210,6 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       }
 
       const aiData: AIResponse = robustJsonParse(responseText);
-
-      // Validação de Integridade Contábil: detecta truncamento de itens multi-páginas
-      if (aiData.apportionment && aiData.apportionment.length > 1 && aiData.financial?.chargedValue > 0) {
-        const sumApportionment = aiData.apportionment.reduce((acc, it) => acc + (Number(it.value) || 0), 0);
-        const chargedVal = Number(aiData.financial.chargedValue);
-        const difference = Math.abs(chargedVal - sumApportionment);
-        if (difference > 2.00 && (sumApportionment / chargedVal) < 0.95) {
-          throw new Error(`Extração incompleta de itens de rateio: soma dos itens (R$ ${sumApportionment.toFixed(2)}) diverge do valor cobrado (R$ ${chargedVal.toFixed(2)}). Total de itens capturados: ${aiData.apportionment.length}. Comutando modelo...`);
-        }
-      }
 
       // Monitoramento de Uso e Custos (Registrado após o parse para enriquecer com dados do fornecedor)
       const usage = result.response.usageMetadata;
@@ -344,7 +309,6 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           unitValue: item.unitValue,
           value: item.value
         })),
-        zeevValidation: aiData.zeevValidation,
         rawText: JSON.stringify(aiData)
       };
     } catch (error) {
@@ -352,8 +316,8 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       console.warn(`[IA] Tentativa ${attempt} (${currentModelName}) falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
       
       if (attempt < MAX_RETRIES) {
-        const delays = [4000, 8000, 15000, 20000];
-        const waitTime = delays[attempt - 1] || 15000;
+        const delays = [2000, 4000];
+        const waitTime = delays[attempt - 1] || 3000;
         console.log(`[IA] Retentando em ${waitTime / 1000}s (comutando de modelo se persistir instabilidade)...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }

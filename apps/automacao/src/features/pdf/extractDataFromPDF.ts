@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { extractWithAI } from "./aiExtract.js";
+import { extractTableItemsFromPdf } from "./tableItemsExtractor.js";
 import { enrichData } from "./dataEnrichment.js";
 import { BoletoData } from "./types.js";
 import { FILES_DIR } from "../../server/config/paths.js";
@@ -26,6 +27,13 @@ async function extractDataFromPDF(pdfPath: string, userInfo?: { email?: string; 
     
     // Extração Inteligente via IA - Passando o nome do arquivo para o log de consumo
     const parsedContentRaw = await extractWithAI(dataBuffer, `${baseName}.pdf`, userInfo);
+
+    // Extração nativa de itens de equipamentos diretamente do PDF via Backend
+    const nativeItems = await extractTableItemsFromPdf(dataBuffer, parsedContentRaw.financial?.chargedValue);
+    if (nativeItems.length > 0) {
+      console.log(`[Extrator] Anexando ${nativeItems.length} equipamentos extraídos nativamente do PDF ao rateio.`);
+      parsedContentRaw.apportionment = nativeItems;
+    }
 
     // Enriquecimento de dados contábeis via base de referência
     const parsedContent = await enrichData(parsedContentRaw);

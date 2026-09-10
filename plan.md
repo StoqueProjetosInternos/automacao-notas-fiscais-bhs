@@ -33,7 +33,85 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ---
 
-## 3. Registros Ativos — Agosto / 2026
+## 3. Registros Ativos — Setembro / 2026
+
+### CHG-0219 — Linha de Somatória de Fechamento nas Abas Rateio e Rateio_Agrupado
+
+- Data/Hora: 2026-09-10 11:36
+- Contexto: Solicitação de melhoria visual e conferência fiscal de saldo nas planilhas Excel geradas para rateio contábil.
+- Objetivo: Inserir linha de somatória em negrito com formatação monetária e bordas contábeis ao final das abas Rateio e Rateio_Agrupado.
+- Escopo:
+  - [generateRateioExcel.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/excel/generateRateioExcel.ts)
+- Riscos: Nenhum impacto nos dados ou nas regras de negócio.
+- Proposta: Calcular a somatória dos grupos de rateio e adicionar linhas de Total com bordas duplas contábeis no fechamento das duas primeiras abas.
+- Testes:
+  - Compilação TypeScript (cmd.exe /c "npx tsc --noEmit").
+  - Verificação da planilha gerada via script com conferência dos valores somados.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/excel/generateRateioExcel.ts`
+- Commit: `e9fff81`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0218 — Extração e Preenchimento Automático do Número de Série no Rateio
+
+- Data/Hora: 2026-09-10 11:27
+- Contexto: A coluna de número de série permanecia vazia para itens não cadastrados previamente na base consolidada, embora os dados constem entre parênteses na descrição do equipamento no PDF.
+- Objetivo: Extrair o número de série diretamente das descrições no tableItemsExtractor e garantir sua preservação no fallback de dataEnrichment.
+- Escopo:
+  - [tableItemsExtractor.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/tableItemsExtractor.ts)
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos: Nenhum risco a valores monetários ou classificações.
+- Proposta: Inserir extração de serial via parMatches em tableItemsExtractor e injetar serialNumber no retorno do mapeamento contábil de dataEnrichment.
+- Testes:
+  - Compilação TypeScript (cmd.exe /c "npx tsc --noEmit").
+  - Validação da coluna Nº de Série na fatura da Magna com 356 itens.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/tableItemsExtractor.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Commit: `e9fff81`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0217 — Extrator Nativo de Itens de Faturas de Equipamentos via Backend
+
+- Data/Hora: 2026-09-10 09:56
+- Contexto: Faturas de locação com centenas de equipamentos (Magna, EMC) ficavam resumidas em item único no rateio detalhado porque a inteligência artificial não transcrevia tabelas extensas em JSON.
+- Objetivo: Extrair todos os equipamentos diretamente do texto vetorial do PDF no backend, preservando cada item individualmente e enriquecendo com Centro de Resultado (CR), Natureza e Contrato.
+- Escopo:
+  - [tableItemsExtractor.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/tableItemsExtractor.ts)
+  - [extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+- Riscos:
+  - Divergência de valores. Mitigado por conferência matemática rigorosa onde os itens só substituem o rateio quando a soma fecha com o chargedValue da fatura.
+- Proposta: Criar o módulo tableItemsExtractor com suporte a layouts tabulares de locação e integrá-lo no fluxo de extractDataFromPDF antes do dataEnrichment.
+- Testes:
+  - Compilação TypeScript com zero erros (cmd.exe /c "npx tsc --noEmit").
+  - Execução de teste automatizado de extração com a fatura Magna (356 itens) e EMC (103 itens).
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/extractDataFromPDF.ts`
+  2) `cmd.exe /c "del apps\automacao\src\features\pdf\tableItemsExtractor.ts"`
+- Commit: `e9fff81`
+- Status: Aplicado
+- Observações: Implementação aplicada sob aprovação [APROVAR-CODIGO] do usuário com garantia expressa de reversão imediata caso necessário.
+
+### CHG-0216 — Desacoplamento de Rateio da IA e Enriquecimento Contábil pelo Backend
+
+- Data/Hora: 2026-09-10 09:38
+- Contexto: Faturas extensas com mais de 100 itens falhavam recorrentemente na extração por divergência na contagem de itens de rateio e causavam lentidão de até 5 minutos devido a sucessivas retentativas com modelos instáveis.
+- Objetivo: Restringir a IA à extração textual e fiscal do PDF, eliminar a transcrição obrigatória de tabelas extensas em JSON e transferir o enriquecimento contábil e cálculo de regras Zeev para o backend.
+- Escopo:
+  - [aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos:
+  - Divergência em rateios detalhados preexistentes. Mitigado pela preservação de itens válidos que fechem o total cobrado da nota e fallback seguro para o rateio do fornecedor.
+- Proposta: Enxugar prompt de extração, remover validação destrutiva com throw de rateio em aiExtract, remover modelo instável gemini-3.7-flash da esteira de fallback, reduzir delays de retentativa e implementar cálculo determinístico de zeevValidation e consolidação de rateio no dataEnrichment.
+- Testes:
+  - Verificação de tipos via compilação TypeScript (cmd.exe /c "npx tsc --noEmit").
+  - Teste de extração via test_pdf.ts em PDF de fatura multipáginas.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/aiExtract.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Commit: `e9fff81`
+- Status: Aplicado
+- Observações: Alterações aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
 
 ### CHG-0213 — Curadoria Avançada, Auditoria de Logs e Controle de Acesso ADMIN
 
