@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +17,6 @@ async function testZeevWithRN00Fields() {
   const flowIdStr = process.env.ZEEV_FLOW_ID || '2149';
   const flowId = parseInt(flowIdStr, 10);
   const rawEmail = process.env.ZEEV_REQUESTER || 'hugo.bhs@stoque.com.br';
-  const rawLogin = rawEmail.split('@')[0]; // "hugo.bhs"
 
   if (!apiUrl || !token) {
     console.error('Configuracoes ausentes no .env');
@@ -26,7 +26,14 @@ async function testZeevWithRN00Fields() {
   token = token.trim().replace(/^["']|["']$/g, '');
   const url = `${apiUrl.replace(/\/$/, '')}/api/2/instances`;
 
-  const formFieldsBase = [
+  const folderPath = path.resolve(__dirname, '../../../../data/extracted/JM FIBRA COMUNICACAO MULTIMIDIA LTDA_2970_2026-08-17');
+  const pdfPath = path.join(folderPath, 'JM FIBRA COMUNICACAO MULTIMIDIA LTDA_2970_2026-08-17.pdf');
+  const excelPath = path.join(folderPath, 'JM FIBRA COMUNICACAO MULTIMIDIA LTDA_2970_2026-08-17.xlsx');
+
+  const pdfBase64 = fs.existsSync(pdfPath) ? fs.readFileSync(pdfPath).toString('base64') : '';
+  const excelBase64 = fs.existsSync(excelPath) ? fs.readFileSync(excelPath).toString('base64') : '';
+
+  const formFields = [
     { name: 'possuiContrato', value: 'Não' },
     { name: 'tipoDeContrato', value: 'Fixo' },
     { name: 'possuiPedidoDeCompra', value: 'Não' },
@@ -36,89 +43,76 @@ async function testZeevWithRN00Fields() {
     { name: 'possuiRateio', value: 'Sim' },
     { name: 'cRPrincipal', value: '1103' },
     { name: 'diretorHead', value: 'Helder Venancio Marques' },
+    { name: 'confimacaoDeExtensaoCorretaDoArquivoDeRateio', value: 'Confirmo que baixei o modelo disponível no link acima' },
     { name: 'naturezaDaRequisicao', value: '141401011' },
-    { name: 'finalidadeDoServico', value: 'Faturamento de serviços - Teste SFI' },
+    { name: 'finalidadeDoServico', value: 'Faturamento de serviços - JM FIBRA' },
     { name: 'localOndeOServicoFoiRealizado', value: 'Stoque BH' },
     { name: 'tipoDeDocumento', value: 'Nota Fiscal' },
-    { name: 'numeroUnicoDaNF', value: '2053026782' },
-    { name: 'dataDeEmissaoDaNF', value: '09/07/2026' },
-    { name: 'nomeDaEmpresa', value: 'Telefônica Brasil S/A' },
-    { name: 'cnpj', value: '02558157000162' },
-    { name: 'tomadorDoServico', value: 'Stoque' },
-    { name: 'dataDeVencimento', value: '09/07/2026' },
+    { name: 'numeroUnicoDaNF', value: '2970' },
+    { name: 'dataDeEmissaoDaNF', value: '2026-08-13' },
+    { name: 'nomeDaEmpresa', value: 'JM FIBRA COMUNICACAO MULTIMIDIA LTDA' },
+    { name: 'cnpj', value: '40955623000132' },
+    { name: 'tomadorDoServico', value: 'STOQUE SOLUCOES TECNOLOGICAS SA' },
+    { name: 'dataDeVencimento', value: '2026-08-20' },
     { name: 'urgenciaDePagamento', value: 'Normal' },
-    { name: 'dataLimiteDePagamentoEmCasoDeUrgencia', value: '09/07/2026' },
+    { name: 'dataLimiteDePagamentoEmCasoDeUrgencia', value: '2026-08-20' },
     { name: 'formaDePagamento', value: 'Boleto/Fatura' },
     { name: 'chavePix', value: '-' },
     { name: 'nomeDoBanco', value: '-' },
     { name: 'agencia', value: '0' },
     { name: 'numeroDaConta', value: '0' },
-    { name: 'valorTotal', value: '3853.81' },
+    { name: 'valorTotal', value: '109.90' },
     { name: 'possuiParcelamento', value: 'Não' },
-    { name: 'valorDaPrimeiraParcela', value: '3853.81' },
+    { name: 'valorDaPrimeiraParcela', value: '109.90' },
     { name: 'parcela', value: '2' },
-    { name: 'vencimentoDaParcela', value: '09/07/2026' }
+    { name: 'vencimentoDaParcela', value: '2026-08-20' },
+    { name: 'pessoaResponsavel', value: rawEmail },
+    { name: 'origem', value: 'IA' }
   ];
 
-  const tests = [
+  const files = [
     {
-      label: 'Teste 1: pessoaResponsavel = login ("hugo.bhs") + origem = "IA"',
-      fields: [
-        ...formFieldsBase,
-        { name: 'pessoaResponsavel', value: rawLogin },
-        { name: 'origem', value: 'IA' }
-      ]
+      filename: 'JM_FIBRA_2970.pdf',
+      resume: 'PDF original da fatura - JM FIBRA (NF 2970)',
+      requesterCanSee: true,
+      docType: 'anexarArquivo',
+      base64Content: pdfBase64
     },
     {
-      label: 'Teste 2: pessoaResponsavel = email ("hugo.bhs@stoque.com.br") + origem = "IA"',
-      fields: [
-        ...formFieldsBase,
-        { name: 'pessoaResponsavel', value: rawEmail },
-        { name: 'origem', value: 'IA' }
-      ]
+      filename: 'JM_FIBRA_2970_boleto.pdf',
+      resume: 'Boleto bancário de cobrança - JM FIBRA',
+      requesterCanSee: true,
+      docType: 'anexarBoleto',
+      base64Content: pdfBase64
     },
     {
-      label: 'Teste 3: pessoaResponsavel = login + origem = "Automação"',
-      fields: [
-        ...formFieldsBase,
-        { name: 'pessoaResponsavel', value: rawLogin },
-        { name: 'origem', value: 'Automação' }
-      ]
-    },
-    {
-      label: 'Teste 4: pessoaResponsavel = email + origem = "Automação"',
-      fields: [
-        ...formFieldsBase,
-        { name: 'pessoaResponsavel', value: rawEmail },
-        { name: 'origem', value: 'Automação' }
-      ]
+      filename: 'rateio_2970.xlsx',
+      resume: 'Planilha de rateio contábil consolidada SFI - CR 1103',
+      requesterCanSee: true,
+      docType: 'rateio',
+      base64Content: excelBase64
     }
   ];
 
-  for (const t of tests) {
-    console.log(`\n--------------------------------------------------`);
-    console.log(`Executando: ${t.label}...`);
-    try {
-      const response = await axios.post(url, {
-        flowId,
-        isSimulation: true,
-        formFields: t.fields
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        timeout: 20000
-      });
-      console.log(`[SUCESSO] Instância simulada com sucesso! Resposta:`, JSON.stringify(response.data, null, 2));
-      return;
-    } catch (err: any) {
-      console.log(`[FALHA] Status ${err.response?.status}:`, err.response?.data?.error?.message || err.message);
-      if (err.response?.data?.error?.details) {
-        console.log('Detalhes:', JSON.stringify(err.response.data.error.details, null, 2));
-      }
-    }
+  console.log('Testando envio com files + formFields...');
+  try {
+    const response = await axios.post(url, {
+      flowId,
+      isSimulation: true,
+      formFields,
+      files
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      timeout: 30000
+    });
+    console.log('[SUCESSO TOTAL] Resposta:', JSON.stringify(response.data, null, 2));
+  } catch (err: any) {
+    console.log('[ERRO]', err.response?.status, JSON.stringify(err.response?.data || err.message, null, 2));
   }
 }
 
 testZeevWithRN00Fields();
+

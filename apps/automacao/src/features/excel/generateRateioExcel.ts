@@ -141,6 +141,23 @@ export async function generateRateioExcel(
     rateioSheet.getCell(`D${rowNumber}`).numFmt = '"R$" #,##0.00';
   });
 
+  // Linha de somatória de referência na Aba Rateio
+  const totalSum = Array.from(groups.values()).reduce((acc, g) => acc + g.valueSum, 0);
+  const roundedTotal = Math.round(totalSum * 100) / 100;
+  const rTotalRowNumber = groups.size + 2;
+  const rTotalRow = rateioSheet.addRow(["Total", "", "", roundedTotal]);
+  rTotalRow.eachCell(cell => {
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.border = {
+      top: { style: "thin" },
+      bottom: { style: "double" },
+      left: { style: "thin" },
+      right: { style: "thin" }
+    };
+  });
+  rateioSheet.getCell(`D${rTotalRowNumber}`).numFmt = '"R$" #,##0.00';
+
   /* =========================================================================
    * ABA 2: Rateio_Agrupado (Layout Corporativo de Conferência Fiscal)
    * ========================================================================= */
@@ -188,6 +205,21 @@ export async function generateRateioExcel(
 
     agrupadoSheet.getCell(`D${rowNumber}`).numFmt = '"R$" #,##0.00';
   });
+
+  // Linha de somatória de referência na Aba Rateio_Agrupado
+  const aTotalRowNumber = groups.size + 2;
+  const aTotalRow = agrupadoSheet.addRow(["Total Geral", "", "", roundedTotal]);
+  aTotalRow.eachCell(cell => {
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.border = {
+      top: { style: "thin" },
+      bottom: { style: "double" },
+      left: { style: "thin" },
+      right: { style: "thin" }
+    };
+  });
+  agrupadoSheet.getCell(`D${aTotalRowNumber}`).numFmt = '"R$" #,##0.00';
 
   /* =========================================================================
    * ABA 3: Rateio_Detalhado (Detalhamento por Item)

@@ -29,9 +29,9 @@ const BASE_PATH = findDataFile("data/base_referencia.csv");
 const ITEMS_MAPPING_PATH = findDataFile("data/mapeamento_itens.json");
 const CNPJ_ALIASES_PATH = findDataFile("data/cnpj_aliases.json");
 const BASE_FORNECEDORES_JSON_PATH = findDataFile("data/base_fornecedores_faturas.json");
-const ROOT_CR_JSON_PATH = findDataFile("cr.json");
-const ROOT_CD_JSON_PATH = findDataFile("cd.json");
-const ROOT_NATUREZAS_JSON_PATH = findDataFile("naturezas.json");
+const ROOT_CR_JSON_PATH = findDataFile("data/cr.json");
+const ROOT_CD_JSON_PATH = findDataFile("data/cd.json");
+const ROOT_NATUREZAS_JSON_PATH = findDataFile("data/naturezas.json");
 
 // Cache e carregamento de descrições das Naturezas Contábeis da raiz
 let naturezaDescriptionsMap: Record<string, string> = {};
@@ -191,6 +191,55 @@ function getCsvFallback(supplierCnpj: string, clientAccount: string): any {
 }
 
 /**
+ * Calcula regras de conformidade e pagamento do Zeev de forma determinística no backend
+ */
+export function computeZeevValidation(issueDateStr?: string, dueDateStr?: string): {
+  isWithinIdealDeadline: boolean;
+  isIssuedAfterDay25: boolean;
+  suggestedPaymentRule: "IDEAL" | "ALTERNATIVE";
+  isInstallmentPay: boolean;
+  installmentsCount: number;
+} {
+  const parseDate = (d?: string): Date | null => {
+    if (!d) return null;
+    const clean = d.trim();
+    const parts = clean.split(/[\/\-.]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      }
+      // DD/MM/YYYY
+      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    }
+    const dt = new Date(clean);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const issue = parseDate(issueDateStr) || new Date();
+  const due = parseDate(dueDateStr);
+
+  const isIssuedAfterDay25 = issue.getDate() > 25;
+
+  let isWithinIdealDeadline = true;
+  if (due) {
+    const diffTime = due.getTime() - issue.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    isWithinIdealDeadline = diffDays >= 30;
+  }
+
+  const suggestedPaymentRule = (isWithinIdealDeadline && !isIssuedAfterDay25) ? "IDEAL" : "ALTERNATIVE";
+
+  return {
+    isWithinIdealDeadline,
+    isIssuedAfterDay25,
+    suggestedPaymentRule,
+    isInstallmentPay: false,
+    installmentsCount: 1
+  };
+}
+
+/**
  * Enriquece os dados extraídos com informações contábeis baseadas na nova base consolidada
  */
 export async function enrichData(data: BoletoData): Promise<BoletoData> {
@@ -327,8 +376,22 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
     }
   }
 
+  // Enriquecimento das regras de conformidade do Zeev via Backend
+  data.zeevValidation = computeZeevValidation(data.financial?.issueDate, data.financial?.dueDate);
+
+  const chargedVal = Number(data.financial?.chargedValue) || 0;
+  let hasValidItems = false;
+  if (data.apportionment && data.apportionment.length > 0 && chargedVal > 0) {
+    const sumItems = data.apportionment.reduce((acc, it) => acc + (Number(it.value) || 0), 0);
+    const diff = Math.abs(chargedVal - sumItems);
+    hasValidItems = diff <= 2.00 || (sumItems / chargedVal) >= 0.95;
+    if (!hasValidItems) {
+      console.warn(`[Enrichment] Itens parciais detectados (soma R$ ${sumItems.toFixed(2)} vs total cobrado R$ ${chargedVal.toFixed(2)}). Backend consolidará o rateio sobre o valor total da fatura.`);
+    }
+  }
+
   // 3. Enriquecer os itens do rateio detalhado (apportionment)
-  if (data.apportionment && data.apportionment.length > 0) {
+  if (data.apportionment && data.apportionment.length > 0 && hasValidItems) {
     console.log(`[Enrichment] Processando rateio de ${data.apportionment.length} itens.`);
     data.apportionment = data.apportionment.map(item => {
       const desc = item.description || "";
@@ -354,7 +417,62 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
         }
       }
 
-      // II. Tentar correspondência por Série de Hardware no banco consolidado
+      // II. Exceção de Negócio: Correspondência por Ativo / Série / Equipamento da Magna
+      const isMagnaSupplier = supplierName.toUpperCase().includes("MAGNA") || cleanCnpj.includes("08052026") || isMagna;
+      if (isMagnaSupplier && database && (database as any).magnaItens) {
+        const magnaDb = (database as any).magnaItens;
+        let magnaMap: any = null;
+
+        // 1. Tenta correspondência pela série já extraída no item
+        if (item.serialNumber && magnaDb[item.serialNumber.toUpperCase()]) {
+          magnaMap = magnaDb[item.serialNumber.toUpperCase()];
+        }
+
+        // 2. Tenta correspondência pelos termos entre parênteses (Série ou Código de Ativo)
+        if (!magnaMap) {
+          for (const code of parMatches) {
+            const upperCode = code.toUpperCase();
+            if (magnaDb[upperCode]) {
+              magnaMap = magnaDb[upperCode];
+              break;
+            }
+            const stripped = upperCode.replace(/^0+/, '');
+            if (stripped && magnaDb[stripped]) {
+              magnaMap = magnaDb[stripped];
+              break;
+            }
+          }
+        }
+
+        // 3. Tenta correspondência por categoria de equipamento padrão da Magna (Mochila, Mouse, Dock)
+        if (!magnaMap) {
+          const descUpper = desc.toUpperCase();
+          if (descUpper.includes("MOCHILA") && magnaDb["MOCHILA"]) {
+            magnaMap = magnaDb["MOCHILA"];
+          } else if (descUpper.includes("MOUSE") && magnaDb["MOUSE"]) {
+            magnaMap = magnaDb["MOUSE"];
+          } else if (descUpper.includes("DOCK") && magnaDb["DOCK STATION"]) {
+            magnaMap = magnaDb["DOCK STATION"];
+          }
+        }
+
+        if (magnaMap) {
+          const finalCr = magnaMap.cr || "1103";
+          const finalNat = magnaMap.naturezaCode || "141401001";
+          const finalContract = magnaMap.contract && magnaMap.contract !== "0" && magnaMap.contract !== "" ? magnaMap.contract : "0";
+          return {
+            ...item,
+            serialNumber: magnaMap.serialNumber || item.serialNumber || "-",
+            cr: finalCr,
+            crDescription: getCrDescription(finalCr),
+            naturezaCode: finalNat,
+            naturezaDescription: getNaturezaDescription(finalNat),
+            contract: finalContract
+          };
+        }
+      }
+
+      // III. Tentar correspondência por Série de Hardware no banco consolidado
       if (database) {
         for (const code of parMatches) {
           if (database.series[code]) {
@@ -393,6 +511,7 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
         : item.crDescription;
       
       const itemNatCode = (!item.naturezaCode || item.naturezaCode === "N/A") ? defaultAccounting.naturezaCode : item.naturezaCode;
+      const fallbackSerial = item.serialNumber || (parMatches.length > 1 ? parMatches[parMatches.length - 1] : (parMatches[0] || undefined));
 
       return {
         ...item,
@@ -404,7 +523,8 @@ export async function enrichData(data: BoletoData): Promise<BoletoData> {
           : item.naturezaDescription,
         contract: (!item.contract || item.contract === "0" || item.contract === "-") 
           ? (defaultAccounting.contract && defaultAccounting.contract !== "-" ? defaultAccounting.contract : "0") 
-          : item.contract
+          : item.contract,
+        serialNumber: fallbackSerial
       };
     });
 

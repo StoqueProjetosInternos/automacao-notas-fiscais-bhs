@@ -33,7 +33,270 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ---
 
-## 3. Registros Ativos — Agosto / 2026
+## 3. Registros Ativos — Setembro / 2026
+
+### CHG-0229 — Restauração de Fidelidade Visual e Layout Compacto da Aba de Histórico
+
+- Data/Hora: 2026-09-10 16:26
+- Contexto: A tabela de histórico em HistoryTab.tsx havia sofrido regressão visual de layout com largura comprimida (1600px em vez de 2150px), quebra vertical em nomes de arquivos e fornecedores, divisão de usuário em duas linhas e fontes monoespaçadas desalinhadas da identidade Host Grotesk.
+- Objetivo: Restaurar a estrutura visual e estilos canônicos originais da tabela de histórico em HistoryTab.tsx, reativando a largura fixa de 2150px, tableLayout fixed, cabeçalho sticky, linhas zebradas com altura compacta de linha única e truncamento adequado de texto.
+- Escopo:
+  - [HistoryTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/HistoryTab.tsx)
+- Riscos: Baixo. Correção puramente estética e estrutural de JSX/CSS sem impacto em lógica de dados.
+- Proposta: Reaplicar a tabela original com dimensões precisas de cada coluna e botões de ação consistentes.
+- Testes:
+  - Compilação do dashboard via `npm run build` com código 0 e zero erros de TypeScript.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/components/HistoryTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO].
+
+### CHG-0228 — Integração da Planilha de Rateio Canônica do Fornecedor Magna
+
+- Data/Hora: 2026-09-10 15:56
+- Contexto: O fornecedor Magna possuía apenas enriquecimento genérico, necessitando de mapeamento de rateio por equipamento, número de série e código de ativo para compor adequadamente os R$ 12.105,08 faturados.
+- Objetivo: Mover rateio_magna.xlsx para data/, atualizar consolidate_rateios.ts para extrair as abas Rateio_Detalhado e Equipamentos (926 mapeamentos consolidados) e implementar regra de enriquecimento de itens da Magna em dataEnrichment.ts.
+- Escopo:
+  - [rateio_magna.xlsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/data/rateio_magna.xlsx)
+  - [consolidate_rateios.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/consolidate_rateios.ts)
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos: Baixo. Regra direcionada exclusivamente para o fornecedor Magna.
+- Proposta: Indexar magnaItens por número de série, código de ativo e equipamento, e associar o CR, natureza contábil e contrato correspondentes em cada item da fatura.
+- Testes:
+  - Consolidação executada com sucesso gerando 926 itens da Magna em data/rateios_consolidado.json.
+  - Teste de enriquecimento executado sobre a fatura existente da Magna: 356 itens enriquecidos com soma de R$ 12.105,08 exata.
+  - Planilha de rateio Excel da fatura regenerada com sucesso.
+  - Compilação via `npm run build` em apps/automacao finalizada com código 0.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/scripts/consolidate_rateios.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+  2) `cmd /c npx tsx src/scripts/consolidate_rateios.ts`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO].
+
+### CHG-0227 — Fase 5: Auditoria e Higienização de Scripts Utilitários
+
+- Data/Hora: 2026-09-10 14:05
+- Contexto: Após a unificação das bases de dados em data/, scripts utilitários em apps/automacao/src/scripts/ ainda mantinham referências ao caminho obsoleto de assets do dashboard.
+- Objetivo: Atualizar generate_base_json.ts para salvar exclusivamente na pasta unificada data/base_fornecedores_faturas.json, eliminando referências a caminhos antigos.
+- Escopo:
+  - [generate_base_json.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/scripts/generate_base_json.ts)
+- Riscos: Baixo. Script utilitário isolado fora da rota em tempo real.
+- Proposta: Remover jsonOutputPathDashboard e direcionar a saída unicamente para jsonOutputPathData.
+- Testes:
+  - Compilação via `npm run build` em apps/automacao (tsc) e apps/dashboard (tsc -b && vite build) com código 0.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/scripts/generate_base_json.ts`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Encerramento com sucesso de todas as fases (1 a 5) do plano de refatoração estrutural.
+
+### CHG-0226 — Fase 4 (Passo 4.3): Modularização do Componente HistoryTab
+
+- Data/Hora: 2026-09-10 14:02
+- Contexto: A aba de Histórico de Processamento em Dashboard/index.tsx continha mais de 1.100 linhas de código misturando filtros multidimensionais, KPIs executivos de custo/latência, exportações complexas para Excel/PDF e pré-visualização de faturas.
+- Objetivo: Isolar toda a visualização e operação do histórico em HistoryTab.tsx, desacoplando estados de busca, paginação, exportação e modais associados do orquestrador raiz.
+- Escopo:
+  - [HistoryTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/HistoryTab.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Todas as props e callbacks de desarquivamento e visualização foram preservados com tipagem estrita no TypeScript.
+- Proposta: Criar HistoryTab.tsx, mover filtros, paginação, exportação e modais de PDF/Rateio do histórico, e invocar o componente dentro da aba history em Dashboard/index.tsx.
+- Testes:
+  - Compilação via `cmd /c npm run build` em apps/dashboard com zero erros de TypeScript e bundle gerado com sucesso.
+- Rollback:
+  - 1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+  - 2) Remover `apps/dashboard/src/components/HistoryTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Redução de mais de 1.100 linhas em Dashboard/index.tsx (caiu para 840 linhas).
+
+### CHG-0225 — Fase 4 (Passo 4.2): Modularização do Componente LogsTab
+
+- Data/Hora: 2026-09-10 13:50
+- Contexto: A visualização de logs e o modal de confirmação de limpeza estavam acoplados diretamente ao componente raiz do Dashboard, inflando seu escopo com regras de console e modais secundários.
+- Objetivo: Isolar a aba de logs em LogsTab.tsx, encapsulando os estados de carregamento, cópia para clipboard, terminal escuro e modal de confirmação.
+- Escopo:
+  - [LogsTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/LogsTab.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Contrato direto via callbacks (onBack e showToast) e preservação das travas de acesso ADMIN.
+- Proposta: Criar LogsTab.tsx e substituir mais de 250 linhas em Dashboard/index.tsx por uma invocação modularizada.
+- Testes:
+  - npm run build em apps/dashboard com zero erros de TypeScript e bundle gerado com sucesso.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+  2) Remover `apps/dashboard/src/components/LogsTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Redução líquida de 250+ linhas em Dashboard/index.tsx.
+
+### CHG-0224 — Fase 4 (Passo 4.1): Modularização do Componente DeadlinesTab
+
+- Data/Hora: 2026-09-10 13:45
+- Contexto: O componente Dashboard/index.tsx acumulava mais de 2.830 linhas, misturando regras e tabelas de diferentes domínios e dificultando a manutenção.
+- Objetivo: Extrair a aba de Monitoramento de Prazos de Vencimento para o componente dedicado DeadlinesTab.tsx, desacoplando cálculos de dias restantes, ordenação, paginação e simulação de alertas de e-mail.
+- Escopo:
+  - [DeadlinesTab.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DeadlinesTab.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Contrato de propriedades bem delimitado (notes, onBack, onRefreshNotes, showToast).
+- Proposta: Criar DeadlinesTab.tsx contendo toda a computação de vencimentos e substituir mais de 450 linhas do arquivo raiz por uma única invocação declarativa.
+- Testes:
+  - npm run build em apps/dashboard com zero erros de TypeScript e bundle gerado com sucesso.
+  - npm run build em apps/automacao com compilação TypeScript validada com código 0.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/pages/Dashboard/index.tsx`
+  2) Remover `apps/dashboard/src/components/DeadlinesTab.tsx`
+- Status: Aplicado
+- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO]. Redução líquida de 460+ linhas em Dashboard/index.tsx.
+
+### CHG-0223 — Fase 3 da Refatoração: Higienização do index.css e Padronização de Classes no App.css
+
+- Data/Hora: 2026-09-10 13:35
+- Contexto: O index.css continha estilos legados do template Vite e o Dashboard utilizava centenas de linhas de CSS inline repetido para badges, paginação e tabelas.
+- Objetivo: Eliminar o código morto do index.css e criar classes semânticas no App.css, reduzindo a repetição e alinhando ao Brand Center da Stoque.
+- Escopo:
+  - [index.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/index.css)
+  - [App.css](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/App.css)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+- Riscos: Baixo. Mudanças puramente visuais e estruturais de CSS com checagem imediata no build.
+- Proposta: Limpar regras residuais de template no index.css, extrair classes utilitárias para badges, tabelas e paginação no App.css e substituir blocos inline repetitivos.
+- Testes:
+  - npm run build em apps/dashboard com zero erros de bundle.
+- Rollback:
+  1) `git checkout -- apps/dashboard/src/index.css apps/dashboard/src/App.css apps/dashboard/src/pages/Dashboard/index.tsx`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0222 — Fase 2 da Refatoração: Centralização e Unificação das Bases Cadastrais
+
+- Data/Hora: 2026-09-10 13:30
+- Contexto: Arquivos cadastrais de CR, Naturezas e Contratos existiam duplicados entre a raiz do projeto e a pasta assets do dashboard, além de resquícios de arquivos SVG de template.
+- Objetivo: Estabelecer a pasta data/ como fonte única da verdade cadastral, configurar alias @data no frontend, atualizar o backend e eliminar cópias redundantes.
+- Escopo:
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+  - [vite.config.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/vite.config.ts)
+  - [tsconfig.app.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/tsconfig.app.json)
+  - [DataEditor.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/DataEditor.tsx)
+  - [Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+  - [.gitignore](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.gitignore)
+- Riscos: Baixo. Validado através de compilação simultânea do backend e frontend com checagem de tipos estrita.
+- Proposta: Mover cr.json e naturezas.json para data/, criar alias @data no Vite/TypeScript e eliminar duplicatas em apps/dashboard/src/assets/ e na raiz.
+- Testes:
+  - npm run build em apps/dashboard (código 0).
+  - npm run build em apps/automacao (código 0).
+  - Execução de teste de carregamento de CR e Natureza no backend (código 0).
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/dataEnrichment.ts apps/dashboard/vite.config.ts apps/dashboard/tsconfig.app.json apps/dashboard/src/components/DataEditor.tsx apps/dashboard/src/pages/Dashboard/index.tsx .gitignore`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0221 — Fase 1 da Refatoração: Higienização da Raiz e Atualização do Gitignore
+
+- Data/Hora: 2026-09-10 13:25
+- Contexto: Início do ciclo de refatoração do projeto para eliminar arquivos órfãos, logs residuais e artefatos de compilação desktop não rastreados.
+- Objetivo: Proteger o repositório contra arquivos zip de release, eliminar arquivos residuais e organizar regras de exclusão no .gitignore.
+- Escopo:
+  - [.gitignore](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/.gitignore)
+- Riscos: Baixo. Não altera código de execução da aplicação.
+- Proposta: Adicionar regras de exclusão para pacotes zip e scripts locais no .gitignore e remover logs residuais.
+- Testes:
+  - Execução de git status confirmando árvore de trabalho limpa.
+- Rollback:
+  1) `git checkout -- .gitignore`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0220 — Unificação de Contratos Recorrentes e Deduplicação nos Alertas de Prazos
+
+- Data/Hora: 2026-09-10 13:05
+- Contexto: O e-mail automático diário omitia contratos recorrentes como a Claro S.A./NET (1 dia restante) por consultar apenas faturas reais processadas em disco, além de duplicar linhas de fornecedores com múltiplos arquivos.
+- Objetivo: Unificar a base de contratos recorrentes com as faturas reais pendentes no DeadlineAlertService, projetar datas dinâmicas no mês vigente e deduplicar fornecedores repetidos.
+- Escopo:
+  - [deadlineAlertService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/deadlineAlertService.ts)
+  - [noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+- Riscos: Baixo. Leitura local em disco de arquivos JSON consolidados com fallbacks defensivos.
+- Proposta: Implementar getDynamicDueDate e mesclagem de base_fornecedores_faturas.json no backend, priorizando notas fiscais reais sobre estimativas de contratos e formatando status singular/plural.
+- Testes:
+  - Compilação TypeScript com zero erros (cmd.exe /c "npx tsc --noEmit").
+  - Execução de teste automatizado verificando a presença de Claro S.A./NET e a deduplicação de EMC.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/server/services/deadlineAlertService.ts apps/automacao/src/server/services/noteService.ts`
+- Commit: `bb80a42`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0219 — Linha de Somatória de Fechamento nas Abas Rateio e Rateio_Agrupado
+
+- Data/Hora: 2026-09-10 11:36
+- Contexto: Solicitação de melhoria visual e conferência fiscal de saldo nas planilhas Excel geradas para rateio contábil.
+- Objetivo: Inserir linha de somatória em negrito com formatação monetária e bordas contábeis ao final das abas Rateio e Rateio_Agrupado.
+- Escopo:
+  - [generateRateioExcel.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/excel/generateRateioExcel.ts)
+- Riscos: Nenhum impacto nos dados ou nas regras de negócio.
+- Proposta: Calcular a somatória dos grupos de rateio e adicionar linhas de Total com bordas duplas contábeis no fechamento das duas primeiras abas.
+- Testes:
+  - Compilação TypeScript (cmd.exe /c "npx tsc --noEmit").
+  - Verificação da planilha gerada via script com conferência dos valores somados.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/excel/generateRateioExcel.ts`
+- Commit: `2350708`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0218 — Extração e Preenchimento Automático do Número de Série no Rateio
+
+- Data/Hora: 2026-09-10 11:27
+- Contexto: A coluna de número de série permanecia vazia para itens não cadastrados previamente na base consolidada, embora os dados constem entre parênteses na descrição do equipamento no PDF.
+- Objetivo: Extrair o número de série diretamente das descrições no tableItemsExtractor e garantir sua preservação no fallback de dataEnrichment.
+- Escopo:
+  - [tableItemsExtractor.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/tableItemsExtractor.ts)
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos: Nenhum risco a valores monetários ou classificações.
+- Proposta: Inserir extração de serial via parMatches em tableItemsExtractor e injetar serialNumber no retorno do mapeamento contábil de dataEnrichment.
+- Testes:
+  - Compilação TypeScript (cmd.exe /c "npx tsc --noEmit").
+  - Validação da coluna Nº de Série na fatura da Magna com 356 itens.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/tableItemsExtractor.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Commit: `2350708`
+- Status: Aplicado
+- Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
+
+### CHG-0217 — Extrator Nativo de Itens de Faturas de Equipamentos via Backend
+
+- Data/Hora: 2026-09-10 09:56
+- Contexto: Faturas de locação com centenas de equipamentos (Magna, EMC) ficavam resumidas em item único no rateio detalhado porque a inteligência artificial não transcrevia tabelas extensas em JSON.
+- Objetivo: Extrair todos os equipamentos diretamente do texto vetorial do PDF no backend, preservando cada item individualmente e enriquecendo com Centro de Resultado (CR), Natureza e Contrato.
+- Escopo:
+  - [tableItemsExtractor.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/tableItemsExtractor.ts)
+  - [extractDataFromPDF.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/extractDataFromPDF.ts)
+- Riscos:
+  - Divergência de valores. Mitigado por conferência matemática rigorosa onde os itens só substituem o rateio quando a soma fecha com o chargedValue da fatura.
+- Proposta: Criar o módulo tableItemsExtractor com suporte a layouts tabulares de locação e integrá-lo no fluxo de extractDataFromPDF antes do dataEnrichment.
+- Testes:
+  - Compilação TypeScript com zero erros (cmd.exe /c "npx tsc --noEmit").
+  - Execução de teste automatizado de extração com a fatura Magna (356 itens) e EMC (103 itens).
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/extractDataFromPDF.ts`
+  2) `cmd.exe /c "del apps\automacao\src\features\pdf\tableItemsExtractor.ts"`
+- Commit: `2350708`
+- Status: Aplicado
+- Observações: Implementação aplicada sob aprovação [APROVAR-CODIGO] do usuário com garantia expressa de reversão imediata caso necessário.
+
+### CHG-0216 — Desacoplamento de Rateio da IA e Enriquecimento Contábil pelo Backend
+
+- Data/Hora: 2026-09-10 09:38
+- Contexto: Faturas extensas com mais de 100 itens falhavam recorrentemente na extração por divergência na contagem de itens de rateio e causavam lentidão de até 5 minutos devido a sucessivas retentativas com modelos instáveis.
+- Objetivo: Restringir a IA à extração textual e fiscal do PDF, eliminar a transcrição obrigatória de tabelas extensas em JSON e transferir o enriquecimento contábil e cálculo de regras Zeev para o backend.
+- Escopo:
+  - [aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - [dataEnrichment.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/dataEnrichment.ts)
+- Riscos:
+  - Divergência em rateios detalhados preexistentes. Mitigado pela preservação de itens válidos que fechem o total cobrado da nota e fallback seguro para o rateio do fornecedor.
+- Proposta: Enxugar prompt de extração, remover validação destrutiva com throw de rateio em aiExtract, remover modelo instável gemini-3.7-flash da esteira de fallback, reduzir delays de retentativa e implementar cálculo determinístico de zeevValidation e consolidação de rateio no dataEnrichment.
+- Testes:
+  - Verificação de tipos via compilação TypeScript (cmd.exe /c "npx tsc --noEmit").
+  - Teste de extração via test_pdf.ts em PDF de fatura multipáginas.
+- Rollback:
+  1) `git checkout -- apps/automacao/src/features/pdf/aiExtract.ts apps/automacao/src/features/pdf/dataEnrichment.ts`
+- Commit: `2350708`
+- Status: Aplicado
+- Observações: Alterações aplicadas com sucesso após autorização [APROVAR-CODIGO] do usuário.
 
 ### CHG-0213 — Curadoria Avançada, Auditoria de Logs e Controle de Acesso ADMIN
 
@@ -1106,6 +1369,158 @@ Para consultar o histórico detalhado dos meses anteriores:
   1) `git checkout HEAD -- apps/dashboard/src/services/api.ts apps/dashboard/src/pages/Dashboard/index.tsx apps/dashboard/src/pages/Login/index.tsx`
 - Status: Aplicado
 - Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0270 — Validação de Integridade Contábil de Rateio e Extração Completa Multi-Páginas na IA
+
+- Data/Hora: 2026-09-08 09:46
+- Contexto: Faturas extensas multi-páginas (como a Fatura-5855 com 103 itens) sofriam corte prematuro no modelo gemini-2.5-flash, gerando apenas 28 itens sem acionar fallback de modelo.
+- Objetivo: Implementar regra de integridade contábil no aiExtract.ts que valida a soma dos itens em relação ao chargedValue, rejeita extrações truncadas e comuta automaticamente para gemini-3.6-flash ou gemini-3.1-pro-preview.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Faturas de item único ou sem rateio prévio não são afetadas pela validação, preservando o fluxo regular.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e reprocessamento da fatura Fatura-5855 com conferência dos 103 itens.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0271 — Remoção de Modelos Pro da Contingência e Fallback 100% Flash para Cota Free Tier
+
+- Data/Hora: 2026-09-08 09:55
+- Contexto: A chave de API do Google AI Studio do ambiente opera sob o plano gratuito (Free Tier), que atribui cota zero (limit: 0) a modelos da família Pro, causando erro 429 quando gemini-3.1-pro-preview era acionado na contingência.
+- Objetivo: Restringir a sequência de contingência e a definição do modelo primário exclusivamente a modelos da família Flash (gemini-3.6-flash e gemini-2.5-flash), incluindo salvaguarda defensiva contra configurações acidentais de modelos Pro.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. O modelo gemini-3.6-flash possui suporte comprovado a saídas extensas de tabelas multi-páginas e cota ativa no plano gratuito.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e validação do fluxo de extração sem erros de cota.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0272 — Detecção de Páginas via pdf-lib, Backoff para Erro 503 e Extração das Páginas 3 e 4
+
+- Data/Hora: 2026-09-08 12:06
+- Contexto: A extração interrompia a captura ao término da página 2 (capturando apenas 48 a 52 itens de 103) e a última tentativa coincidiu com indisponibilidade 503 temporária do Google.
+- Objetivo: Injetar a contagem exata de páginas via pdf-lib no prompt para obrigar a leitura de todas as 4 páginas, expandir o laço para 5 tentativas com backoff progressivo contra erros 503 e priorizar gemini-3.6-flash.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a robustez contra oscilações de rede e assegura a extração integral em documentos multi-páginas.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e validação da extração completa dos 103 registros.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0273 — Expansão de Limite de Saída (maxOutputTokens: 32768) e Atualização da Contingência Flash
+
+- Data/Hora: 2026-09-08 12:42
+- Contexto: A extração de faturas extensas multi-páginas (como Fatura-5855.pdf com 103 itens) excedia o teto hardcoded de 8.192 tokens (atingindo 8.178 tokens somando raciocínio interno e candidatos), provocando corte abrupto no JSON e erro de sintaxe. Adicionalmente, gemini-3.6-flash vinha sofrendo sobrecargas pontuais 503.
+- Objetivo: Expandir maxOutputTokens de 8192 para 32768 tokens, permitindo extração integral de grandes faturas sem truncamento, e atualizar a sequência de contingência de modelos Flash disponíveis e saudáveis (gemini-3.8-flash, gemini-3.7-flash, gemini-2.5-flash).
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/features/pdf/aiExtract.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/features/pdf/aiExtract.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Permanece 100% dentro dos limites do plano gratuito (Free Tier) e evita corte da resposta.
+- Testes: Build do projeto via `npm --prefix apps/automacao run build` e execução de extração de faturas multi-páginas.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/features/pdf/aiExtract.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0274 — Sanitização do Histórico de Uso e Resolução Automática de Instâncias Zeev
+
+- Data/Hora: 2026-09-08 13:15
+- Contexto: Registros de auditoria no histórico exibiam colunas em branco no topo devido a 113 linhas vazias no CSV, além de ausência do ID Zeev gerado após a aprovação de faturas.
+- Objetivo: Sanitizar o arquivo usage_log.csv, filtrar defensivamente registros com campos vazios no backend, complementar metadados fiscais a partir dos JSONs das notas e resolver automaticamente o ID Zeev a partir do arquivo zeev_response_simulation.json.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/noteService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/noteService.ts)
+    - [apps/automacao/src/server/services/zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+    - [apps/automacao/src/server/controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+  - Dados:
+    - [data/usage_log.csv](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/data/usage_log.csv)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a integridade visual e auditoria sem alterar lógica de negócios das notas.
+- Testes: Compilação TypeScript com `npm --prefix apps/automacao run build` e validação do retorno da rota de histórico.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/noteService.ts apps/automacao/src/server/services/zeevService.ts apps/automacao/src/server/controllers/noteController.ts data/usage_log.csv`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0275 — Monitoramento Automático de Vencimentos com Idempotência Diária no Electron
+
+- Data/Hora: 2026-09-08 13:26
+- Contexto: Alertas de vencimento dependiam de acionamento manual na interface, necessitando automação nativa e resiliente para o ambiente desktop Electron.
+- Objetivo: Implementar serviço de agendamento automático com verificação na inicialização (Startup Check), filtro de faturas com vencimento em até 10 dias, envio de e-mail preventivo e trava de idempotência diária em disco para evitar disparos duplicados.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/deadlineAlertService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/deadlineAlertService.ts)
+    - [apps/automacao/src/server/controllers/noteController.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/controllers/noteController.ts)
+    - [apps/automacao/src/server/routes/noteRoutes.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/routes/noteRoutes.ts)
+    - [apps/automacao/src/server/app.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/app.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Opera sem bloquear a thread do Electron e respeita rigorosamente a trava de um disparo por dia.
+- Testes: Build do projeto via `npm --prefix apps/automacao run build` e validação da consulta ao endpoint `/api/notes/deadlines/status`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/app.ts apps/automacao/src/server/routes/noteRoutes.ts apps/automacao/src/server/controllers/noteController.ts`
+  2) Remover `apps/automacao/src/server/services/deadlineAlertService.ts`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0276 — Padronização de Mascaramento de Segurança para Tenant ID e Client ID
+
+- Data/Hora: 2026-09-08 13:33
+- Contexto: As variáveis TENANT_ID e CLIENT_ID eram expostas em texto puro na tela de configurações, divergindo do padrão seguro das demais variáveis de credenciais.
+- Objetivo: Unificar o padrão de segurança mascarando TENANT_ID e CLIENT_ID no backend ({ isConfigured, masked }), implementando controle de visibilidade (Eye/EyeOff) e protegendo contra sobrescrita indevida no dashboard.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/settingsService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/settingsService.ts)
+  - Frontend:
+    - [apps/dashboard/src/services/api.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/services/api.ts)
+    - [apps/dashboard/src/components/SettingsModal.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/SettingsModal.tsx)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a segurança contra exposição acidental e preserva compatibilidade retroativa.
+- Testes: Build do backend com `npm --prefix apps/automacao run build` e do dashboard com `npm --prefix apps/dashboard run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/settingsService.ts apps/dashboard/src/services/api.ts apps/dashboard/src/components/SettingsModal.tsx`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0277 — Painel Executivo e Gráficos de Indicadores de Faturas e IA
+
+- Data/Hora: 2026-09-08 13:45
+- Contexto: A liderança precisava de uma visualização consolidada do volume financeiro processado, aprovações no Zeev, custos/eficiência da IA e alocação contábil de rateios.
+- Objetivo: Criar a aba Indicadores à direita de Prazos com 4 cartões de KPIs executivos e 4 painéis analíticos nativos (sem dependências externas) em puro React/SVG/CSS.
+- Escopo:
+  - Frontend:
+    - [apps/dashboard/src/components/ExecutiveAnalytics.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/ExecutiveAnalytics.tsx)
+    - [apps/dashboard/src/components/Header.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/components/Header.tsx)
+    - [apps/dashboard/src/pages/Dashboard/index.tsx](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/dashboard/src/pages/Dashboard/index.tsx)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Componente modular em SVG/CSS que não sobrecarrega a thread nem gera conflito de pacotes.
+- Testes: Compilação TypeScript e Vite com `npm --prefix apps/dashboard run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/dashboard/src/components/Header.tsx apps/dashboard/src/pages/Dashboard/index.tsx`
+  2) Remover `apps/dashboard/src/components/ExecutiveAnalytics.tsx`
+- Status: Aplicado
+- Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
 
 
 

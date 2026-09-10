@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/noteService.js';
 import { ZeevService } from '../services/zeevService.js';
+import { DeadlineAlertService } from '../services/deadlineAlertService.js';
 import { getLogsContent, clearLogsContent } from '../config/logger.js';
 import fs from 'fs';
 import path from 'path';
@@ -26,7 +27,11 @@ export class NoteController {
       // Se o status de transição for 'validado', executa a integração/simulação primeiro
       if (newData.status === 'validado') {
         console.log(`[API] Executando simulação de integração com o Zeev para fatura ${id} antes de validar.`);
-        await ZeevService.generateDryRunPayload(id as string, newData);
+        const zeevResult = await ZeevService.generateDryRunPayload(id as string, newData);
+        const createdZeevId = zeevResult?.instanceId || zeevResult?.id || zeevResult?.code || zeevResult?.instanceCode;
+        if (createdZeevId) {
+          newData.zeevInstanceId = String(createdZeevId);
+        }
       }
 
       // Se passou pela simulação (ou se não for 'validado'), persiste as atualizações em disco
@@ -74,6 +79,25 @@ export class NoteController {
     } catch (error: any) {
       console.error('[Error] Falha ao enviar alertas de vencimento:', error);
       res.status(500).json({ error: error.message || 'Erro ao enviar alertas por e-mail' });
+    }
+  }
+
+  public static getDeadlineStatus(req: Request, res: Response) {
+    try {
+      const status = DeadlineAlertService.getDeadlineAlertsState();
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Erro ao consultar status de prazos' });
+    }
+  }
+
+  public static async triggerDeadlineCheck(req: Request, res: Response) {
+    try {
+      const force = req.query.force === 'true';
+      const result = await DeadlineAlertService.checkAndDispatchDailyAlerts(force);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Erro ao executar checagem de prazos' });
     }
   }
 

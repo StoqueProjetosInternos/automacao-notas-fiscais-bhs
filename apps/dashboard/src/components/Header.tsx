@@ -6,8 +6,8 @@ interface HeaderProps {
   onSync: () => void;
   isApiOnline: boolean;
   isSyncing: boolean;
-  activeTab: 'notes' | 'history' | 'logs' | 'deadlines';
-  onChangeTab: (tab: 'notes' | 'history' | 'logs' | 'deadlines') => void;
+  activeTab: 'notes' | 'history' | 'logs' | 'deadlines' | 'analytics';
+  onChangeTab: (tab: 'notes' | 'history' | 'logs' | 'deadlines' | 'analytics') => void;
   onExit: (target: string) => void;
   user: {
     name: string;
@@ -95,6 +95,13 @@ export const Header = ({ onSync, isApiOnline, isSyncing, activeTab, onChangeTab,
           onClick={() => onChangeTab('deadlines')}
         >
           Prazos
+        </button>
+
+        <button 
+          className={`nav-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => onChangeTab('analytics')}
+        >
+          Indicadores
         </button>
       </nav>
       <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>

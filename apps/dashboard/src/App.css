@@ -1415,3 +1415,89 @@ html, body, #root {
   box-shadow: 0 1px 3px rgba(47, 200, 8, 0.2);
   filter: brightness(0.95);
 }
+
+/* Utilitários Semânticos de Tabelas e Badges */
+.badge-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.badge-status-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-status-alert {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-status-normal {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.badge-status-success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.table-row-critical {
+  background-color: #fef2f2;
+}
+
+.table-row-alert {
+  background-color: #fffbeb;
+}
+
+.table-header-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-select {
+  padding: 8px;
+  font-size: 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  outline: none;
+  background-color: #ffffff;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.filter-input-text {
+  padding: 8px 24px 8px 8px;
+  font-size: 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  outline: none;
+  background-color: #ffffff;
+  color: #1f2937;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pagination-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

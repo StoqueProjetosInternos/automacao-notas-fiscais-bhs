@@ -180,8 +180,8 @@ export interface MaskedSettings {
   zeevFlowId: string;
   zeevRequester: string;
   userEmail: string;
-  tenantId: string;
-  clientId: string;
+  tenantId: { isConfigured: boolean; masked: string };
+  clientId: { isConfigured: boolean; masked: string };
   clientSecret: { isConfigured: boolean; masked: string };
   smtpHost: string;
   smtpPort: number;

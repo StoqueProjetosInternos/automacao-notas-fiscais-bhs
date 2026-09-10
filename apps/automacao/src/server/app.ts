@@ -9,6 +9,7 @@ import noteRoutes from './routes/noteRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import { authMiddleware } from './middlewares/authMiddleware.js';
+import { DeadlineAlertService } from './services/deadlineAlertService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,5 +48,8 @@ app.use('/api/notes', authMiddleware, noteRoutes);
 
 // Rotas de Configurações e Credenciais do Sistema (Protegidas)
 app.use('/api/settings', authMiddleware, settingsRoutes);
+
+// Inicializa o agendador de monitoramento diário automático de vencimentos
+DeadlineAlertService.startDeadlineScheduler();
 
 export default app;

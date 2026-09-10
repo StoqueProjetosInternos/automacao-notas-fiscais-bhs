@@ -4,14 +4,19 @@ dist/
 dist-ssr/
 release/
 apps/desktop/release/
+apps/desktop/*.zip
+*.zip
 
 # Variáveis de ambiente e segredos locais
 .env
 .env.local
 .env.*.local
 
-# Pastas de dados e arquivos temporários da automação
-data/
+# Pastas de dados dinâmicos e temporários da automação
+data/extracted/
+data/logs/
+data/usage_log.csv
+data/deadline_alerts_state.json
 temp/
 .tmp/
 
@@ -39,3 +44,4 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+*.ps1

@@ -51,6 +51,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
   // Show/hide passwords
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showZeevToken, setShowZeevToken] = useState(false);
+  const [showTenantId, setShowTenantId] = useState(false);
+  const [showClientId, setShowClientId] = useState(false);
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
 
@@ -74,8 +76,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
       setZeevFlowId(data.zeevFlowId || '2044');
       setZeevRequester(data.zeevRequester || '');
       setUserEmail(data.userEmail || '');
-      setTenantId(data.tenantId || '');
-      setClientId(data.clientId || '');
       setSmtpHost(data.smtpHost || '');
       setSmtpPort(data.smtpPort || 587);
       setSmtpSecure(Boolean(data.smtpSecure));
@@ -83,9 +83,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
       setSmtpFrom(data.smtpFrom || '');
       setSmtpTo(data.smtpTo || '');
       
-      // Limpa os campos de senha/token
+      // Limpa os campos de senha/token/credenciais
       setGeminiApiKey('');
       setZeevApiToken('');
+      setTenantId('');
+      setClientId('');
       setClientSecret('');
       setSmtpPass('');
     } catch (err: any) {
@@ -107,8 +109,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
       zeevFlowId,
       zeevRequester,
       userEmail,
-      tenantId,
-      clientId,
       smtpHost,
       smtpPort,
       smtpSecure,
@@ -117,9 +117,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
       smtpTo
     };
 
-    // Só anexa chaves secretas se o usuário tiver digitado um novo valor
+    // Só anexa credenciais e chaves se o usuário tiver digitado um novo valor
     if (geminiApiKey.trim()) payload.geminiApiKey = geminiApiKey;
     if (zeevApiToken.trim()) payload.zeevApiToken = zeevApiToken;
+    if (tenantId.trim()) payload.tenantId = tenantId;
+    if (clientId.trim()) payload.clientId = clientId;
     if (clientSecret.trim()) payload.clientSecret = clientSecret;
     if (smtpPass.trim()) payload.smtpPass = smtpPass;
 
@@ -128,6 +130,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
       setSettings(res.settings);
       setGeminiApiKey('');
       setZeevApiToken('');
+      setTenantId('');
+      setClientId('');
       setClientSecret('');
       setSmtpPass('');
       setFeedback({ type: 'success', message: 'Configurações e credenciais salvas com sucesso no servidor!' });
@@ -602,40 +606,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                     Azure / Microsoft Tenant ID (TENANT_ID)
                   </label>
-                  <input
-                    type="text"
-                    value={tenantId}
-                    onChange={(e) => setTenantId(e.target.value)}
-                    placeholder="ex: 8f4a210b-..."
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      fontSize: '0.85rem',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showTenantId ? 'text' : 'password'}
+                      value={tenantId}
+                      onChange={(e) => setTenantId(e.target.value)}
+                      placeholder={settings?.tenantId?.isConfigured ? `ID gravado: ${settings.tenantId.masked}` : 'Cole o Tenant ID do Azure'}
+                      style={{
+                        width: '100%',
+                        padding: '8px 40px 8px 12px',
+                        fontSize: '0.85rem',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowTenantId(!showTenantId)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#94a3b8'
+                      }}
+                    >
+                      {showTenantId ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                     Azure Client / App ID (CLIENT_ID)
                   </label>
-                  <input
-                    type="text"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    placeholder="ex: d12c3b4a-..."
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      fontSize: '0.85rem',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showClientId ? 'text' : 'password'}
+                      value={clientId}
+                      onChange={(e) => setClientId(e.target.value)}
+                      placeholder={settings?.clientId?.isConfigured ? `ID gravado: ${settings.clientId.masked}` : 'Cole o Client ID do Azure'}
+                      style={{
+                        width: '100%',
+                        padding: '8px 40px 8px 12px',
+                        fontSize: '0.85rem',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowClientId(!showClientId)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#94a3b8'
+                      }}
+                    >
+                      {showClientId ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -12,8 +12,8 @@ export interface MaskedSettings {
   zeevFlowId: string;
   zeevRequester: string;
   userEmail: string;
-  tenantId: string;
-  clientId: string;
+  tenantId: { isConfigured: boolean; masked: string };
+  clientId: { isConfigured: boolean; masked: string };
   clientSecret: { isConfigured: boolean; masked: string };
   smtpHost: string;
   smtpPort: number;
@@ -26,16 +26,23 @@ export interface MaskedSettings {
 
 export class SettingsService {
   private static getEnvPath(): string {
+    const appData = process.env.APPDATA || '';
+    const userDataEnv = appData ? path.resolve(appData, 'StoqueFiscalIntelligence', '.env') : '';
+    const resourcesPath = (process as any).resourcesPath || '';
+
     const possiblePaths = [
+      userDataEnv,
+      path.resolve(resourcesPath, '.env'),
+      path.resolve(resourcesPath, 'app', '.env'),
       path.resolve(process.cwd(), '.env'),
       path.resolve(process.cwd(), '../../.env'),
       path.resolve(__dirname, '../../../../.env'),
       path.resolve(__dirname, '../../../.env'),
       path.resolve(__dirname, '../../.env'),
       path.resolve(__dirname, '../.env'),
-    ];
+    ].filter(Boolean);
     const found = possiblePaths.find(p => fs.existsSync(p));
-    return found || path.resolve(process.cwd(), '.env');
+    return found || userDataEnv || path.resolve(process.cwd(), '.env');
   }
 
   private static maskSecret(val?: string): { isConfigured: boolean; masked: string } {
@@ -59,8 +66,8 @@ export class SettingsService {
       zeevFlowId: process.env.ZEEV_FLOW_ID || '2044',
       zeevRequester: process.env.ZEEV_REQUESTER || '',
       userEmail: process.env.USER_EMAIL || '',
-      tenantId: process.env.TENANT_ID || '',
-      clientId: process.env.CLIENT_ID || '',
+      tenantId: this.maskSecret(process.env.TENANT_ID),
+      clientId: this.maskSecret(process.env.CLIENT_ID),
       clientSecret: this.maskSecret(process.env.CLIENT_SECRET),
       smtpHost: process.env.SMTP_HOST || '',
       smtpPort: Number(process.env.SMTP_PORT) || 587,
@@ -83,8 +90,8 @@ export class SettingsService {
       ZEEV_FLOW_ID: newSettings.zeevFlowId !== undefined && newSettings.zeevFlowId !== '' ? newSettings.zeevFlowId.trim() : undefined,
       ZEEV_REQUESTER: newSettings.zeevRequester !== undefined ? newSettings.zeevRequester.trim() : undefined,
       USER_EMAIL: newSettings.userEmail !== undefined ? newSettings.userEmail.trim() : undefined,
-      TENANT_ID: newSettings.tenantId !== undefined ? newSettings.tenantId.trim() : undefined,
-      CLIENT_ID: newSettings.clientId !== undefined ? newSettings.clientId.trim() : undefined,
+      TENANT_ID: newSettings.tenantId && newSettings.tenantId.trim() !== '' ? newSettings.tenantId.trim() : undefined,
+      CLIENT_ID: newSettings.clientId && newSettings.clientId.trim() !== '' ? newSettings.clientId.trim() : undefined,
       CLIENT_SECRET: newSettings.clientSecret && newSettings.clientSecret.trim() !== '' ? newSettings.clientSecret.trim() : undefined,
       SMTP_HOST: newSettings.smtpHost !== undefined ? newSettings.smtpHost.trim() : undefined,
       SMTP_PORT: newSettings.smtpPort !== undefined ? String(newSettings.smtpPort).trim() : undefined,

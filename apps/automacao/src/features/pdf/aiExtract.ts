@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PDFDocument } from "pdf-lib";
 import { BoletoData } from "./types.js";
 import fs from "fs";
 import path from "path";
@@ -46,13 +47,6 @@ interface AIResponse {
     unitValue: number;
     value: number;
   }>;
-  zeevValidation: {
-    isWithinIdealDeadline: boolean;
-    isIssuedAfterDay25: boolean;
-    suggestedPaymentRule: "IDEAL" | "ALTERNATIVE";
-    isInstallmentPay: boolean;
-    installmentsCount?: number;
-  };
 }
 
 /**
@@ -78,12 +72,25 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  // Modelos ativos suportados na API v1beta do Google Generative AI
-  const fallbackModels = [primaryModel, "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-3.6-flash"].filter(
+  let primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // Salvaguarda contra cota zero (limit: 0) para modelos Pro em contas Free Tier
+  if (primaryModel.toLowerCase().includes("pro")) {
+    console.warn(`[IA] Modelo configurado '${primaryModel}' requer faturamento e possui cota zero no Free Tier. Comutando para 'gemini-3.6-flash'.`);
+    primaryModel = "gemini-3.6-flash";
+  }
+  // Modelos ativos suportados na API v1beta compatíveis com Free Tier
+  const fallbackModels = [primaryModel, "gemini-3.6-flash", "gemini-2.5-flash"].filter(
     (value, index, self) => self.indexOf(value) === index
   );
   const todayStr = new Date().toLocaleDateString("pt-BR"); // ex: 08/06/2026
+
+  let pageCount = 1;
+  try {
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    pageCount = pdfDoc.getPageCount();
+  } catch (pdfErr) {
+    console.warn("[IA] Não foi possível contar páginas via pdf-lib, assumindo fluxo padrão:", pdfErr);
+  }
 
   const prompt = `
     Você é um especialista em documentos fiscais brasileiros (Boletos, DANFE, DANFSe) e auditor de processos corporativos.
@@ -102,15 +109,9 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
     5. IDENTIFICADORES: Número do documento (Fatura/Nota) e Código do Cliente/Número da Conta (especialmente importante para empresas de Telecom/Utilities).
        - Para BOLETOS: Extraia a linha digitável completa (47 ou 48 dígitos numéricos) sem pontos ou espaços no campo 'barcode'.
        - Para DANFE: Se houver chave de acesso de 44 dígitos, extraia no campo 'chaveAcesso' em 'additionalInfo'.
-    6. TABELA DE ITENS / RATEIO EXTENSO MULTI-PÁGINAS (apportionment):
-       - Se o documento possuir uma tabela detalhada com os itens cobrados (por exemplo, equipamentos locados, serviços discriminados em linhas), você DEVE percorrer TODAS as páginas do PDF e extrair ABSOLUTAMENTE TODAS as linhas da tabela de itens, sem resumir, omitir ou parar na primeira página.
-       - Preencha o array "apportionment" com todos os itens, onde cada objeto tem: "description" (formato: "NOME DO EQUIPAMENTO (Item CÓDIGO)"), "quantity" (quantidade), "unitValue" (valor unitário) e "value" (valor total da linha).
-       - ATENÇÃO: NUNCA use aspas duplas desescapadas dentro de descrições (use 'POL' para polegadas ou aspas simples).
-
-    Validação de Regras do Processo de Pagamento Zeev:
-    - Se a data de emissão for após o dia 25 do mês corrente: Defina "isIssuedAfterDay25": true. Sugira a regra "ALTERNATIVE" (vencimento em 60 dias da emissão ou próximo dia 10 útil após os 60 dias).
-    - Se o vencimento for igual ou superior a 30 dias da data de emissão: Defina "isWithinIdealDeadline": true. Sugira "IDEAL".
-    - Se o vencimento for menor que 30 dias da emissão: Defina "isWithinIdealDeadline": false. Sugira "ALTERNATIVE" (vencimento ajustado para 30 dias da data de emissão).
+    6. DESCRIÇÃO DOS SERVIÇOS / ITENS:
+       - Se houver descrição resumida ou poucos itens de serviço, preencha o array "apportionment".
+       - Não tente transcrever listas exaustivas com centenas de linhas. A IA deve focar na precisão dos valores totais, fornecedor, datas e identificadores do documento. O detalhamento contábil fino é tratado pelo backend.
     - IMPORTANTE: Retorne APENAS o JSON válido. Não inclua marcações extras de texto, explicações ou comentários de código.
 
     Retorne EXATAMENTE este formato JSON:
@@ -131,13 +132,6 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
         "clientAccount": "432892312",
         "type": "NFSE"
       },
-      "zeevValidation": {
-        "isWithinIdealDeadline": true,
-        "isIssuedAfterDay25": false,
-        "suggestedPaymentRule": "IDEAL",
-        "isInstallmentPay": false,
-        "installmentsCount": 1
-      },
       "additionalInfo": {
         "chavePix": "...",
         "banco": "...",
@@ -145,24 +139,23 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       },
       "apportionment": [
         {
-          "description": "MONITOR 24 POL (Item 018812)",
+          "description": "Prestação de Serviços (Item 1)",
           "quantity": 1,
-          "unitValue": 54.25,
-          "value": 54.25
+          "unitValue": 100.00,
+          "value": 100.00
         }
       ]
     }
   `;
 
-  const MAX_RETRIES = 4;
+  const MAX_RETRIES = 3;
   let lastError: any;
 
-  // Sequência de modelos ativos por tentativa com tolerância a oscilações transitórias
+  // Sequência de modelos estáveis evitando modelos instáveis que retornam 503
   const attemptModelSequence = [
     primaryModel,
-    primaryModel,
-    fallbackModels.includes("gemini-3.1-pro-preview") ? "gemini-3.1-pro-preview" : primaryModel,
-    fallbackModels.includes("gemini-3.6-flash") ? "gemini-3.6-flash" : primaryModel,
+    "gemini-2.5-flash",
+    "gemini-2.5-flash",
   ];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -316,7 +309,6 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
           unitValue: item.unitValue,
           value: item.value
         })),
-        zeevValidation: aiData.zeevValidation,
         rawText: JSON.stringify(aiData)
       };
     } catch (error) {
@@ -324,8 +316,8 @@ export async function extractWithAI(pdfBuffer: Buffer, fileName: string = "unkno
       console.warn(`[IA] Tentativa ${attempt} (${currentModelName}) falhou: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
       
       if (attempt < MAX_RETRIES) {
-        const delays = [3000, 6000, 10000];
-        const waitTime = delays[attempt - 1] || 10000;
+        const delays = [2000, 4000];
+        const waitTime = delays[attempt - 1] || 3000;
         console.log(`[IA] Retentando em ${waitTime / 1000}s (comutando de modelo se persistir instabilidade)...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }

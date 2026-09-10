@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Save, Check, AlertCircle, RefreshCcw, Trash2, Copy, CheckCircle2, Loader2, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp } from 'lucide-react';
 import type { Note, NoteData } from '../types';
-import crList from '../assets/cr.json';
-import naturezasList from '../assets/naturezas.json';
+import crList from '@data/cr.json';
+import naturezasList from '@data/naturezas.json';
 
 interface DataEditorProps {
   formData: NoteData | null;
@@ -836,7 +836,7 @@ export const DataEditor = ({ formData, selectedNote, loading, onInputChange, onS
             }}
           >
             {loading && activeAction === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            {loading && activeAction === 'approve' ? 'Aprovando no Zeev...' : 'Aprovar'}
+            {loading && activeAction === 'approve' ? 'Aprovando...' : 'Aprovar'}
           </button>
         )}
       </div>
