@@ -50,6 +50,7 @@ Para consultar o histórico detalhado dos meses anteriores:
   - Execução de teste automatizado verificando a presença de Claro S.A./NET e a deduplicação de EMC.
 - Rollback:
   1) `git checkout -- apps/automacao/src/server/services/deadlineAlertService.ts apps/automacao/src/server/services/noteService.ts`
+- Commit: `bb80a42`
 - Status: Aplicado
 - Observações: Alterações aplicadas sob aprovação [APROVAR-CODIGO] do usuário.
 
