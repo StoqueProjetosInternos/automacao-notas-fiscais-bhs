@@ -58,9 +58,9 @@ Para consultar o histórico detalhado dos meses anteriores:
   - Compilação do workspace automacao via `tsc` concluída com código 0.
   - Compilação do dashboard via `tsc -b && vite build` concluída com código 0.
 - Rollback:
-  1) `git checkout -- apps/ data/`
-- Status: Aplicado
-- Observações: Mudança aplicada sob aprovação [APROVAR-CODIGO].
+  1) `git revert c6a6bed`
+- Status: Aplicado (Commit: c6a6bed)
+- Observações: Mudança aplicada e enviada para origin/develop sob aprovação explícita.
 
 ### CHG-0229 — Restauração de Fidelidade Visual e Layout Compacto da Aba de Histórico
 
