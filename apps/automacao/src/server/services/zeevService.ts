@@ -48,6 +48,274 @@ function formatCnpj(raw?: string): string {
   return raw;
 }
 
+/**
+ * Formata um valor numérico para o padrão de moeda brasileira (R$ 1.234,56).
+ */
+function formatCurrencyBRL(val: number | string | undefined | null): string {
+  const num = typeof val === 'number' ? val : parseFloat(String(val || 0).replace(',', '.'));
+  if (isNaN(num)) return '0,00';
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Converte strings de datas em objetos Date seguros.
+ */
+function parseZeevDate(dateVal?: string): Date | null {
+  if (!dateVal || typeof dateVal !== 'string') return null;
+  const clean = dateVal.trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) {
+    const [dd, mm, yyyy] = clean.split('/').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(clean)) {
+    const [yyyy, mm, dd] = clean.slice(0, 10).split('-').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+  }
+  const parsed = new Date(clean);
+  if (!isNaN(parsed.getTime())) {
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+  return null;
+}
+
+interface DeadlineEvaluation {
+  venceAte7Dias: 'Sim' | 'Não';
+  explicacao: string;
+}
+
+/**
+ * Calcula se a fatura vence em até 7 dias a partir da data de abertura e gera a memória de cálculo textual.
+ */
+function evaluateDeadline7Days(dueDateRaw?: string, openingDate = new Date()): DeadlineEvaluation {
+  const openingNorm = new Date(openingDate.getFullYear(), openingDate.getMonth(), openingDate.getDate());
+  const dueNorm = parseZeevDate(dueDateRaw);
+
+  const ddOp = String(openingNorm.getDate()).padStart(2, '0');
+  const mmOp = String(openingNorm.getMonth() + 1).padStart(2, '0');
+  const yyyyOp = openingNorm.getFullYear();
+  const openingFormatted = `${ddOp}/${mmOp}/${yyyyOp}`;
+
+  if (!dueNorm) {
+    return {
+      venceAte7Dias: 'Não',
+      explicacao: `Data de abertura: ${openingFormatted}. Data de vencimento não informada ou ilegível no documento fiscal.`
+    };
+  }
+
+  const ddDue = String(dueNorm.getDate()).padStart(2, '0');
+  const mmDue = String(dueNorm.getMonth() + 1).padStart(2, '0');
+  const yyyyDue = dueNorm.getFullYear();
+  const dueFormatted = `${ddDue}/${mmDue}/${yyyyDue}`;
+
+  if (dueNorm < openingNorm) {
+    return {
+      venceAte7Dias: 'Sim',
+      explicacao: `Data de abertura: ${openingFormatted}. Data de vencimento: ${dueFormatted}. A fatura já se encontra vencida em relação à data de abertura. O retorno é 'Sim'.`
+    };
+  }
+
+  if (dueNorm.getTime() === openingNorm.getTime()) {
+    return {
+      venceAte7Dias: 'Sim',
+      explicacao: `Data de abertura: ${openingFormatted}. Data de vencimento: ${dueFormatted}. A fatura vence na mesma data de abertura (0 dias corridos). Como 0 dias é menor ou igual a 7, o retorno é 'Sim'.`
+    };
+  }
+
+  const dPlus1 = new Date(openingNorm);
+  dPlus1.setDate(dPlus1.getDate() + 1);
+
+  const ddD1 = String(dPlus1.getDate()).padStart(2, '0');
+  const mmD1 = String(dPlus1.getMonth() + 1).padStart(2, '0');
+  const yyyyD1 = dPlus1.getFullYear();
+  const dPlus1Formatted = `${ddD1}/${mmD1}/${yyyyD1}`;
+
+  const sequence: string[] = [];
+  let curr = new Date(dPlus1);
+  let count = 0;
+
+  while (curr <= dueNorm) {
+    count++;
+    if (count <= 10) {
+      sequence.push(`${curr.getDate()} (${count})`);
+    }
+    curr.setDate(curr.getDate() + 1);
+  }
+
+  const sequenceText = count <= 10 
+    ? sequence.join(', ') 
+    : `${sequence.slice(0, 5).join(', ')} ... até ${dueFormatted} (${count})`;
+
+  const isUpTo7Days = count <= 7;
+  const comparacao = isUpTo7Days ? 'menor ou igual a 7' : 'maior que 7';
+  const retorno = isUpTo7Days ? 'Sim' : 'Não';
+
+  const explicacao = `Data de abertura: ${openingFormatted}. Data de vencimento: ${dueFormatted}. Considerando a contagem a partir do dia seguinte à abertura (D+1), iniciamos em ${dPlus1Formatted} e contamos até ${dueFormatted}: ${sequenceText}, totalizando ${count} ${count === 1 ? 'dia corrido' : 'dias corridos'} de diferença. Como ${count} ${count === 1 ? 'dia' : 'dias'} é ${comparacao}, o retorno é '${retorno}'.`;
+
+  return {
+    venceAte7Dias: retorno,
+    explicacao
+  };
+}
+
+interface ProcessSummaryParams {
+  supplierName: string;
+  formattedCnpj: string;
+  cleanDocNumber: string;
+  zeevDocType: string;
+  totalRaw: number | string;
+  formattedDueDate: string;
+  formattedIssueDate: string;
+  natureFormatted: string;
+  docFiscalFileName: string;
+  deadlineEval: DeadlineEvaluation;
+}
+
+/**
+ * Constrói a mensagem informativa detalhada para registro no histórico do processo no Zeev.
+ * Omite referências a modelos específicos de IA e evidencia dados fiscais e de rateio contábil.
+ */
+function buildProcessSummaryMessage(noteData: any, params: ProcessSummaryParams): string {
+  const lines: string[] = [];
+
+  lines.push('[SFI - Processamento de Documento Fiscal]');
+  lines.push(`Processado automaticamente em: ${new Date().toLocaleString('pt-BR')}`);
+  lines.push('');
+
+  // Avaliação do agente de IA
+  lines.push('Avaliação do agente de IA');
+  lines.push(`NF vence em até 7 dias?    ${params.deadlineEval.venceAte7Dias}`);
+  lines.push(`Explicação de como foi feito o calculo    ${params.deadlineEval.explicacao}`);
+  lines.push('');
+
+  // Identificação do Documento conforme campos solicitados
+  lines.push('DADOS DO DOCUMENTO FISCAL:');
+  lines.push(`Tipo de documento    ${params.zeevDocType}`);
+  lines.push(`Documento Fiscal / Comprovante    ${params.docFiscalFileName}`);
+  lines.push(`Número do documento fiscal    ${params.cleanDocNumber}`);
+  lines.push(`Data de emissão do documento fiscal    ${params.formattedIssueDate}`);
+  lines.push(`Nome da empresa    ${params.supplierName}`);
+  const partnerCode = noteData.supplier?.partnerCode ? ` (Cód. Parceiro: ${noteData.supplier.partnerCode})` : '';
+  lines.push(`CNPJ    ${params.formattedCnpj}${partnerCode}`);
+  const tomadorName = (noteData.payer?.name || noteData.recipient?.name || 'STOQUE SOLUCOES TECNOLOGICAS SA').trim();
+  const tomadorCnpj = noteData.payer?.cnpjCpf ? ` (CNPJ: ${formatCnpj(noteData.payer.cnpjCpf)})` : '';
+  lines.push(`Tomador do serviço / cliente    ${tomadorName}${tomadorCnpj}`);
+  if (noteData.additionalInfo?.chaveAcesso) {
+    lines.push(`Chave de Acesso: ${noteData.additionalInfo.chaveAcesso}`);
+  }
+  if (noteData.financial?.competenceDate) {
+    lines.push(`Competência: ${noteData.financial.competenceDate}`);
+  }
+  lines.push('');
+
+  // Financeiro e Pagamento
+  lines.push('FINANCEIRO E PAGAMENTO:');
+  const formattedTotalStr = formatCurrencyBRL(params.totalRaw);
+  lines.push(`- Valor Total: R$ ${formattedTotalStr}`);
+  lines.push(`- Vencimento: ${params.formattedDueDate}`);
+  if (noteData.barcode) {
+    lines.push(`- Código de Barras / Linha Digitável: ${noteData.barcode}`);
+  }
+  if (noteData.additionalInfo?.banco) {
+    lines.push(`- Banco: ${noteData.additionalInfo.banco}`);
+  }
+  if (noteData.additionalInfo?.chavePix) {
+    lines.push(`- Chave Pix: ${noteData.additionalInfo.chavePix}`);
+  }
+
+  // Tributos Retidos (exibidos apenas se houver retenção apurada)
+  const taxes = noteData.financial?.taxes;
+  if (taxes) {
+    const taxParts: string[] = [];
+    if (taxes.iss > 0) taxParts.push(`ISS: R$ ${formatCurrencyBRL(taxes.iss)}`);
+    if (taxes.irrf > 0) taxParts.push(`IRRF: R$ ${formatCurrencyBRL(taxes.irrf)}`);
+    if (taxes.pis > 0) taxParts.push(`PIS: R$ ${formatCurrencyBRL(taxes.pis)}`);
+    if (taxes.cofins > 0) taxParts.push(`COFINS: R$ ${formatCurrencyBRL(taxes.cofins)}`);
+    if (taxes.csll > 0) taxParts.push(`CSLL: R$ ${formatCurrencyBRL(taxes.csll)}`);
+    if (taxParts.length > 0) {
+      lines.push(`- Tributos Retidos: ${taxParts.join(' | ')}`);
+    }
+  }
+  lines.push('');
+
+  // Rateio e Classificação Contábil
+  lines.push('RATEIO E CLASSIFICAÇÃO CONTÁBIL:');
+  const mainCr = noteData.accountingFields?.cr || '1103';
+  const mainCrDesc = noteData.accountingFields?.crDescription || 'Centro de Custo';
+  const mainContract = noteData.accountingFields?.contract && noteData.accountingFields.contract !== '-' 
+    ? noteData.accountingFields.contract 
+    : '0';
+  lines.push(`- CR Principal: ${mainCr} - ${mainCrDesc}`);
+  lines.push(`- Natureza Principal: ${params.natureFormatted}`);
+  lines.push(`- Contrato: ${mainContract}`);
+
+  const rawItems: any[] = Array.isArray(noteData.apportionment) ? noteData.apportionment : [];
+  if (rawItems.length > 0) {
+    lines.push(`- Total de Itens no Rateio: ${rawItems.length}`);
+    lines.push('');
+
+    // Agrupamento consolidado por CR, Natureza e Contrato
+    interface GroupSummary {
+      cr: string;
+      crDescription: string;
+      naturezaCode: string;
+      naturezaDescription: string;
+      contract: string;
+      valueSum: number;
+    }
+    const groupMap = new Map<string, GroupSummary>();
+    rawItems.forEach(item => {
+      const cr = item.cr && item.cr !== 'N/A' ? item.cr : mainCr;
+      const crDesc = item.crDescription && item.crDescription !== 'N/A' ? item.crDescription : mainCrDesc;
+      const natCode = item.naturezaCode && item.naturezaCode !== 'N/A' 
+        ? item.naturezaCode 
+        : (noteData.accountingFields?.naturezaCode || 'N/A');
+      const natDesc = item.naturezaDescription && item.naturezaDescription !== 'N/A' 
+        ? item.naturezaDescription 
+        : (noteData.accountingFields?.naturezaDescription || 'Geral');
+      const contract = item.contract && item.contract !== '-' && item.contract !== 'N/A' 
+        ? item.contract 
+        : mainContract;
+      const val = typeof item.value === 'number' ? item.value : parseFloat(String(item.value || 0));
+      const key = `${cr}|${natCode}|${contract}`;
+
+      if (groupMap.has(key)) {
+        const g = groupMap.get(key)!;
+        g.valueSum += val;
+      } else {
+        groupMap.set(key, {
+          cr,
+          crDescription: crDesc,
+          naturezaCode: natCode,
+          naturezaDescription: natDesc,
+          contract,
+          valueSum: val
+        });
+      }
+    });
+
+    lines.push('Distribuição Contábil Consolidada:');
+    const totalNum = typeof params.totalRaw === 'number' ? params.totalRaw : parseFloat(String(params.totalRaw || 0));
+    Array.from(groupMap.values()).forEach(g => {
+      const pct = totalNum > 0 ? ((g.valueSum / totalNum) * 100).toFixed(1) : '0.0';
+      lines.push(`  * CR ${g.cr} (${g.crDescription}) | Natureza: ${g.naturezaCode} (${g.naturezaDescription}) | Contrato: ${g.contract} | R$ ${formatCurrencyBRL(g.valueSum)} (${pct}%)`);
+    });
+    lines.push('');
+
+    lines.push('Nota: O detalhamento analítico de todos os itens, quantidades e números de série está disponível na planilha de rateio (.xlsx anexada).');
+  } else {
+    lines.push('- Detalhamento: Fatura de item único integralmente alocada no CR e Natureza principais.');
+  }
+
+  const obs = noteData.additionalInfo?.observacao || noteData.additionalInfo?.description;
+  if (obs && String(obs).trim()) {
+    lines.push('');
+    lines.push('OBSERVAÇÕES:');
+    lines.push(String(obs).trim());
+  }
+
+  return lines.join('\n');
+}
+
 const ZEEV_FIELD_IDS: Record<string, number> = {
   possuiContrato: 34765,
   tipoDeContrato: 34766,
@@ -194,19 +462,24 @@ export class ZeevService {
         ? rawNatureCode 
         : `${rawNatureCode} - ${rawNatureDesc}`;
 
-      // 5. Mensagem descritiva da IA para auditoria
-      const aiSummaryMessage = [
-        `[SFI - Automação IA Google Gemini]`,
-        `Processado automaticamente em: ${new Date().toLocaleString('pt-BR')}`,
-        `Fornecedor: ${supplierName} (CNPJ: ${formattedCnpj})`,
-        `Documento Fiscal: Nº ${cleanDocNumber} | Tipo: ${zeevDocType}`,
-        `Valor Total: R$ ${formattedTotal} | Vencimento: ${formattedDueDate}`,
-        `Classificação Contábil: CR ${noteData.accountingFields?.cr || '1103'} | Natureza: ${natureFormatted}`,
-        noteData.additionalInfo?.description ? `Observações: ${noteData.additionalInfo.description}` : null
-      ].filter(Boolean).join('\n');
+      const docFiscalFileName = `${id}.pdf`;
+      const deadlineEval = evaluateDeadline7Days(noteData.financial?.dueDate);
+
+      // 5. Mensagem descritiva estruturada para o histórico do processo no Zeev
+      const processSummaryMessage = buildProcessSummaryMessage(noteData, {
+        supplierName,
+        formattedCnpj,
+        cleanDocNumber,
+        zeevDocType,
+        totalRaw,
+        formattedDueDate,
+        formattedIssueDate,
+        natureFormatted,
+        docFiscalFileName,
+        deadlineEval
+      });
 
       const rateioFileName = `rateio_${cleanDocNumber || id}.xlsx`;
-      const docFiscalFileName = `${id}.pdf`;
       const boletoFileName = `${id}_boleto.pdf`;
       const requesterEmail = process.env.ZEEV_REQUESTER || process.env.ZEEV_REQUESTER_EMAIL || 'hugo.bhs@stoque.com.br';
 
@@ -348,7 +621,7 @@ export class ZeevService {
       const createdInstanceId = apiResult?.instanceId || apiResult?.id || apiResult?.code || apiResult?.instanceCode;
       if (createdInstanceId) {
         try {
-          const msgResult = await ZeevClient.postInstanceMessage(createdInstanceId, aiSummaryMessage);
+          const msgResult = await ZeevClient.postInstanceMessage(createdInstanceId, processSummaryMessage);
           const msgLogPath = path.join(folderPath, 'zeev_message_response.json');
           fs.writeFileSync(msgLogPath, JSON.stringify(msgResult, null, 2), 'utf-8');
         } catch (msgError: any) {

@@ -35,6 +35,28 @@ Para consultar o histórico detalhado dos meses anteriores:
 
 ## 3. Registros Ativos — Setembro / 2026
 
+### CHG-0231 — Atualização e Geração da Versão Desktop Electron 1.1.0
+
+- Data/Hora: 2026-09-11 09:15
+- Contexto: Necessidade de gerar uma nova versão distribuível desktop (instalador NSIS e executável portátil) consolidando o enriquecimento contábil do fornecedor Magna, correção de origem de faturas e fidelidade visual da aba Histórico.
+- Objetivo: Atualizar o manifesto apps/desktop/package.json para versão 1.1.0, remover caminhos obsoletos de extraResources e empacotar os binários via electron-builder.
+- Escopo:
+  - [package.json](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/package.json)
+  - [release/](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/release/)
+- Riscos: Baixo. Alteração restrita a metadados de empacotamento.
+- Proposta: Ajustar versão e recursos no package.json do desktop, adicionar filtros de exclusão para workspaces monorepo e pastas release em node_modules e executar pipeline de distribuição.
+- Testes:
+  - Compilação de automacao (tsc) concluída com código 0.
+  - Compilação do dashboard (tsc -b && vite build) concluída com código 0.
+  - Compilação do main desktop (tsc) concluída com código 0.
+  - Geração via electron-builder concluída com código 0 gerando:
+    - Stoque Fiscal Intelligence Setup 1.1.0.exe (~238 MB)
+    - Stoque Fiscal Intelligence 1.1.0.exe (~238 MB)
+- Rollback:
+  1) `git checkout -- apps/desktop/package.json`
+- Status: Aplicado
+- Observações: Mudança de configuração, exclusão de recursão de workspaces monorepo e geração dos executáveis concluídas com êxito sob aprovação [APROVAR-CODIGO] e [APROVAR-COMANDO].
+
 ### CHG-0230 — Correção e Precisão da Origem de Entrada (Upload Manual vs E-mail Sync)
 
 - Data/Hora: 2026-09-10 17:48
@@ -1546,6 +1568,91 @@ Para consultar o histórico detalhado dos meses anteriores:
   2) Remover `apps/dashboard/src/components/ExecutiveAnalytics.tsx`
 - Status: Aplicado
 - Observações: Alteração aplicada sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0278 — Correção de Inicialização e Renderização da Aplicação Desktop Electron
+
+- Data/Hora: 2026-09-11 11:40
+- Contexto: O executável portátil do Electron iniciava processos em segundo plano, mas a interface visual não era renderizada na tela devido a SyntaxError no preload script e bloqueio na inicialização síncrona do servidor Express.
+- Objetivo: Converter o preload para CommonJS (.cts -> .cjs), desacoplar a abertura imediata da janela BrowserWindow do ciclo do servidor backend, adicionar splash screen HTML de carregamento e tratar erros no listener HTTP.
+- Escopo:
+  - Desktop:
+    - [apps/desktop/src/preload.cts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/preload.cts)
+    - [apps/desktop/src/preload.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/preload.ts)
+    - [apps/desktop/src/main.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/desktop/src/main.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Melhora a robustez de inicialização, eliminando tela travada e garantindo saída limpa de instâncias duplicadas.
+- Testes:
+  - Execução de `npm --workspace=stoque-fiscal-intelligence-desktop run build:main`.
+  - Empacotamento com `electron-builder`.
+- Rollback:
+  1) `git checkout HEAD -- apps/desktop/src/main.ts apps/desktop/src/preload.ts`
+  2) Remover `apps/desktop/src/preload.cts`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0279 — Enriquecimento da Mensagem de Histórico do Zeev e Detalhamento de Rateio
+
+- Data/Hora: 2026-09-11 13:30
+- Contexto: A mensagem enviada ao histórico da instância no Zeev exibia apenas dados resumidos de cabeçalho e continha identificação explícita do provedor de IA utilizado.
+- Objetivo: Expandir o corpo da mensagem com dados fiscais completos (emissão, competência, tomador, código de barras, tributos retidos) e detalhamento aprofundado do rateio (consolidação de CRs, naturezas, contratos, percentuais e itens discriminados), removendo menções a ferramentas ou modelos de IA específicos.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Truncamento defensivo em 8 itens para proteção do limite de caracteres do endpoint do Zeev.
+- Proposta: Implementar buildProcessSummaryMessage com formatação BRL e vincular no ZeevClient.postInstanceMessage.
+- Testes:
+  - Compilação TypeScript do workspace de automação.
+  - Validação da estrutura de texto sem referências a fornecedores de IA.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0280 — Otimização da Mensagem do Zeev: Remoção da Listagem de Itens e Foco na Consolidação
+
+- Data/Hora: 2026-09-11 13:35
+- Contexto: A listagem individual de itens na mensagem de histórico do Zeev apresentava risco de poluição visual e estouro de tamanho de texto em faturas com dezenas ou centenas de itens.
+- Objetivo: Remover a discriminação de itens individuais da mensagem de histórico, mantendo a consolidação de Centros de Custo, Naturezas e Contratos e direcionando a consulta analítica para a planilha Excel anexada.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Redução de volume de payload e maior previsibilidade visual.
+- Proposta: Substituir o bloco de itens pela nota de orientação à planilha Excel anexada na função buildProcessSummaryMessage.
+- Testes:
+  - Compilação TypeScript via `npm --workspace=stoque-fiscal-intelligence run build`.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+### CHG-0281 — Inclusão da Avaliação de Prazo em até 7 Dias e Reestruturação dos Campos Fiscais no Zeev
+
+- Data/Hora: 2026-09-11 13:40
+- Contexto: O fluxo do Zeev requer avaliação explícita se a nota fiscal vence em até 7 dias corridos a partir da abertura (D+1), acompanhada da memória descritiva do cálculo e da exibição estruturada dos campos de identificação do documento fiscal e fornecedor.
+- Objetivo: Implementar a função determinística evaluateDeadline7Days para calcular a contagem diária D+1 até o vencimento e reestruturar o cabeçalho da mensagem do Zeev com os campos: Tipo de documento, Documento Fiscal / Comprovante, Número do documento fiscal, Data de emissão do documento fiscal, Nome da empresa, CNPJ e Tomador do serviço / cliente.
+- Escopo:
+  - Backend:
+    - [apps/automacao/src/server/services/zeevService.ts](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/apps/automacao/src/server/services/zeevService.ts)
+  - Documentação:
+    - [plan.md](file:///C:/stoque-dev-2024/automacao_notas_fisicais_v2/plan.md)
+- Riscos: Baixo. Truncamento da exibição da sequência diária para intervalos superiores a 10 dias, prevenindo mensagens extensas.
+- Proposta: Injetar evaluateDeadline7Days e atualizar buildProcessSummaryMessage em zeevService.ts.
+- Testes:
+  - Compilação TypeScript via `npm --workspace=stoque-fiscal-intelligence run build`.
+  - Validação da memória de cálculo para vencimentos inferiores e superiores a 7 dias.
+- Rollback:
+  1) `git checkout HEAD -- apps/automacao/src/server/services/zeevService.ts`
+- Status: Aplicado
+- Observações: Alteração de código aplicada com sucesso sob autorização explícita [APROVAR-CODIGO] do usuário.
+
+
+
+
 
 
 
