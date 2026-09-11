@@ -1,6 +1,6 @@
 {
   "name": "stoque-fiscal-intelligence-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Stoque Fiscal Intelligence - Aplicação Desktop Electron",
   "main": "dist/main.js",
   "type": "module",
@@ -62,7 +62,12 @@
           "!electron",
           "!electron-builder",
           "!@types",
-          "!typescript"
+          "!typescript",
+          "!stoque-fiscal-intelligence-desktop/**",
+          "!stoque-fiscal-intelligence-dashboard/**",
+          "!stoque-fiscal-intelligence/**",
+          "!**/release/**",
+          "!**/*.zip"
         ]
       },
       {
@@ -82,14 +87,6 @@
       {
         "from": "../../data",
         "to": "data"
-      },
-      {
-        "from": "../../cr.json",
-        "to": "cr.json"
-      },
-      {
-        "from": "../../naturezas.json",
-        "to": "naturezas.json"
       },
       {
         "from": "../../.env",

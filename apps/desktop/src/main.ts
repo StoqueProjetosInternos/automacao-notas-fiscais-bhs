@@ -8,13 +8,11 @@ import express from 'express';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Desativa aceleracao por GPU preservando rasterizacao por software
-app.disableHardwareAcceleration();
-
 // Bloqueia multiplas instancias simultaneas
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
+  process.exit(0);
 }
 
 // Define variáveis de ambiente globais essenciais para o Desktop
@@ -106,8 +104,13 @@ function startBackendServer(): Promise<void> {
         console.warn(`[Desktop Backend] Pasta de dist do dashboard não encontrada em: ${dashboardDistPath}`);
       }
 
-      expressApp.listen(PORT, () => {
+      const server = expressApp.listen(PORT, () => {
         console.log(`[Desktop Backend] Servidor Express iniciado com sucesso na porta ${PORT}`);
+        resolve();
+      });
+
+      server.on('error', (err: any) => {
+        console.error('[Desktop Backend] Erro no listener do servidor Express:', err);
         resolve();
       });
     } catch (error: any) {
@@ -141,7 +144,7 @@ function createWindow() {
     show: true,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -152,25 +155,47 @@ function createWindow() {
     console.log(`[Desktop UI Log] ${message} (${sourceId}:${line})`);
   });
 
-  const devUrl = 'http://localhost:5173';
-  const prodUrl = `http://localhost:${PORT}`;
-
-  if (!app.isPackaged) {
-    fetch(devUrl)
-      .then(() => {
-        console.log('[Desktop] Conectado ao Vite Dev Server (porta 5173).');
-        mainWindow?.loadURL(devUrl);
-      })
-      .catch(() => {
-        console.log('[Desktop] Vite Dev Server não encontrado. Carregando aplicação local integrada...');
-        mainWindow?.loadURL(prodUrl);
-      });
-  } else {
-    mainWindow.loadURL(prodUrl).catch((err) => {
-      console.warn('[Desktop] Falha na primeira tentativa de conexão, retentando em 1s...', err);
-      setTimeout(() => mainWindow?.loadURL(prodUrl), 1000);
-    });
-  }
+  // Exibe tela inicial de carregamento enquanto o servidor sobe
+  const loadingHtml = `data:text/html;charset=utf-8,${encodeURIComponent(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Stoque Fiscal Intelligence</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid #334155;
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 18px; margin: 0 0 8px; font-weight: 600; }
+    p { font-size: 13px; color: #94a3b8; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <h2>Iniciando Stoque Fiscal Intelligence</h2>
+  <p>Carregando servicos e base de dados local...</p>
+</body>
+</html>
+`)}`;
+  mainWindow.loadURL(loadingHtml);
 
   // Abrir links externos no navegador padrão do sistema
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -186,20 +211,54 @@ function createWindow() {
   });
 }
 
+function loadApplication() {
+  if (!mainWindow) return;
+  const devUrl = 'http://localhost:5173';
+  const prodUrl = `http://localhost:${PORT}`;
+
+  if (!app.isPackaged) {
+    fetch(devUrl)
+      .then(() => {
+        console.log('[Desktop] Conectado ao Vite Dev Server (porta 5173).');
+        mainWindow?.loadURL(devUrl);
+      })
+      .catch(() => {
+        console.log('[Desktop] Vite Dev Server não encontrado. Carregando aplicação local integrada...');
+        mainWindow?.loadURL(prodUrl);
+      });
+  } else {
+    const tryLoad = (attemptsLeft: number) => {
+      if (!mainWindow) return;
+      mainWindow.loadURL(prodUrl).catch((err) => {
+        if (attemptsLeft > 0) {
+          console.warn(`[Desktop] Aguardando servidor Express responder, retentando em 500ms (${attemptsLeft} restantes)...`);
+          setTimeout(() => tryLoad(attemptsLeft - 1), 500);
+        } else {
+          dialog.showErrorBox('Erro de Conexão', `Não foi possível conectar ao servidor interno na porta ${PORT}. Detalhes: ${err.message}`);
+        }
+      });
+    };
+    tryLoad(20);
+  }
+}
+
 app.on('second-instance', () => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
     mainWindow.focus();
   }
 });
 
 app.whenReady().then(async () => {
-  await startBackendServer();
   createWindow();
+  await startBackendServer();
+  loadApplication();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+      loadApplication();
     }
   });
 });

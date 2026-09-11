@@ -1,12 +1,2 @@
-import { contextBridge, ipcRenderer } from 'electron';
-
-contextBridge.exposeInMainWorld('electronAPI', {
-  platform: process.platform,
-  isElectron: true,
-  sendMessage: (channel: string, data: any) => {
-    ipcRenderer.send(channel, data);
-  },
-  onMessage: (channel: string, func: (...args: any[]) => void) => {
-    ipcRenderer.on(channel, (event, ...args) => func(...args));
-  }
-});
+// Preload migrado para preload.cts para geracao nativa de CommonJS (.cjs) compativel com o sandbox do Electron.
+export {};
